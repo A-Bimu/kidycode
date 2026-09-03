@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="KidyCode Code Explorers is a self-paced coding course for ages 10 to 12, built around short lessons, practice and creative projects." />
+    <title>Code Explorers | KidyCode</title>
+    <link rel="stylesheet" href="learn.css" />
+    <script src="curriculum.js" defer></script>
+    <script src="learn.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#learning-space">Skip to the learning space</a>
+    <header class="learn-header">
+      <a class="learn-brand" href="../" aria-label="KidyCode home">
+        <span aria-hidden="true">K</span>
+        <b>KidyCode</b>
+      </a>
+      <div class="header-progress" aria-label="Course progress">
+        <span id="progress-label">0 of 65 activities</span>
+        <div class="progress-track"><i id="progress-bar"></i></div>
+      </div>
+      <nav aria-label="Learning space">
+        <button class="nav-tab is-active" data-view="map" type="button">My map</button>
+        <button class="nav-tab" data-view="studio" type="button">Studio</button>
+        <button class="nav-tab" data-view="portfolio" type="button">My builds</button>
+        <button class="nav-tab" data-view="badges" type="button">Badges</button>
+        <button class="nav-tab" data-view="grownup" type="button">Grown-up view</button>
+      </nav>
+      <button class="learner-chip" id="learner-chip" type="button" aria-label="Edit learner profile">New explorer</button>
+    </header>
+
+    <main id="learning-space">
+      <section class="app-view is-active" id="map-view" aria-labelledby="map-heading">
+        <div class="map-intro">
+          <div>
+            <p class="eyebrow">CODE EXPLORERS · AGES 10 TO 12</p>
+            <h1 id="map-heading">Choose the next thing to make.</h1>
+            <p id="welcome-copy">Small lessons. Real projects. Your work stays on this device while you learn.</p>
+          </div>
+          <article class="next-card" id="next-card"></article>
+        </div>
+
+        <section class="weekly-card" aria-labelledby="weekly-heading">
+          <div>
+            <p class="eyebrow">THIS WEEK'S SIDE QUEST</p>
+            <h2 id="weekly-heading">Make a pattern that tells a story</h2>
+            <p>Use shapes, movement or sound. Repeat one part, then change one detail so people notice.</p>
+          </div>
+          <button class="button button-light" data-open-weekly type="button">Open the brief</button>
+        </section>
+
+        <div class="learning-layout">
+          <aside class="mentor-rail" aria-label="Your learning guides">
+            <p class="rail-label">YOUR CREW</p>
+            <article class="mentor-card mentor-fox">
+              <img src="../assets/origami-fox.webp" alt="Origami fox guide" />
+              <div><b>Fara the Fox</b><span>Plans the steps</span></div>
+            </article>
+            <article class="mentor-card mentor-bird">
+              <img src="../assets/origami-bird.webp" alt="Origami bird guide" />
+              <div><b>Odi the Owl</b><span>Finds the bug</span></div>
+            </article>
+            <article class="mentor-card mentor-elephant">
+              <img src="../assets/origami-elephant.webp" alt="Origami elephant guide" />
+              <div><b>Ella the Elephant</b><span>Remembers values</span></div>
+            </article>
+            <p class="mentor-note">Cheetah, Butterfly and Lion join when their skills are needed.</p>
+          </aside>
+          <div class="stage-map" id="stage-map" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="app-view lesson-view" id="lesson-view" aria-labelledby="lesson-title">
+        <button class="back-button" data-view="map" type="button">← Back to my map</button>
+        <div class="lesson-shell">
+          <aside class="lesson-brief">
+            <div class="lesson-meta"><span id="lesson-stage"></span><span id="lesson-time"></span></div>
+            <p class="eyebrow" id="lesson-kind"></p>
+            <h1 id="lesson-title"></h1>
+            <p class="lesson-goal" id="lesson-goal"></p>
+            <div class="mentor-message" id="mentor-message"></div>
+            <ol class="lesson-rhythm" aria-label="Lesson steps">
+              <li class="is-current">Learn</li>
+              <li>Practice</li>
+              <li>Build</li>
+              <li>Explain</li>
+            </ol>
+            <div class="concept-card">
+              <b>THE IDEA</b>
+              <div id="lesson-concept"></div>
+            </div>
+            <div class="predict-card">
+              <b>PREDICT FIRST</b>
+              <p id="lesson-predict"></p>
+            </div>
+            <div class="project-requirements" id="project-requirements" hidden></div>
+          </aside>
+
+          <div class="workbench">
+            <div class="workbench-tabs" role="tablist" aria-label="Lesson tools">
+              <button class="work-tab is-active" data-work-tab="practice" role="tab" type="button">Practice</button>
+              <button class="work-tab" data-work-tab="preview" role="tab" type="button">Result</button>
+              <button class="work-tab" data-work-tab="notes" role="tab" type="button">My thinking</button>
+            </div>
+            <section class="work-panel is-active" id="practice-panel">
+              <div class="task-bar">
+                <div><span>YOUR TASK</span><p id="lesson-task"></p></div>
+                <span class="save-state" id="save-state">Saved on this device</span>
+              </div>
+              <label class="editor-label" for="code-editor">KidyCode studio</label>
+              <textarea id="code-editor" spellcheck="false" autocapitalize="off" aria-describedby="editor-help"></textarea>
+              <p class="editor-help" id="editor-help">You can type, paste or use the keyboard. Dragging is never required.</p>
+              <div class="editor-actions">
+                <button class="button button-primary" id="run-code" type="button">Run my code</button>
+                <button class="button button-outline" id="check-work" type="button">Check my work</button>
+                <button class="button button-quiet" id="save-snapshot" type="button">Save a version</button>
+              </div>
+              <div class="feedback-box" id="feedback-box" aria-live="polite">Try the task. A mistake is information, not a score.</div>
+              <div class="hint-box">
+                <div><b>Need a nudge?</b><span id="hint-count">Hint 1 of 3</span></div>
+                <p id="hint-text">Start by reading the task one more time.</p>
+                <button class="button button-quiet" id="next-hint" type="button">Show the next hint</button>
+              </div>
+            </section>
+            <section class="work-panel" id="preview-panel">
+              <div class="result-stage" id="result-stage">
+                <iframe id="code-preview" title="Your project preview" sandbox="allow-scripts"></iframe>
+                <div id="text-output" aria-live="polite"></div>
+              </div>
+            </section>
+            <section class="work-panel" id="notes-panel">
+              <label for="explain-box">Explain what your code does in your own words.</label>
+              <textarea id="explain-box" placeholder="First my code... Then it..."></textarea>
+              <label for="debug-box">What did you change when something did not work?</label>
+              <textarea id="debug-box" placeholder="I expected... I saw... I changed..."></textarea>
+              <button class="button button-outline" id="save-thinking" type="button">Save my thinking</button>
+            </section>
+          </div>
+        </div>
+        <div class="lesson-finish">
+          <div><b id="mastery-label">Mastery check</b><p>Make it work, explain one choice and save your progress.</p></div>
+          <button class="button button-primary" id="complete-lesson" type="button" disabled>Finish activity</button>
+        </div>
+      </section>
+
+      <section class="app-view" id="studio-view" aria-labelledby="studio-heading">
+        <div class="page-heading"><p class="eyebrow">YOUR SAFE MAKING SPACE</p><h1 id="studio-heading">Studio</h1><p>Open a boss project, remix an old build or return to a saved version.</p></div>
+        <div class="studio-grid">
+          <section class="panel"><h2>Projects ready to build</h2><div id="studio-projects"></div></section>
+          <section class="panel"><h2>Saved versions</h2><div id="snapshot-list" class="empty-state">No versions saved yet. Save one inside any activity.</div></section>
+        </div>
+      </section>
+
+      <section class="app-view" id="portfolio-view" aria-labelledby="portfolio-heading">
+        <div class="page-heading"><p class="eyebrow">PRIVATE BY DEFAULT</p><h1 id="portfolio-heading">My builds</h1><p>Your boss projects appear here with the story of how you made them better.</p></div>
+        <div class="portfolio-grid" id="portfolio-grid"></div>
+      </section>
+
+      <section class="app-view" id="badges-view" aria-labelledby="badges-heading">
+        <div class="page-heading"><p class="eyebrow">SKILLS YOU CAN PROVE</p><h1 id="badges-heading">Badges</h1><p>Badges unlock after the work, not just after opening a page.</p></div>
+        <div class="badge-grid" id="badge-grid"></div>
+        <div class="certificate-card" id="certificate-card"></div>
+      </section>
+
+      <section class="app-view" id="grownup-view" aria-labelledby="grownup-heading">
+        <div class="page-heading"><p class="eyebrow">FOR THE GROWN-UP AT HOME</p><h1 id="grownup-heading">See the learning, not just the score.</h1><p>Ask what was made, what went wrong and what your explorer wants to try next.</p></div>
+        <div class="grownup-grid">
+          <article class="panel metric-panel"><span>COURSE PROGRESS</span><strong id="grownup-progress">0%</strong><p id="grownup-summary"></p></article>
+          <article class="panel"><h2>Recent effort</h2><div id="recent-effort" class="empty-state"></div></article>
+          <article class="panel"><h2>Conversation starters</h2><ul class="question-list"><li>Show me the part you are proudest of.</li><li>What bug taught you something useful?</li><li>What would you add with twenty more minutes?</li></ul></article>
+          <article class="panel safety-panel"><h2>Privacy promise</h2><p>Work is stored on this device. Nothing is published automatically. An adult chooses if and when a project is shared.</p></article>
+          <article class="panel"><h2>Comfort settings</h2><label class="toggle-row"><input id="low-data-toggle" type="checkbox" /> <span>Use calmer movement and fewer visual effects</span></label><p class="setting-note">This setting is saved on this device. The course also follows the device's reduced-motion setting.</p></article>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="profile-dialog" class="profile-dialog">
+      <form method="dialog" id="profile-form">
+        <button class="dialog-close" data-close-dialog type="button" aria-label="Close">×</button>
+        <p class="eyebrow">WELCOME TO CODE EXPLORERS</p>
+        <h2>Let us find your first step.</h2>
+        <label for="learner-name">What should we call you?</label>
+        <input id="learner-name" name="learnerName" maxlength="20" required placeholder="First name or nickname" />
+        <fieldset><legend>How old are you?</legend><div class="choice-row"><label><input type="radio" name="age" value="10" required /> 10</label><label><input type="radio" name="age" value="11" /> 11</label><label><input type="radio" name="age" value="12" /> 12</label></div></fieldset>
+        <fieldset><legend>What have you tried before?</legend><div class="choice-stack"><label><input type="radio" name="experience" value="new" required /> I am completely new</label><label><input type="radio" name="experience" value="blocks" /> I have used Scratch or blocks</label><label><input type="radio" name="experience" value="projects" /> I have made a small project</label></div></fieldset>
+        <p class="profile-note">This only recommends a starting point. You can still explore earlier stages.</p>
+        <button class="button button-primary button-wide" value="default" type="submit">Build my learning map</button>
+      </form>
+    </dialog>
+
+    <dialog id="weekly-dialog" class="profile-dialog">
+      <form method="dialog">
+        <button class="dialog-close" data-close-dialog type="button" aria-label="Close">×</button>
+        <p class="eyebrow">WEEKLY SIDE QUEST</p>
+        <h2>Pattern with a surprise</h2>
+        <p>Make a repeating pattern using movement, sound, words or color. Change one part on the final repeat. Ask someone what they noticed first.</p>
+        <ol><li>Plan the repeating part.</li><li>Build it with a loop.</li><li>Change the last repeat.</li><li>Explain why the change stands out.</li></ol>
+        <button class="button button-primary button-wide" value="done">I have my idea</button>
+      </form>
+    </dialog>
+  </body>
+</html>
