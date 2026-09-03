@@ -59,7 +59,10 @@
 
   function mentorAsset(key) {
     if (key === 'elephant') return '../assets/origami-elephant.webp';
-    if (key === 'owl' || key === 'butterfly') return '../assets/origami-bird.webp';
+    if (key === 'owl') return '../assets/origami-owl.webp';
+    if (key === 'butterfly') return '../assets/origami-butterfly.webp';
+    if (key === 'cheetah') return '../assets/origami-cheetah.webp';
+    if (key === 'lion') return '../assets/origami-lion.webp';
     return '../assets/origami-fox.webp';
   }
 
