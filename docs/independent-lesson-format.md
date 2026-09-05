@@ -32,3 +32,18 @@ Every lesson should answer four questions clearly:
 - Use gradual hints that preserve the child's thinking.
 - Give immediate and encouraging feedback.
 - End with something the learner can make or demonstrate.
+
+## Lesson quality checklist
+
+Before publishing a lesson, confirm that:
+
+- The learner can understand the goal without adult help.
+- Every button and instruction uses clear action words.
+- The learner does something within the first three minutes.
+- No more than three short paragraphs appear before an activity.
+- Examples use familiar situations and age-appropriate language.
+- Each incorrect answer produces a useful clue.
+- Hints move from a small clue to stronger support.
+- The lesson has no dead end after a wrong attempt.
+- Completion requires visible evidence, such as an answer, explanation or creation.
+- The final message describes what the learner achieved.
