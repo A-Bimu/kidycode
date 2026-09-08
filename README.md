@@ -9,9 +9,10 @@ Learners choose one of three mission-game themes, then build the same project fr
 The course contains:
 
 - 10 stages in prerequisite order
-- 40 complete lessons
-- notes, worked examples and one prediction question in every lesson
-- a practical project change and three graduated hints in every lesson
+- 70 focused activities arranged as 7 activities in each stage
+- a concept lesson with four teaching sections and three understanding questions in every stage
+- three guided builds, one independent checkpoint, one review and one five-question quiz in every stage
+- immediate project checks and three graduated hints during practical work
 - 10 saved project checkpoints
 - 10 final knowledge questions and one practical JavaScript repair
 - a guided lesson sequence that reveals one step at a time
