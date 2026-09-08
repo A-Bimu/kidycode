@@ -1,5 +1,6 @@
 export type ThemeId = "wildlife" | "museum" | "space";
 export type LessonMode = "blocks" | "javascript";
+export type ActivityType = "theory" | "workshop" | "lab" | "review" | "quiz";
 
 export type PracticeQuestion = {
   prompt: string;
@@ -28,6 +29,19 @@ export type Lesson = {
   hints: string[];
   reflection: string;
   evidence: string;
+  activityType?: ActivityType;
+  activityNumber?: number;
+  sections?: Array<{
+    title: string;
+    paragraphs: string[];
+    exampleTitle: string;
+    exampleCode: string;
+    exampleExplanation: string;
+  }>;
+  questions?: PracticeQuestion[];
+  steps?: string[];
+  requirements?: string[];
+  keyTerms?: string[];
 };
 
 export type Stage = {
@@ -116,7 +130,7 @@ function collectItem() {
   updateScreen();
 }`;
 
-export const stages: Stage[] = [
+const stageSeeds: Stage[] = [
   {
     id: "route",
     number: 1,
@@ -666,6 +680,120 @@ export const stages: Stage[] = [
   },
 ];
 
+function unique(values: string[]) {
+  return [...new Set(values)];
+}
+
+function buildStageActivities(stage: Stage): Lesson[] {
+  const sourceLessons = stage.lessons;
+  const keyTerms = unique(
+    stage.focus
+      .split(/,| and /)
+      .map((term) => term.trim())
+      .filter(Boolean),
+  );
+  const theoryQuestions = sourceLessons.slice(0, 3).map((lesson) => lesson.question);
+  const stageQuiz: PracticeQuestion[] = [
+    ...sourceLessons.map((lesson) => lesson.question),
+    {
+      prompt: `Which result belongs in ${stage.checkpoint.title}?`,
+      options: [stage.checkpoint.checks[0], "The activity page was opened", "A decoration changed without a test"],
+      answer: 0,
+      explanation: `${stage.checkpoint.checks[0]} is one of the practical checks for this stage.`,
+    },
+  ];
+
+  const theory: Lesson = {
+    ...sourceLessons[0],
+    id: `${stage.id}-theory`,
+    title: `Learn: ${stage.title}`,
+    minutes: 18,
+    objective: `Understand ${stage.focus.toLowerCase()} before changing the project.`,
+    activityType: "theory",
+    activityNumber: 1,
+    sections: sourceLessons.map((lesson) => ({
+      title: lesson.title.replace(/^Checkpoint:\s*/i, "Putting the ideas together"),
+      paragraphs: lesson.notes,
+      exampleTitle: lesson.exampleTitle,
+      exampleCode: lesson.exampleCode,
+      exampleExplanation: lesson.exampleExplanation,
+    })),
+    questions: theoryQuestions,
+    keyTerms,
+  };
+
+  const workshops = sourceLessons.slice(0, 3).map((lesson, index): Lesson => ({
+    ...lesson,
+    id: `${stage.id}-workshop-${index + 1}`,
+    title: `Build ${index + 1}: ${lesson.title}`,
+    activityType: "workshop",
+    activityNumber: index + 2,
+    steps: [
+      `Read the goal: ${lesson.objective}`,
+      `Study “${lesson.exampleTitle}” and predict what its instructions will do.`,
+      lesson.task,
+      "Run the project and compare the game preview with the goal.",
+      "Check your work. Read the failed requirement before opening a hint.",
+      "Keep the working version and continue to the next build.",
+    ],
+    requirements: [lesson.evidence, "The required instructions appear in a useful order"],
+  }));
+
+  const lab: Lesson = {
+    ...sourceLessons[3],
+    id: `${stage.id}-checkpoint`,
+    title: stage.checkpoint.title,
+    activityType: "lab",
+    activityNumber: 5,
+    requirements: stage.checkpoint.checks,
+    steps: [
+      "Read every requirement before changing the project.",
+      "Plan the smallest change that could satisfy the requirements.",
+      "Build and run your solution without copying a finished answer.",
+      "Use the automated checks, repair one failed requirement and test again.",
+      "Explain one decision before saving this project version.",
+    ],
+  };
+
+  const review: Lesson = {
+    ...sourceLessons[3],
+    id: `${stage.id}-review`,
+    title: `${stage.title} review`,
+    minutes: 10,
+    objective: "Bring the important ideas and examples together before the quiz.",
+    activityType: "review",
+    activityNumber: 6,
+    notes: unique(sourceLessons.flatMap((lesson) => lesson.notes)),
+    sections: sourceLessons.map((lesson) => ({
+      title: lesson.title.replace(/^Checkpoint:\s*/i, "Checkpoint thinking"),
+      paragraphs: lesson.notes,
+      exampleTitle: lesson.exampleTitle,
+      exampleCode: lesson.exampleCode,
+      exampleExplanation: lesson.exampleExplanation,
+    })),
+    keyTerms,
+  };
+
+  const quiz: Lesson = {
+    ...sourceLessons[3],
+    id: `${stage.id}-quiz`,
+    title: `${stage.title} quiz`,
+    minutes: 8,
+    objective: "Answer five questions using only ideas already taught in this stage.",
+    activityType: "quiz",
+    activityNumber: 7,
+    questions: stageQuiz,
+    keyTerms,
+  };
+
+  return [theory, ...workshops, lab, review, quiz];
+}
+
+export const stages: Stage[] = stageSeeds.map((stage) => ({
+  ...stage,
+  lessons: buildStageActivities(stage),
+}));
+
 export const lessons = stages.flatMap((stage) => stage.lessons);
 
 export const finalExam: PracticeQuestion[] = [
@@ -693,6 +821,6 @@ export const courseFacts = {
   ageRange: "Ages 10 to 12",
   lessonCount: lessons.length,
   stageCount: stages.length,
-  estimatedHours: "18 to 22 hours",
+  estimatedHours: "20 to 24 hours",
   passMark: 7,
 };
