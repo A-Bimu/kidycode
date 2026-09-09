@@ -1,826 +1,216 @@
-export type ThemeId = "wildlife" | "museum" | "space";
-export type LessonMode = "blocks" | "javascript";
-export type ActivityType = "theory" | "workshop" | "lab" | "review" | "quiz";
+export type ProjectId = "interest" | "club" | "magazine";
+export type CodeFile = "html" | "css" | "javascript";
+export type ActivityType = "challenge" | "project" | "quiz";
 
 export type PracticeQuestion = {
   prompt: string;
-  options: string[];
+  options: [string, string, string];
   answer: number;
   explanation: string;
 };
+
+export type CodeTest = {
+  file: CodeFile;
+  label: string;
+  pattern: string;
+};
+
+export type WorkspaceFiles = { html: string; css: string; javascript: string };
 
 export type Lesson = {
   id: string;
   title: string;
   minutes: number;
-  mode: LessonMode;
   objective: string;
-  notes: string[];
+  activityType: ActivityType;
+  activityNumber: number;
+  language: "HTML" | "CSS" | "JavaScript" | "Web project";
+  explanation: string[];
+  keyTerms: string[];
   exampleTitle: string;
   exampleCode: string;
   exampleExplanation: string;
-  question: PracticeQuestion;
   task: string;
-  starterBlocks?: string[];
-  availableBlocks?: string[];
-  solutionBlocks?: string[];
-  starterCode?: string;
-  requiredCode?: string[];
-  hints: string[];
-  reflection: string;
-  evidence: string;
-  activityType?: ActivityType;
-  activityNumber?: number;
-  sections?: Array<{
-    title: string;
-    paragraphs: string[];
-    exampleTitle: string;
-    exampleCode: string;
-    exampleExplanation: string;
-  }>;
+  starterFiles: WorkspaceFiles;
+  editableFiles: CodeFile[];
+  tests: CodeTest[];
+  hints: [string, string, string];
+  question?: PracticeQuestion;
   questions?: PracticeQuestion[];
-  steps?: string[];
-  requirements?: string[];
-  keyTerms?: string[];
+  reflection?: string;
 };
 
 export type Stage = {
   id: string;
   number: number;
   title: string;
-  focus: string;
-  projectStep: string;
-  mentor: "fox" | "owl" | "elephant" | "cheetah" | "butterfly" | "lion";
+  description: string;
+  outcome: string;
   lessons: Lesson[];
-  checkpoint: {
-    title: string;
-    checks: string[];
-  };
 };
 
-export const themes: Array<{
-  id: ThemeId;
+export const projectChoices: Array<{
+  id: ProjectId;
   title: string;
   pitch: string;
-  collectable: string;
-  hazard: string;
-  destination: string;
+  siteTitle: string;
+  intro: string;
+  items: [string, string, string];
 }> = [
-  {
-    id: "wildlife",
-    title: "Wildlife Signal Rescue",
-    pitch: "Restore three tracking beacons and reach the field station.",
-    collectable: "beacons",
-    hazard: "rocky ground",
-    destination: "field station",
-  },
-  {
-    id: "museum",
-    title: "Museum Night Run",
-    pitch: "Recover three exhibit tags and reach the control room.",
-    collectable: "exhibit tags",
-    hazard: "security barriers",
-    destination: "control room",
-  },
-  {
-    id: "space",
-    title: "Space Station Courier",
-    pitch: "Collect three energy cells and reach the command deck.",
-    collectable: "energy cells",
-    hazard: "coolant leaks",
-    destination: "command deck",
-  },
+  { id: "interest", title: "Interest Guide", pitch: "Teach visitors about a topic you enjoy.", siteTitle: "The Interest Guide", intro: "A clear guide to a topic worth exploring.", items: ["What it is", "Why it matters", "Where to begin"] },
+  { id: "club", title: "Club Website", pitch: "Create a home page for a fictional club or team.", siteTitle: "The Saturday Club", intro: "A place for people who enjoy learning together.", items: ["About the club", "Weekly activities", "How to take part"] },
+  { id: "magazine", title: "Mini Magazine", pitch: "Publish short articles about a subject you choose.", siteTitle: "The Small Magazine", intro: "Short articles, useful ideas and thoughtful recommendations.", items: ["Latest article", "Editor picks", "Reader notes"] },
 ];
 
-export const blockCatalog: Record<string, { label: string; code: string; group: string }> = {
-  start: { label: "when game starts", code: "startGame();", group: "Events" },
-  right: { label: "move right 1 step", code: "movePlayer(1, 0);", group: "Movement" },
-  left: { label: "move left 1 step", code: "movePlayer(-1, 0);", group: "Movement" },
-  up: { label: "move up 1 step", code: "movePlayer(0, -1);", group: "Movement" },
-  down: { label: "move down 1 step", code: "movePlayer(0, 1);", group: "Movement" },
-  keyRight: { label: "when right arrow pressed", code: "onKey(\"ArrowRight\", moveRight);", group: "Events" },
-  keyLeft: { label: "when left arrow pressed", code: "onKey(\"ArrowLeft\", moveLeft);", group: "Events" },
-  keyUp: { label: "when up arrow pressed", code: "onKey(\"ArrowUp\", moveUp);", group: "Events" },
-  keyDown: { label: "when down arrow pressed", code: "onKey(\"ArrowDown\", moveDown);", group: "Events" },
-  repeat3: { label: "repeat 3 times", code: "repeat(3, moveRight);", group: "Loops" },
-  repeatForever: { label: "repeat while playing", code: "while (game.playing) { animate(); }", group: "Loops" },
-  collect: { label: "if touching item, collect it", code: "if (touchingItem()) collectItem();", group: "Decisions" },
-  avoid: { label: "if touching hazard, lose a life", code: "if (touchingHazard()) loseLife();", group: "Decisions" },
-  score0: { label: "set score to 0", code: "let score = 0;", group: "Variables" },
-  lives3: { label: "set lives to 3", code: "let lives = 3;", group: "Variables" },
-  addScore: { label: "change score by 1", code: "score = score + 1;", group: "Variables" },
-  timer30: { label: "set time to 30", code: "let timeLeft = 30;", group: "Variables" },
-  win: { label: "if score is 3, show win", code: "if (score === 3) showWin();", group: "Decisions" },
-  lose: { label: "if lives is 0, show retry", code: "if (lives === 0) showRetry();", group: "Decisions" },
-  level2: { label: "load level 2", code: "loadLevel(2);", group: "Levels" },
-  reset: { label: "reset the game", code: "resetGame();", group: "Controls" },
+const files = (html: string, css = "", javascript = ""): WorkspaceFiles => ({ html, css, javascript });
+const q = (prompt: string, correct: string, wrongOne: string, wrongTwo: string, explanation: string): PracticeQuestion => ({ prompt, options: [correct, wrongOne, wrongTwo], answer: 0, explanation });
+const t = (file: CodeFile, label: string, pattern: string): CodeTest => ({ file, label, pattern });
+
+type LessonSeed = Omit<Lesson, "id" | "activityType" | "activityNumber"> & { id: string };
+
+function makeStage(input: {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  outcome: string;
+  challenges: LessonSeed[];
+  project: LessonSeed;
+  projectQuestion: PracticeQuestion;
+}): Stage {
+  const challenges = input.challenges.map((lesson, index): Lesson => ({ ...lesson, id: `${input.id}-${lesson.id}`, activityType: "challenge", activityNumber: index + 1 }));
+  const project: Lesson = { ...input.project, id: `${input.id}-project`, activityType: "project", activityNumber: 5 };
+  const questions = [...challenges.map((lesson) => lesson.question!), input.projectQuestion];
+  const quiz: Lesson = {
+    id: `${input.id}-quiz`, title: `${input.title} check`, minutes: 8, objective: "Check the ideas you used before opening the next module.", activityType: "quiz", activityNumber: 6,
+    language: challenges[0].language, explanation: ["Answer five questions. Four correct answers unlock the next module."], keyTerms: Array.from(new Set(challenges.flatMap((lesson) => lesson.keyTerms))),
+    exampleTitle: "Review first", exampleCode: "Read the question, predict an answer, then choose.", exampleExplanation: "Every answer was taught and used in this module.", task: "Answer all five questions.",
+    starterFiles: files(""), editableFiles: [], tests: [], hints: ["Return to the lesson that introduced the term.", "Read each code example again.", "Try a fresh attempt after reviewing."], questions,
+  };
+  return { id: input.id, number: input.number, title: input.title, description: input.description, outcome: input.outcome, lessons: [...challenges, project, quiz] };
+}
+
+const shared = {
+  htmlProject: "<header><h1>{{TITLE}}</h1></header>\n<main>\n  <p>{{INTRO}}</p>\n  <section class=\"cards\">\n    <article class=\"card\"><h2>{{ITEM1}}</h2><p>Add useful information here.</p></article>\n    <article class=\"card\"><h2>{{ITEM2}}</h2><p>Add useful information here.</p></article>\n    <article class=\"card\"><h2>{{ITEM3}}</h2><p>Add useful information here.</p></article>\n  </section>\n</main>\n<footer><p>Built while learning web development.</p></footer>",
+  cssProject: "body { margin: 0; padding: 2rem; background: #f7f3ea; color: #111936; font-family: Arial, sans-serif; }\nh1 { color: #4b1f63; }\n.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }\n.card { padding: 1rem; border: 2px solid #111936; border-radius: 12px; }\n@media (max-width: 650px) { .cards { grid-template-columns: 1fr; } }",
 };
 
-const javascriptBase = `const player = { x: 1, y: 4 };
-let score = 0;
-let lives = 3;
-
-function movePlayer(dx, dy) {
-  player.x = player.x + dx;
-  player.y = player.y + dy;
-}
-
-function collectItem() {
-  score = score + 1;
-  updateScreen();
-}`;
-
-const stageSeeds: Stage[] = [
-  {
-    id: "route",
-    number: 1,
-    title: "Plan the route",
-    focus: "Algorithms, sequence and precise instructions",
-    projectStep: "Move the player from the start tile to the first signal.",
-    mentor: "fox",
-    lessons: [
-      {
-        id: "route-1",
-        title: "Code is an exact instruction",
-        minutes: 18,
-        mode: "blocks",
-        objective: "Explain why a computer needs instructions that are clear and ordered.",
-        notes: [
-          "An algorithm is a set of steps for completing a task.",
-          "A computer follows the steps it receives. It does not fill in missing details for us.",
-          "A useful instruction says what action to take and, when needed, how many times to take it.",
-        ],
-        exampleTitle: "A route with no guessing",
-        exampleCode: "when game starts\nmove right 1 step\nmove right 1 step",
-        exampleExplanation: "The event begins the algorithm. The two movement blocks then run from top to bottom.",
-        question: {
-          prompt: "Which instruction is most useful to a computer?",
-          options: ["Go over there", "Move right two tiles", "Find the nice place"],
-          answer: 1,
-          explanation: "Move right two tiles gives a direction and an exact distance.",
-        },
-        task: "Build the first route: start the game, then move right twice.",
-        starterBlocks: [],
-        availableBlocks: ["start", "right", "left", "up"],
-        solutionBlocks: ["start", "right", "right"],
-        hints: ["Every program needs a clear starting event.", "The signal is two tiles to the right.", "Use start, right, right in that order."],
-        reflection: "Why would “go to the signal” be difficult for a computer to follow?",
-        evidence: "I can turn a short route into exact commands.",
-      },
-      {
-        id: "route-2",
-        title: "Order changes the result",
-        minutes: 18,
-        mode: "blocks",
-        objective: "Predict how changing the order of commands changes an outcome.",
-        notes: [
-          "A sequence is the order in which commands run.",
-          "The same commands can produce a different route when their order changes.",
-          "Read a block program from the event at the top to the final block at the bottom.",
-        ],
-        exampleTitle: "Same blocks, different destination",
-        exampleCode: "move right\nmove up\nmove right",
-        exampleExplanation: "Moving up in the middle avoids the barrier. Moving up last would place the player somewhere else.",
-        question: {
-          prompt: "The player must go right, up, then right. Which sequence works?",
-          options: ["right, right, up", "up, right, right", "right, up, right"],
-          answer: 2,
-          explanation: "The commands must match the route in the same order.",
-        },
-        task: "Reach the second tile without crossing the barrier: right, up, right.",
-        starterBlocks: ["start"],
-        availableBlocks: ["right", "left", "up", "down"],
-        solutionBlocks: ["start", "right", "up", "right"],
-        hints: ["Trace the route one tile at a time.", "The middle move goes upward.", "Start, right, up, right is the complete sequence."],
-        reflection: "What changed when you moved one block to a different position?",
-        evidence: "I can order commands to match a planned route.",
-      },
-      {
-        id: "route-3",
-        title: "Test a prediction",
-        minutes: 20,
-        mode: "blocks",
-        objective: "Predict a result, run the program and compare the actual result.",
-        notes: [
-          "Prediction means deciding what you expect before pressing Run.",
-          "Testing compares the expected result with what actually happened.",
-          "A wrong prediction is useful because it tells you what to inspect next.",
-        ],
-        exampleTitle: "Expected and actual",
-        exampleCode: "Prediction: finish on tile B4\nActual: finish on tile B3\nDifference: one move up is missing",
-        exampleExplanation: "A clear comparison points to the smallest useful change.",
-        question: {
-          prompt: "What should you do before changing code that did not work?",
-          options: ["Delete everything", "Describe expected and actual results", "Add several random blocks"],
-          answer: 1,
-          explanation: "Expected and actual results help you find the exact difference.",
-        },
-        task: "Complete the planned route, then run it and check the final tile.",
-        starterBlocks: ["start", "right", "up"],
-        availableBlocks: ["right", "left", "up", "down"],
-        solutionBlocks: ["start", "right", "up", "right", "down"],
-        hints: ["The final signal is one tile below the current route.", "Add only one block, then test.", "Place down after the final right block."],
-        reflection: "Write one sentence comparing your prediction with the result.",
-        evidence: "I can predict, run and compare a program.",
-      },
-      {
-        id: "route-4",
-        title: "Checkpoint: the first signal",
-        minutes: 25,
-        mode: "blocks",
-        objective: "Plan and build a complete short route without copying a finished answer.",
-        notes: [
-          "Plan the tiles first, then turn each tile change into a command.",
-          "Run the smallest working version before adding extra movement.",
-          "Your explanation is part of the work. It shows that the route was understood, not guessed.",
-        ],
-        exampleTitle: "A compact route plan",
-        exampleCode: "Start (1,4) → right → up → right → down → signal (3,4)",
-        exampleExplanation: "Coordinates and arrows give a plan that can be checked before coding.",
-        question: {
-          prompt: "Which is the best first step for a new route?",
-          options: ["Plan the tiles", "Add every block", "Change the colours"],
-          answer: 0,
-          explanation: "A short plan makes the coding and checking easier.",
-        },
-        task: "Build the full route to signal one. Save it as Project Checkpoint 1.",
-        starterBlocks: ["start"],
-        availableBlocks: ["right", "left", "up", "down"],
-        solutionBlocks: ["start", "right", "up", "right", "down"],
-        hints: ["Draw the route with arrows first.", "There are four movement blocks.", "The route is right, up, right, down."],
-        reflection: "How did your plan help you use fewer guesses?",
-        evidence: "I can plan, build and explain a complete sequence.",
-      },
+export const stages: Stage[] = [
+  makeStage({
+    id: "html-foundations", number: 1, title: "Write your first HTML", description: "Use tags to turn plain text into a structured webpage.", outcome: "A page with a title, introduction and organised list.",
+    challenges: [
+      { id: "elements", title: "Create an HTML element", minutes: 8, objective: "Write an opening tag, content and a closing tag.", language: "HTML", explanation: ["HTML gives a webpage structure. Most elements have an opening tag, content and a closing tag.", "The tag name tells the browser what the content means. h1 means the main heading."], keyTerms: ["element", "opening tag", "closing tag"], exampleTitle: "A paragraph element", exampleCode: "<p>I am learning to build websites.</p>", exampleExplanation: "The first p tag starts the paragraph and the second one closes it.", task: "Replace the plain text with an h1 element that says My First Website.", starterFiles: files("My First Website"), editableFiles: ["html"], tests: [t("html", "Your page has the required h1", "<h1[^>]*>\\s*My First Website\\s*</h1>")], hints: ["A main heading begins with <h1>.", "Put the words between the two tags.", "Use <h1>My First Website</h1>."], question: q("What marks the main heading?", "The h1 element", "The file name", "The space bar", "h1 represents the main heading." ) },
+      { id: "text", title: "Add headings and paragraphs", minutes: 10, objective: "Use headings for titles and paragraphs for normal text.", language: "HTML", explanation: ["Headings organise the page. h1 names the page and h2 introduces an important section.", "Paragraphs hold normal sentences. Choosing the right element gives content meaning."], keyTerms: ["heading", "paragraph", "structure"], exampleTitle: "Two levels of content", exampleCode: "<h1>Photography</h1>\n<h2>First tip</h2>\n<p>Use light to make the subject clear.</p>", exampleExplanation: "Each element has a different job.", task: "Add an h2 saying About this page and a paragraph below it.", starterFiles: files("<h1>My First Website</h1>\n\n<!-- Add your section -->"), editableFiles: ["html"], tests: [t("html", "The page has an About this page heading", "<h2[^>]*>\\s*About this page\\s*</h2>"), t("html", "The section has a paragraph", "<p[^>]*>[^<]+</p>")], hints: ["Add the h2 before the paragraph.", "A paragraph uses p tags.", "Write <h2>About this page</h2>, then add your paragraph."], question: q("Which element is best for a normal sentence?", "p", "h1", "img", "The p element represents a paragraph.") },
+      { id: "nesting", title: "Nest related elements", minutes: 10, objective: "Put related elements inside a section correctly.", language: "HTML", explanation: ["Nesting means placing an element inside another. It groups content that belongs together.", "Close the inner element before the outer element. Indentation makes the relationship easier to see."], keyTerms: ["nesting", "parent", "child"], exampleTitle: "A section containing text", exampleCode: "<section>\n  <h2>About</h2>\n  <p>This content belongs together.</p>\n</section>", exampleExplanation: "The heading and paragraph are children of the section.", task: "Place the h2 and paragraph inside a section element.", starterFiles: files("<h2>About this page</h2>\n<p>This page shares useful ideas.</p>"), editableFiles: ["html"], tests: [t("html", "A section contains the heading and paragraph", "<section[^>]*>[\\s\\S]*<h2[^>]*>[\\s\\S]*</h2>[\\s\\S]*<p[^>]*>[\\s\\S]*</p>[\\s\\S]*</section>")], hints: ["Add <section> before the h2.", "Close the section after the paragraph.", "Indent the h2 and p inside the section."], question: q("What does nesting show?", "Which elements belong inside another", "How fast a page loads", "The browser colour", "Nesting shows parent and child relationships.") },
+      { id: "lists", title: "Build a useful list", minutes: 10, objective: "Create an unordered list with three list items.", language: "HTML", explanation: ["A list groups related items. Use ul when the order does not matter and ol when it does.", "Every item belongs inside an li element."], keyTerms: ["unordered list", "ordered list", "list item"], exampleTitle: "Three materials", exampleCode: "<ul>\n  <li>Notebook</li>\n  <li>Pencil</li>\n  <li>Ruler</li>\n</ul>", exampleExplanation: "The ul groups three li elements.", task: "Complete the list by adding two more li elements.", starterFiles: files("<h2>What you will find</h2>\n<ul>\n  <li>Clear explanations</li>\n</ul>"), editableFiles: ["html"], tests: [t("html", "The list contains at least three items", "<ul[^>]*>[\\s\\S]*<li[^>]*>[\\s\\S]*</li>[\\s\\S]*<li[^>]*>[\\s\\S]*</li>[\\s\\S]*<li[^>]*>[\\s\\S]*</li>[\\s\\S]*</ul>")], hints: ["Add new li elements before </ul>.", "Every item needs opening and closing li tags.", "Follow the example using your own words."], question: q("Where do li elements belong?", "Inside a ul or ol", "Inside an img", "Outside the page", "List items belong inside a list.") },
     ],
-    checkpoint: {
-      title: "Checkpoint 1: First signal route",
-      checks: ["The program starts correctly", "The route reaches signal one", "The commands are in a sensible order", "The learner explains one decision"],
-    },
-  },
-  {
-    id: "controls",
-    number: 2,
-    title: "Give the player control",
-    focus: "Events, input and responsive movement",
-    projectStep: "Let another person move the player with four arrow keys.",
-    mentor: "cheetah",
-    lessons: [
-      {
-        id: "controls-1",
-        title: "Events make code respond",
-        minutes: 18,
-        mode: "blocks",
-        objective: "Connect an event with the code that should run after it.",
-        notes: ["An event is something the program notices, such as a key press or click.", "An event handler contains the commands that run after that event.", "Different events can trigger different actions."],
-        exampleTitle: "Right arrow event",
-        exampleCode: "when right arrow pressed\nmove right 1 step",
-        exampleExplanation: "Movement waits until the player presses the matching key.",
-        question: { prompt: "What starts this movement?", options: ["A timer", "The right arrow key", "The score"], answer: 1, explanation: "The event listens for the right arrow key." },
-        task: "Connect the right arrow event to right movement.",
-        starterBlocks: [], availableBlocks: ["keyRight", "right", "keyLeft", "left"], solutionBlocks: ["keyRight", "right"],
-        hints: ["Choose an event first.", "Match the arrow direction with the movement direction.", "Use keyRight followed by right."],
-        reflection: "What would happen if the movement block had no event?", evidence: "I can connect an event to an action.",
-      },
-      {
-        id: "controls-2",
-        title: "Four directions, four decisions",
-        minutes: 20,
-        mode: "blocks",
-        objective: "Create consistent controls for up, down, left and right.",
-        notes: ["Controls should behave in a way the player can predict.", "Each arrow event needs the matching movement.", "Testing every direction catches reversed or missing controls."],
-        exampleTitle: "A complete control pair",
-        exampleCode: "when left arrow pressed\nmove left 1 step",
-        exampleExplanation: "The input and output point in the same direction.",
-        question: { prompt: "Which pair is incorrect?", options: ["up key → move up", "left key → move right", "down key → move down"], answer: 1, explanation: "A left key should not move the player right." },
-        task: "Add all four key events and their matching movements.",
-        starterBlocks: ["keyRight", "right"], availableBlocks: ["keyLeft", "left", "keyUp", "up", "keyDown", "down"],
-        solutionBlocks: ["keyRight", "right", "keyLeft", "left", "keyUp", "up", "keyDown", "down"],
-        hints: ["Build one event and movement pair at a time.", "You need eight blocks in total.", "Each key block is immediately followed by the same direction movement."],
-        reflection: "Which control did you test first, and why?", evidence: "I can build and test a four-direction control system.",
-      },
-      {
-        id: "controls-3",
-        title: "Keep the player on the map",
-        minutes: 20,
-        mode: "blocks",
-        objective: "Recognise that controls need rules and boundaries.",
-        notes: ["A boundary stops the player leaving the game area.", "Good feedback makes a blocked move understandable.", "Edge cases happen at the limits, such as the top row or far-left tile."],
-        exampleTitle: "A boundary check",
-        exampleCode: "if next tile is inside map\n  move player\nelse\n  stay on current tile",
-        exampleExplanation: "The program checks the result before allowing the move.",
-        question: { prompt: "Which test checks an edge case?", options: ["Move in the middle", "Move at the left edge", "Read the title"], answer: 1, explanation: "The left edge tests whether the boundary works." },
-        task: "Test all four edges, then keep the correct four-direction controls.",
-        starterBlocks: ["keyRight", "right", "keyLeft", "left", "keyUp", "up"], availableBlocks: ["keyDown", "down"],
-        solutionBlocks: ["keyRight", "right", "keyLeft", "left", "keyUp", "up", "keyDown", "down"],
-        hints: ["Try moving beyond every outside edge.", "A good control should stop at the map border.", "Complete the missing down control pair."],
-        reflection: "Name one edge case you tested.", evidence: "I can test controls at the boundaries of a map.",
-      },
-      {
-        id: "controls-4",
-        title: "Checkpoint: playable movement",
-        minutes: 25,
-        mode: "blocks",
-        objective: "Make the project controllable by another person.",
-        notes: ["A playable control system needs clear instructions.", "A silent test shows whether another player can understand the controls without help.", "Fix one problem at a time, then retest."],
-        exampleTitle: "A short control instruction",
-        exampleCode: "Use the arrow keys to collect three signals. Avoid the dark tiles.",
-        exampleExplanation: "The instruction tells the player the controls, goal and main danger.",
-        question: { prompt: "What makes a playtest more useful?", options: ["Tell the player every answer", "Watch where the player hesitates", "Only test your favourite key"], answer: 1, explanation: "Hesitation shows where instructions or controls may be unclear." },
-        task: "Finish four-direction movement and ask someone to try it without help.",
-        starterBlocks: ["keyRight", "right", "keyLeft", "left"], availableBlocks: ["keyUp", "up", "keyDown", "down"], solutionBlocks: ["keyRight", "right", "keyLeft", "left", "keyUp", "up", "keyDown", "down"],
-        hints: ["Finish the controls before the playtest.", "Do not explain while the tester plays.", "Watch one thing they find unclear, then improve it."],
-        reflection: "What did your tester do that you did not expect?", evidence: "I can make and test controls that another person can use.",
-      },
+    project: { id: "project", title: "Build the page introduction", minutes: 18, objective: "Create the first working version of your website.", language: "Web project", explanation: ["This is your project file. Later modules will improve the same website."], keyTerms: ["page structure", "content"], exampleTitle: "Required structure", exampleCode: "<main>\n  <h1>Page title</h1>\n  <p>Introduction</p>\n  <h2>Inside this site</h2>\n  <ul>...</ul>\n</main>", exampleExplanation: "The main element contains the important page content.", task: "Create a title, introduction and three-item list for your chosen website.", starterFiles: files("<main>\n  <h1>{{TITLE}}</h1>\n  <p>{{INTRO}}</p>\n  <!-- Add an h2 and a three-item list -->\n</main>"), editableFiles: ["html"], tests: [t("html", "The project has one main heading", "<h1[^>]*>[^<]+</h1>"), t("html", "The project has an introduction", "<p[^>]*>[^<]+</p>"), t("html", "The project has a section heading", "<h2[^>]*>[^<]+</h2>"), t("html", "The project has a three-item list", "<ul[^>]*>[\\s\\S]*<li[^>]*>[\\s\\S]*</li>[\\s\\S]*<li[^>]*>[\\s\\S]*</li>[\\s\\S]*<li[^>]*>[\\s\\S]*</li>[\\s\\S]*</ul>")], hints: ["Build one requirement at a time.", "Keep visible text inside HTML elements.", "Compare the structure with the example."], question: q("What does this first version prove?", "The learner can structure real content", "The page has animation", "The page uses a database", "The checkpoint proves basic HTML structure."), reflection: "Which element organised your page most clearly?" },
+    projectQuestion: q("Which element should contain the main page content?", "main", "title", "script", "main holds the primary content."),
+  }),
+  makeStage({
+    id: "html-content", number: 2, title: "Connect and describe content", description: "Add links, images and meaningful page regions.", outcome: "A complete HTML page that works before styling.",
+    challenges: [
+      { id: "links", title: "Create a working link", minutes: 9, objective: "Use an anchor and href attribute.", language: "HTML", explanation: ["The a element creates a link. Its href attribute stores the destination.", "Good link text explains where the link goes."], keyTerms: ["anchor", "attribute", "href"], exampleTitle: "A descriptive link", exampleCode: "<a href=\"https://example.com\">Read the guide</a>", exampleExplanation: "href contains the address and the visible words describe it.", task: "Turn Read more into a link to https://example.com.", starterFiles: files("<p>Find another useful explanation.</p>\n<p>Read more</p>"), editableFiles: ["html"], tests: [t("html", "Read more links to the correct address", "<a[^>]+href=[\"']https://example\\.com/?[\"'][^>]*>\\s*Read more\\s*</a>")], hints: ["Replace the second p with an a element.", "Add href inside the opening tag.", "Use <a href=\"https://example.com\">Read more</a>."], question: q("Which attribute holds a link destination?", "href", "alt", "class", "href tells the link where to go.") },
+      { id: "images", title: "Describe an image", minutes: 10, objective: "Use src and alt attributes correctly.", language: "HTML", explanation: ["img displays an image from its src address.", "Alternative text communicates the image's meaning when it cannot be seen or loaded."], keyTerms: ["image", "src", "alternative text"], exampleTitle: "Useful alternative text", exampleCode: "<img src=\"camera.jpg\" alt=\"A camera beside a notebook\">", exampleExplanation: "The description communicates the important information.", task: "Add a useful alt description to the image.", starterFiles: files("<img src=\"https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800\">"), editableFiles: ["html"], tests: [t("html", "The image has a useful alt description", "<img[^>]+alt=[\"'][^\"']{5,}[\"'][^>]*>")], hints: ["Add alt inside the img element.", "Describe what matters in the picture.", "For example: alt=\"A laptop open on a desk\"."], question: q("Why does an image need alt text?", "To communicate its meaning when it cannot be seen", "To download it twice", "To make it a heading", "Alternative text makes image information available.") },
+      { id: "semantics", title: "Use meaningful page regions", minutes: 11, objective: "Structure a page with header, main and footer.", language: "HTML", explanation: ["Semantic elements name the job of each page region.", "A header introduces the page, main contains central content and footer ends the page."], keyTerms: ["semantic HTML", "header", "main", "footer"], exampleTitle: "A meaningful outline", exampleCode: "<header><h1>Guide</h1></header>\n<main><p>Main information.</p></main>\n<footer><p>Practice project.</p></footer>", exampleExplanation: "The tag names explain the purpose of each region.", task: "Replace the three div elements with header, main and footer.", starterFiles: files("<div><h1>My Guide</h1></div>\n<div><p>The main information.</p></div>\n<div><p>Made for practice.</p></div>"), editableFiles: ["html"], tests: [t("html", "The page has a header", "<header[\\s>]"), t("html", "The page has a main region", "<main[\\s>]"), t("html", "The page has a footer", "<footer[\\s>]")], hints: ["Change only the tag names first.", "Match every opening and closing tag.", "Use header, then main, then footer."], question: q("Which element contains the central information?", "main", "footer", "style", "main contains the primary content.") },
+      { id: "forms", title: "Label an input", minutes: 12, objective: "Connect a label and input using for and id.", language: "HTML", explanation: ["Forms collect information. Inputs need labels that explain what to enter.", "The label for value must match the input id."], keyTerms: ["form", "label", "input", "id"], exampleTitle: "A connected label", exampleCode: "<label for=\"topic\">Favourite topic</label>\n<input id=\"topic\" type=\"text\">", exampleExplanation: "Both elements use topic, so the browser connects them.", task: "Connect the email label and set the input type to email.", starterFiles: files("<label>Email address</label>\n<input>"), editableFiles: ["html"], tests: [t("html", "The label points to email", "<label[^>]+for=[\"']email[\"'][^>]*>"), t("html", "The input has matching id and email type", "<input[^>]+(?:id=[\"']email[\"'][^>]+type=[\"']email[\"']|type=[\"']email[\"'][^>]+id=[\"']email[\"'])[^>]*>")], hints: ["Add for=\"email\" to the label.", "Add id=\"email\" to the input.", "The input also needs type=\"email\"."], question: q("How do you connect a label and input?", "Match label for with input id", "Give them the same colour", "Put both in a paragraph", "Matching values create the connection.") },
     ],
-    checkpoint: { title: "Checkpoint 2: Playable controls", checks: ["All four arrow keys work", "Movement stays inside the map", "Instructions name the controls", "One playtest observation is recorded"] },
-  },
-  {
-    id: "loops",
-    number: 3,
-    title: "Use repetition well",
-    focus: "Counted loops, continuous loops and efficient code",
-    projectStep: "Animate the signals and shorten repeated movement code.",
-    mentor: "butterfly",
-    lessons: [
-      {
-        id: "loops-1", title: "Spot repeated work", minutes: 18, mode: "blocks", objective: "Identify commands that can be replaced by a loop.",
-        notes: ["A loop repeats a command or group of commands.", "Counted loops repeat a known number of times.", "Loops make repeated code shorter and easier to change."],
-        exampleTitle: "Three moves, one loop", exampleCode: "repeat 3 times\n  move right 1 step", exampleExplanation: "The movement command runs three times without being copied three times.",
-        question: { prompt: "Which code is most efficient for ten identical moves?", options: ["Ten separate move blocks", "A repeat 10 loop", "A score variable"], answer: 1, explanation: "A counted loop states the repetition clearly and compactly." },
-        task: "Replace three right blocks with one repeat block.", starterBlocks: ["start"], availableBlocks: ["right", "repeat3"], solutionBlocks: ["start", "repeat3"],
-        hints: ["Look for the action that repeats.", "The repeat block already includes three right moves.", "Use start, then repeat3."], reflection: "What becomes easier when repeated code is shorter?", evidence: "I can replace repeated commands with a counted loop.",
-      },
-      {
-        id: "loops-2", title: "Repeat a pattern", minutes: 20, mode: "blocks", objective: "Use a loop to create a predictable visual pattern.",
-        notes: ["A pattern repeats a recognisable set of actions.", "The loop body is the part that repeats.", "Changing one value can change every repeat."],
-        exampleTitle: "Signal pulse", exampleCode: "repeat 3 times\n  make signal bright\n  make signal dim", exampleExplanation: "Two actions form one pulse, and the loop repeats that pulse three times.",
-        question: { prompt: "What is the loop body?", options: ["The actions inside the repeat", "The game title", "The final score"], answer: 0, explanation: "The loop body contains the commands that repeat." },
-        task: "Create a three-step patrol using a repeat block.", starterBlocks: ["start"], availableBlocks: ["right", "repeat3", "left"], solutionBlocks: ["start", "repeat3", "left"],
-        hints: ["Use repeat for the repeated right movement.", "Add one left move after the loop.", "The complete order is start, repeat3, left."], reflection: "Which command is inside the repeated part?", evidence: "I can identify and build a repeated pattern.",
-      },
-      {
-        id: "loops-3", title: "Repeat while the game runs", minutes: 20, mode: "blocks", objective: "Distinguish a continuous loop from a counted loop.",
-        notes: ["A continuous loop keeps running while the program is active.", "Animation needs repeated small updates.", "A stop, pause or game-over state must be able to end the loop."],
-        exampleTitle: "Continuous animation", exampleCode: "repeat while playing\n  update animation\n  check collisions", exampleExplanation: "The game keeps updating until playing becomes false.",
-        question: { prompt: "When should a continuous game loop stop?", options: ["Never", "When the game is paused or finished", "After every key press"], answer: 1, explanation: "The program needs a clear state that stops repeated updates." },
-        task: "Add the continuous animation loop after the game starts.", starterBlocks: ["start"], availableBlocks: ["repeat3", "repeatForever", "right"], solutionBlocks: ["start", "repeatForever"],
-        hints: ["This animation does not have a fixed number of repeats.", "Choose the block that runs while playing.", "Use start, then repeatForever."], reflection: "Why is a stop condition important in a continuous loop?", evidence: "I can choose between counted and continuous loops.",
-      },
-      {
-        id: "loops-4", title: "Checkpoint: an animated map", minutes: 25, mode: "blocks", objective: "Use two kinds of loops in the growing project.",
-        notes: ["Use a counted loop for a fixed route or repeated effect.", "Use a continuous loop for ongoing animation and checking.", "Test that the project can still pause, win and restart."],
-        exampleTitle: "Two loops, two jobs", exampleCode: "repeat 3 times → patrol route\nrepeat while playing → animate signals", exampleExplanation: "Each loop matches a different kind of repetition.",
-        question: { prompt: "Which loop suits a signal that pulses until the game ends?", options: ["Repeat 3", "Repeat while playing", "No loop"], answer: 1, explanation: "The animation should continue for the whole playing state." },
-        task: "Keep the shorter patrol route and add continuous animation.", starterBlocks: ["start", "repeat3"], availableBlocks: ["repeatForever", "right", "left"], solutionBlocks: ["start", "repeat3", "repeatForever"],
-        hints: ["Your route already uses a counted loop.", "Add the ongoing animation after it.", "Use start, repeat3, repeatForever."], reflection: "Explain why your two loops do different jobs.", evidence: "I can use loops to improve both code and animation.",
-      },
+    project: { id: "project", title: "Complete the HTML structure", minutes: 20, objective: "Turn the first project into a complete semantic page.", language: "Web project", explanation: ["Keep the structure you already built. Add a useful link, described image and labelled input."], keyTerms: ["semantic structure", "accessible content"], exampleTitle: "A complete outline", exampleCode: "<header>...</header>\n<main><section>...</section></main>\n<footer>...</footer>", exampleExplanation: "A clear outline makes later styling easier.", task: "Add semantic regions, one link, one described image and a labelled email input.", starterFiles: files(shared.htmlProject), editableFiles: ["html"], tests: [t("html", "The project uses header, main and footer", "<header[\\s>][\\s\\S]*<main[\\s>][\\s\\S]*<footer[\\s>]"), t("html", "The project has a working link", "<a[^>]+href=[\"'][^\"']+[\"'][^>]*>"), t("html", "The image has alternative text", "<img[^>]+alt=[\"'][^\"']{5,}[\"'][^>]*>"), t("html", "A label and input are connected", "<label[^>]+for=[\"']([^\"']+)[\"'][^>]*>[\\s\\S]*<input[^>]+id=[\"'][^\"']+[\"']")], hints: ["Start with header, main and footer.", "Add one feature and run before the next.", "Check that label and input share the same word."], question: q("Why finish HTML before design?", "Clear structure gives CSS meaningful content to style", "CSS deletes HTML", "Design works without text", "Strong HTML supports styling and accessibility."), reflection: "Which change made the page easier to understand?" },
+    projectQuestion: q("Which feature explains an unseen image?", "Alternative text", "A larger margin", "A loop", "Alternative text communicates the image's meaning."),
+  }),
+  makeStage({
+    id: "css-foundations", number: 3, title: "Style with CSS", description: "Use selectors and declarations to control presentation.", outcome: "A consistent colour, type and component style.",
+    challenges: [
+      { id: "rules", title: "Write a CSS rule", minutes: 9, objective: "Use a selector, property and value.", language: "CSS", explanation: ["A CSS rule begins with a selector that chooses HTML.", "Declarations sit inside braces and contain a property and value."], keyTerms: ["selector", "property", "value"], exampleTitle: "Style every paragraph", exampleCode: "p {\n  color: #2d1948;\n}", exampleExplanation: "p selects paragraphs and color changes their text.", task: "Change every h1 to #4b1f63.", starterFiles: files("<h1>Style this heading</h1>", "/* Write CSS here */"), editableFiles: ["css"], tests: [t("css", "The h1 colour is #4b1f63", "h1\\s*\\{[\\s\\S]*color\\s*:\\s*#4b1f63")], hints: ["Start with h1.", "Put the declaration inside braces.", "Use color: #4b1f63;."], question: q("What chooses the HTML element in CSS?", "The selector", "The value", "The semicolon", "The selector chooses the elements to style.") },
+      { id: "classes", title: "Reuse a class", minutes: 10, objective: "Style selected elements with a class.", language: "CSS", explanation: ["A class lets several elements share one style.", "HTML uses class and CSS selects it with a full stop."], keyTerms: ["class", "class selector", "reuse"], exampleTitle: "A highlighted note", exampleCode: "<p class=\"note\">Remember this.</p>\n\n.note { font-weight: bold; }", exampleExplanation: "The class name connects the HTML and CSS.", task: "Create a .featured class for the second article.", starterFiles: files("<article>First</article>\n<article class=\"featured\">Second</article>", "/* Style only .featured */"), editableFiles: ["css", "html"], tests: [t("html", "An element uses the featured class", "class=[\"'][^\"']*featured"), t("css", "CSS selects the featured class", "\\.featured\\s*\\{")], hints: ["The HTML already has the class.", "Select it with .featured.", "Add a declaration inside the rule."], question: q("How does CSS select class card?", ".card", "#card", "<card>", "A full stop begins a class selector.") },
+      { id: "type", title: "Make text readable", minutes: 11, objective: "Set font size, line height and width.", language: "CSS", explanation: ["Readable text needs enough size and space between lines.", "max-width prevents tiring lines that stretch too far."], keyTerms: ["font size", "line height", "max width"], exampleTitle: "Readable paragraph settings", exampleCode: "p { font-size: 1rem; line-height: 1.6; max-width: 65ch; }", exampleExplanation: "The ch unit measures approximate character width.", task: "Set paragraphs to 1rem, line-height 1.6 and max-width 60ch.", starterFiles: files("<p>Good typography makes content easier to understand.</p>", "p {\n  /* Add three declarations */\n}"), editableFiles: ["css"], tests: [t("css", "Font size is 1rem", "font-size\\s*:\\s*1rem"), t("css", "Line height is 1.6", "line-height\\s*:\\s*1\\.6"), t("css", "Maximum width is 60ch", "max-width\\s*:\\s*60ch")], hints: ["Write one declaration per line.", "Use the exact property names.", "Place a colon between each property and value."], question: q("What controls space between text lines?", "line-height", "border", "display", "line-height controls vertical spacing in text.") },
+      { id: "cards", title: "Style a content card", minutes: 12, objective: "Combine background, border and corners.", language: "CSS", explanation: ["A card groups related information without changing its meaning.", "Background, border and border-radius define that group."], keyTerms: ["background", "border", "border radius"], exampleTitle: "A simple card", exampleCode: ".card { background: #fffdf8; border: 2px solid #18213f; border-radius: 12px; }", exampleExplanation: "Three properties create a clear card surface.", task: "Give .card the three styles shown in the example.", starterFiles: files("<article class=\"card\">Useful information</article>", ".card {\n  /* Add the styles */\n}"), editableFiles: ["css"], tests: [t("css", "The card has an off-white background", "background(?:-color)?\\s*:\\s*#fffdf8"), t("css", "The card has a 2px solid border", "border\\s*:\\s*2px\\s+solid\\s+#18213f"), t("css", "Corners use a 12px radius", "border-radius\\s*:\\s*12px")], hints: ["Put all declarations inside .card.", "Copy the values exactly.", "Check every colon and semicolon."], question: q("What rounds an element's corners?", "border-radius", "font-size", "href", "border-radius controls corner shape.") },
     ],
-    checkpoint: { title: "Checkpoint 3: Efficient animation", checks: ["A counted loop replaces repeated movement", "A continuous loop animates the game", "The project can still stop", "The learner explains each loop's job"] },
-  },
-  {
-    id: "collision",
-    number: 4,
-    title: "Collect and avoid",
-    focus: "Coordinates, collision detection and feedback",
-    projectStep: "Make signals collectable and hazards meaningful.",
-    mentor: "cheetah",
-    lessons: [
-      {
-        id: "collision-1", title: "Positions use coordinates", minutes: 18, mode: "blocks", objective: "Read x and y positions on the game grid.",
-        notes: ["The x coordinate changes from left to right.", "The y coordinate changes from top to bottom on this grid.", "Two objects touch when their occupied positions overlap."],
-        exampleTitle: "Reading a tile", exampleCode: "player = (2, 4)\nsignal = (3, 4)", exampleExplanation: "The signal is one tile to the right because only the x value changes.",
-        question: { prompt: "From (2,4), where does one move right end?", options: ["(3,4)", "(2,3)", "(1,4)"], answer: 0, explanation: "Moving right increases x by one and keeps y the same." },
-        task: "Move from (1,4) to the item at (3,4).", starterBlocks: ["start"], availableBlocks: ["right", "left", "up", "down"], solutionBlocks: ["start", "right", "right"],
-        hints: ["Compare the two x values.", "The y value does not change.", "Use two right movements."], reflection: "Which coordinate changed, and which stayed the same?", evidence: "I can use coordinates to plan a move.",
-      },
-      {
-        id: "collision-2", title: "Detect a collected item", minutes: 20, mode: "blocks", objective: "Use a collision condition to collect an item once.",
-        notes: ["Collision detection checks whether two objects are touching.", "Collecting should change the item so it cannot be collected twice.", "Visible or sound feedback tells the player the collection worked."],
-        exampleTitle: "Collect once", exampleCode: "if player touches signal\n  hide signal\n  add one to score", exampleExplanation: "Hiding or marking the signal collected prevents repeat scoring.",
-        question: { prompt: "Why should the signal disappear after collection?", options: ["To make the map empty", "To prevent scoring it again", "To stop the player moving"], answer: 1, explanation: "A collected object should not award points more than once." },
-        task: "Add the collection check after movement.", starterBlocks: ["start", "right", "right"], availableBlocks: ["collect", "avoid", "addScore"], solutionBlocks: ["start", "right", "right", "collect"],
-        hints: ["First reach the signal.", "Then check whether the player is touching it.", "Add collect as the final block."], reflection: "What feedback tells the player an item was collected?", evidence: "I can detect and respond to a collection collision.",
-      },
-      {
-        id: "collision-3", title: "Hazards need fair feedback", minutes: 20, mode: "blocks", objective: "Create a clear response when the player touches a hazard.",
-        notes: ["A hazard changes the game when touched.", "Fair hazards are visible and give immediate feedback.", "After a hit, moving the player to a safe tile prevents repeated life loss."],
-        exampleTitle: "A fair hazard response", exampleCode: "if touching hazard\n  lose one life\n  flash the player\n  return to safe tile", exampleExplanation: "The player sees what happened and gets a clear chance to continue.",
-        question: { prompt: "Which hazard is fairest?", options: ["Invisible and instant", "Visible with clear feedback", "Impossible to avoid"], answer: 1, explanation: "A player should be able to notice, understand and avoid a hazard." },
-        task: "Add a hazard check after the item check.", starterBlocks: ["start", "collect"], availableBlocks: ["avoid", "right", "win"], solutionBlocks: ["start", "collect", "avoid"],
-        hints: ["The collect check is already present.", "Choose the block that reacts to a hazard.", "Use start, collect, avoid."], reflection: "How will a player know why a life was lost?", evidence: "I can design and test a fair hazard response.",
-      },
-      {
-        id: "collision-4", title: "Checkpoint: working game objects", minutes: 25, mode: "blocks", objective: "Combine movement, item collection and hazard detection.",
-        notes: ["Run collision checks after each movement update.", "Test item and hazard behaviour separately before testing them together.", "A checkpoint should keep the last version that worked."],
-        exampleTitle: "A useful test order", exampleCode: "1. Touch one item\n2. Touch the same item again\n3. Touch one hazard\n4. Move away and continue", exampleExplanation: "Each test checks a different rule and catches repeat effects.",
-        question: { prompt: "Which test catches repeat scoring?", options: ["Collect the same item twice", "Read the instructions", "Move on an empty tile"], answer: 0, explanation: "The second contact should not add another point." },
-        task: "Finish collect and avoid rules, then save Project Checkpoint 4.", starterBlocks: ["start"], availableBlocks: ["collect", "avoid", "right", "left"], solutionBlocks: ["start", "collect", "avoid"],
-        hints: ["Add both collision responses.", "Test each one separately.", "The compact solution is start, collect, avoid."], reflection: "Which collision test found the most useful problem?", evidence: "I can combine and test two collision rules.",
-      },
+    project: { id: "project", title: "Create the visual system", minutes: 22, objective: "Apply a consistent design to the project.", language: "Web project", explanation: ["Keep the HTML. Add reusable CSS for the page, text, links and cards."], keyTerms: ["stylesheet", "visual system", "class"], exampleTitle: "A small design system", exampleCode: "body { ... }\nh1 { ... }\n.card { ... }\na { ... }", exampleExplanation: "A few deliberate rules can style the whole page.", task: "Style the body, main heading, links and at least one card class.", starterFiles: files(shared.htmlProject, "/* Build your visual system */"), editableFiles: ["html", "css"], tests: [t("css", "The page has a background", "body\\s*\\{[\\s\\S]*background"), t("css", "The main heading has its own rule", "h1\\s*\\{"), t("css", "Links have their own rule", "a(?:[\\s:{.#]|$)[\\s\\S]*\\{"), t("css", "A card class is styled", "\\.card\\s*\\{")], hints: ["Begin with body and h1 rules.", "Use the existing .card class.", "Run after every two declarations."], question: q("Why use a class for repeated cards?", "One rule styles several elements", "It changes HTML into JavaScript", "It removes the text", "Classes make styles reusable."), reflection: "Which CSS choice improved readability most?" },
+    projectQuestion: q("What connects class=card to CSS?", "The .card selector", "The href attribute", "A loop", ".card matches the HTML class."),
+  }),
+  makeStage({
+    id: "css-layout", number: 4, title: "Build flexible layouts", description: "Control spacing and arrange content for different screens.", outcome: "A responsive page for phones and larger screens.",
+    challenges: [
+      { id: "box", title: "Use the box model", minutes: 11, objective: "Use padding and margin for different space.", language: "CSS", explanation: ["Content sits inside a box. Padding adds inner space and margin adds outer space.", "Choose the property based on where the space belongs."], keyTerms: ["box model", "padding", "margin"], exampleTitle: "Inner and outer space", exampleCode: ".card { padding: 1rem; margin-bottom: 1.5rem; }", exampleExplanation: "Padding opens the inside and margin separates the next card.", task: "Add 1rem padding and 2rem bottom margin.", starterFiles: files("<article class=\"card\">A card needs space.</article>", ".card { border: 2px solid #18213f; }"), editableFiles: ["css"], tests: [t("css", "The card has 1rem inner space", "padding\\s*:\\s*1rem"), t("css", "The card has 2rem space below", "margin-bottom\\s*:\\s*2rem")], hints: ["Both declarations go inside .card.", "Padding is inner space.", "margin-bottom is outside and below."], question: q("What adds space inside a border?", "padding", "margin", "display", "Padding creates inner space.") },
+      { id: "flex", title: "Arrange a row with Flexbox", minutes: 12, objective: "Place navigation links in a row.", language: "CSS", explanation: ["Flexbox arranges items along one main direction.", "Set display: flex on the parent and gap for consistent spacing."], keyTerms: ["Flexbox", "flex container", "gap"], exampleTitle: "A navigation row", exampleCode: "nav { display: flex; gap: 1rem; }", exampleExplanation: "The nav becomes the flex container.", task: "Make nav a flex container with a 1rem gap.", starterFiles: files("<nav><a href=\"#one\">One</a><a href=\"#two\">Two</a></nav>", "nav {\n  /* Add two declarations */\n}"), editableFiles: ["css"], tests: [t("css", "Navigation uses Flexbox", "nav\\s*\\{[\\s\\S]*display\\s*:\\s*flex"), t("css", "Navigation has a 1rem gap", "nav\\s*\\{[\\s\\S]*gap\\s*:\\s*1rem")], hints: ["The parent is nav.", "Use display: flex first.", "Add gap in the same rule."], question: q("Where does display:flex belong?", "On the parent of the items", "Inside href", "In the address bar", "The parent becomes the flex container.") },
+      { id: "grid", title: "Create a card grid", minutes: 13, objective: "Use CSS Grid for equal columns.", language: "CSS", explanation: ["Grid controls rows and columns together.", "repeat makes equal tracks without repeating the size."], keyTerms: ["CSS Grid", "column", "repeat"], exampleTitle: "Three equal columns", exampleCode: ".grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }", exampleExplanation: "1fr is one equal fraction of available space.", task: "Make .grid two equal columns with a 1rem gap.", starterFiles: files("<section class=\"grid\"><article>A</article><article>B</article></section>", ".grid {\n  /* Build the grid */\n}"), editableFiles: ["css"], tests: [t("css", "The section uses Grid", "\\.grid\\s*\\{[\\s\\S]*display\\s*:\\s*grid"), t("css", "The grid has two equal columns", "grid-template-columns\\s*:\\s*repeat\\(2\\s*,\\s*1fr\\)"), t("css", "The grid has a 1rem gap", "gap\\s*:\\s*1rem")], hints: ["Start with display:grid.", "Use repeat(2, 1fr).", "Add gap after the columns."], question: q("What does 1fr mean?", "One equal fraction of available space", "One pixel", "One form", "fr shares available grid space.") },
+      { id: "responsive", title: "Adapt to small screens", minutes: 14, objective: "Use a media query for a narrow screen.", language: "CSS", explanation: ["Responsive design lets one page work on different screens.", "A media query applies rules when its condition is true."], keyTerms: ["responsive design", "media query", "breakpoint"], exampleTitle: "One narrow column", exampleCode: "@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }", exampleExplanation: "The grid becomes one column at 600px or below.", task: "At 650px or below, change .grid to one column.", starterFiles: files("<section class=\"grid\"><article>One</article><article>Two</article></section>", ".grid { display: grid; grid-template-columns: repeat(2, 1fr); }\n\n/* Add the media query */"), editableFiles: ["css"], tests: [t("css", "A 650px media query creates one column", "@media\\s*\\(max-width\\s*:\\s*650px\\)[\\s\\S]*\\.grid\\s*\\{[\\s\\S]*grid-template-columns\\s*:\\s*1fr")], hints: ["Begin with @media (max-width: 650px).", "Add a .grid rule inside it.", "Set grid-template-columns: 1fr."], question: q("What does a media query do?", "Applies styles when a screen condition is true", "Stores a password", "Creates a heading", "Media queries adapt the layout to conditions.") },
     ],
-    checkpoint: { title: "Checkpoint 4: Collect and avoid", checks: ["Items collect only once", "Hazards have visible feedback", "The player returns to a fair position", "Both rules are tested separately"] },
-  },
-  {
-    id: "variables",
-    number: 5,
-    title: "Remember the game state",
-    focus: "Variables, values, score, lives and time",
-    projectStep: "Add a scoreboard with three values that change during play.",
-    mentor: "elephant",
-    lessons: [
-      {
-        id: "variables-1", title: "Variables are labelled memory", minutes: 18, mode: "blocks", objective: "Name and set variables for the game.",
-        notes: ["A variable stores a value the program needs to remember.", "A clear variable name describes the value inside it.", "Starting values prepare the game before play begins."],
-        exampleTitle: "Clear starting values", exampleCode: "set score to 0\nset lives to 3", exampleExplanation: "The names explain the values and both are ready before the first move.",
-        question: { prompt: "Which is the clearest variable name?", options: ["thing", "x1", "playerScore"], answer: 2, explanation: "playerScore tells us exactly what the value represents." },
-        task: "Set score to 0 and lives to 3 when the game starts.", starterBlocks: ["start"], availableBlocks: ["score0", "lives3", "addScore"], solutionBlocks: ["start", "score0", "lives3"],
-        hints: ["Starting values belong near the game start.", "You need one score block and one lives block.", "Use start, score0, lives3."], reflection: "Why is playerScore clearer than thing?", evidence: "I can name and initialise variables.",
-      },
-      {
-        id: "variables-2", title: "Change score after an action", minutes: 20, mode: "blocks", objective: "Update a variable when an item is collected.",
-        notes: ["Updating a variable replaces its old value with a new one.", "Score should change only after the correct event or collision.", "A scoreboard must display the latest stored value."],
-        exampleTitle: "Add one point", exampleCode: "score starts at 0\ncollect one item\nscore becomes 1", exampleExplanation: "The update happens once because the item can only be collected once.",
-        question: { prompt: "Score is 2. What is it after score = score + 1?", options: ["1", "2", "3"], answer: 2, explanation: "The old value 2 plus 1 gives the new value 3." },
-        task: "Add one point after a successful collection.", starterBlocks: ["start", "score0", "collect"], availableBlocks: ["addScore", "lives3", "timer30"], solutionBlocks: ["start", "score0", "collect", "addScore"],
-        hints: ["The update belongs after collection.", "Choose the block that changes score by one.", "Place addScore after collect."], reflection: "What would happen if score changed before the collection check?", evidence: "I can update a variable after a specific action.",
-      },
-      {
-        id: "variables-3", title: "Lives and time create pressure", minutes: 20, mode: "blocks", objective: "Choose suitable starting values for lives and time.",
-        notes: ["Lives count how many mistakes the player can recover from.", "A timer counts down as the game runs.", "Difficulty values should be tested and adjusted, not guessed once."],
-        exampleTitle: "A testable first balance", exampleCode: "lives = 3\ntimeLeft = 30", exampleExplanation: "These values are a starting hypothesis. A playtest decides whether they are fair.",
-        question: { prompt: "Players always run out of time near the first item. What is the best next step?", options: ["Make the timer shorter", "Test a slightly longer time", "Remove all feedback"], answer: 1, explanation: "Adjust one value and test whether the experience becomes fairer." },
-        task: "Prepare three lives and a 30-second timer.", starterBlocks: ["start", "score0"], availableBlocks: ["lives3", "timer30", "addScore"], solutionBlocks: ["start", "score0", "lives3", "timer30"],
-        hints: ["Both values are set at the start.", "Choose lives3 and timer30.", "Place both after score0."], reflection: "Which value would you adjust first after a difficult playtest?", evidence: "I can set and justify starting game values.",
-      },
-      {
-        id: "variables-4", title: "Checkpoint: the scoreboard", minutes: 25, mode: "blocks", objective: "Build and test a consistent score, lives and time system.",
-        notes: ["Every displayed value should match the stored variable.", "Reset should return all values to their starting state.", "Test the scoreboard during collection, a hazard hit and a restart."],
-        exampleTitle: "Three scoreboard tests", exampleCode: "Collect → score +1\nHazard → lives -1\nReset → score 0, lives 3, time 30", exampleExplanation: "Each test changes or restores a different part of the game state.",
-        question: { prompt: "What should Reset do?", options: ["Keep the old score", "Restore all starting values", "Add one life"], answer: 1, explanation: "Reset prepares a clean new round." },
-        task: "Complete the starting variables and add Reset.", starterBlocks: ["start", "score0", "lives3", "timer30"], availableBlocks: ["reset", "addScore", "collect"], solutionBlocks: ["start", "score0", "lives3", "timer30", "reset"],
-        hints: ["Your starting values are already present.", "Choose the control that restores them.", "Add reset as the final block."], reflection: "Name the three moments when you tested the scoreboard.", evidence: "I can create, update and reset game variables.",
-      },
+    project: { id: "project", title: "Make the project responsive", minutes: 24, objective: "Use spacing, Flexbox, Grid and a media query.", language: "Web project", explanation: ["The goal is a clear layout at wide and narrow sizes, not extra decoration."], keyTerms: ["layout", "Flexbox", "Grid", "responsive"], exampleTitle: "A layout plan", exampleCode: "nav { display:flex; }\n.cards { display:grid; }\n@media (max-width:650px) { ... }", exampleExplanation: "Each layout tool has one job.", task: "Create flexible navigation, a card grid and a one-column mobile layout.", starterFiles: files("<header><h1>{{TITLE}}</h1><nav><a href=\"#learn\">Learn</a><a href=\"#about\">About</a></nav></header>\n<main><p>{{INTRO}}</p><section class=\"cards\"><article class=\"card\">{{ITEM1}}</article><article class=\"card\">{{ITEM2}}</article><article class=\"card\">{{ITEM3}}</article></section></main>", "body { padding: 2rem; background: #f7f3ea; color: #111936; font-family: Arial, sans-serif; } .card { padding: 1rem; border: 2px solid #111936; }\n/* Add layout rules */"), editableFiles: ["html", "css"], tests: [t("css", "Navigation uses Flexbox", "nav\\s*\\{[\\s\\S]*display\\s*:\\s*flex"), t("css", "Cards use Grid", "\\.cards\\s*\\{[\\s\\S]*display\\s*:\\s*grid"), t("css", "The layout uses gap", "gap\\s*:"), t("css", "A media query creates one column", "@media[\\s\\S]*\\.cards\\s*\\{[\\s\\S]*grid-template-columns\\s*:\\s*1fr")], hints: ["Give nav and .cards separate rules.", "Use repeat for the wide grid.", "Put the one-column rule in a media query."], question: q("What should happen on a narrow screen?", "The layout should adapt and stay readable", "The page should force sideways scrolling", "The content should disappear", "Responsive layouts protect usability."), reflection: "What changed when you made the preview narrow?" },
+    projectQuestion: q("What is best for a row of navigation links?", "Flexbox", "Alternative text", "A JavaScript number", "Flexbox suits a one-dimensional row."),
+  }),
+  makeStage({
+    id: "javascript-foundations", number: 5, title: "Start programming with JavaScript", description: "Store information, calculate values and organise instructions.", outcome: "JavaScript that updates useful page information.",
+    challenges: [
+      { id: "output", title: "Run your first JavaScript", minutes: 9, objective: "Change visible text with code.", language: "JavaScript", explanation: ["JavaScript adds behaviour to a webpage.", "querySelector finds an element and textContent changes its words."], keyTerms: ["JavaScript", "statement", "textContent"], exampleTitle: "Change a message", exampleCode: "document.querySelector(\"#message\").textContent = \"JavaScript is running\";", exampleExplanation: "The statement finds #message and replaces its text.", task: "Change #status to JavaScript is running.", starterFiles: files("<p id=\"status\">Waiting for code...</p>", "", "// Write JavaScript here"), editableFiles: ["javascript"], tests: [t("javascript", "JavaScript changes the status", "querySelector\\([\"']#status[\"']\\)[\\s\\S]*textContent\\s*=\\s*[\"']JavaScript is running[\"']")], hints: ["Select #status.", "Use textContent.", "Follow the example with the new id."], question: q("What does textContent change?", "The text inside an element", "The browser address", "The file name", "textContent reads or changes element text.") },
+      { id: "variables", title: "Store a changing value", minutes: 10, objective: "Create and update a variable with let.", language: "JavaScript", explanation: ["A variable gives a value a useful name. let is used when the value may change.", "The equals sign assigns the right-hand value to the name on the left."], keyTerms: ["variable", "let", "assignment"], exampleTitle: "A changing count", exampleCode: "let articleCount = 2;\narticleCount = articleCount + 1;", exampleExplanation: "The value begins at 2 and becomes 3.", task: "Create topicCount as 3, then increase it by 1.", starterFiles: files("<p>Open JavaScript.</p>", "", "// Create and update topicCount"), editableFiles: ["javascript"], tests: [t("javascript", "topicCount begins at 3", "let\\s+topicCount\\s*=\\s*3"), t("javascript", "topicCount increases by 1", "topicCount\\s*=\\s*topicCount\\s*\\+\\s*1")], hints: ["Begin with let topicCount = 3;.", "Use the name again on line two.", "Assign topicCount + 1 back to topicCount."], question: q("When is let useful?", "When a stored value may change", "When adding image alt text", "When creating a border", "let declares a value that can be reassigned.") },
+      { id: "types", title: "Use strings and numbers", minutes: 11, objective: "Distinguish text values from numbers.", language: "JavaScript", explanation: ["A string stores text inside quotes. A number is written without quotes.", "Correct types matter because numbers calculate while strings can join as text."], keyTerms: ["string", "number", "data type"], exampleTitle: "Two value types", exampleCode: "const topic = \"Robotics\";\nconst minutes = 15;", exampleExplanation: "topic is text and minutes is a number.", task: "Create a string sectionName and a number itemCount.", starterFiles: files("<p id=\"result\"></p>", "", "// Create the two values"), editableFiles: ["javascript"], tests: [t("javascript", "sectionName stores text", "(?:const|let)\\s+sectionName\\s*=\\s*[\"'][^\"']+[\"']"), t("javascript", "itemCount stores a number", "(?:const|let)\\s+itemCount\\s*=\\s*\\d+")], hints: ["Put sectionName text in quotes.", "Do not quote itemCount.", "Use const or let before each name."], question: q("Which is a number?", "12", "\"12\"", "\"twelve\"", "Numbers do not use quotation marks.") },
+      { id: "functions", title: "Organise code with a function", minutes: 13, objective: "Define and call a function.", language: "JavaScript", explanation: ["A function groups instructions that perform one job.", "Defining prepares it. Calling the function runs it."], keyTerms: ["function", "define", "call"], exampleTitle: "Show a welcome message", exampleCode: "function showWelcome() {\n  document.querySelector(\"#message\").textContent = \"Welcome\";\n}\nshowWelcome();", exampleExplanation: "The final line calls the function.", task: "Complete showTopic, then call it.", starterFiles: files("<p id=\"topic\">No topic selected</p>", "", "function showTopic() {\n  // Change #topic text\n}\n\n// Call the function"), editableFiles: ["javascript"], tests: [t("javascript", "showTopic is defined", "function\\s+showTopic\\s*\\("), t("javascript", "The function changes #topic", "querySelector\\([\"']#topic[\"']\\)[\\s\\S]*textContent\\s*="), t("javascript", "showTopic is called", "showTopic\\s*\\(\\s*\\)\\s*;?\\s*$")], hints: ["Write textContent inside the braces.", "Close the function before calling it.", "Add showTopic(); on the final line."], question: q("What runs a defined function?", "Calling it", "Naming the HTML file", "Adding a CSS class", "A function runs when it is called.") },
     ],
-    checkpoint: { title: "Checkpoint 5: Scoreboard", checks: ["Score begins at 0", "Lives begin at 3", "Time begins at 30", "Reset restores all three values"] },
-  },
-  {
-    id: "decisions",
-    number: 6,
-    title: "Make the game decide",
-    focus: "Conditions, comparisons, win and retry states",
-    projectStep: "Add clear rules for winning, losing and trying again.",
-    mentor: "fox",
-    lessons: [
-      {
-        id: "decisions-1", title: "A condition asks a true-or-false question", minutes: 18, mode: "blocks", objective: "Write a condition the program can evaluate.",
-        notes: ["A condition is a question with a true or false result.", "If runs code only when its condition is true.", "Comparisons use values such as equal to, greater than or less than."],
-        exampleTitle: "A score condition", exampleCode: "if score is 3\n  open destination", exampleExplanation: "The destination opens only after all three items have been collected.",
-        question: { prompt: "Which is a condition?", options: ["Move right", "Is score equal to 3?", "Play a sound"], answer: 1, explanation: "The score question can be evaluated as true or false." },
-        task: "Check whether score is 3 and show the win screen.", starterBlocks: ["start", "score0"], availableBlocks: ["win", "lose", "addScore"], solutionBlocks: ["start", "score0", "win"],
-        hints: ["The condition needs the score value.", "Choose the win decision.", "Use start, score0, win."], reflection: "When is the win condition false?", evidence: "I can recognise and use a true-or-false condition.",
-      },
-      {
-        id: "decisions-2", title: "Win and retry are different states", minutes: 20, mode: "blocks", objective: "Create separate outcomes for success and failure.",
-        notes: ["A game state describes what the game is doing now.", "Playing, won and retry are separate states.", "Controls should stop changing the map when the game is not in the playing state."],
-        exampleTitle: "Two ending checks", exampleCode: "if score is 3 → won\nif lives is 0 → retry", exampleExplanation: "Each comparison leads to a different end state.",
-        question: { prompt: "What should happen after the game enters won state?", options: ["Keep losing lives", "Show success and pause play", "Hide the result"], answer: 1, explanation: "A completed state needs clear feedback and should stop normal play." },
-        task: "Add both the win and retry conditions.", starterBlocks: ["start", "score0", "lives3"], availableBlocks: ["win", "lose", "reset"], solutionBlocks: ["start", "score0", "lives3", "win", "lose"],
-        hints: ["One condition checks score.", "The other condition checks lives.", "Add win, then lose after the starting variables."], reflection: "How does the player know which ending happened?", evidence: "I can build two distinct game outcomes.",
-      },
-      {
-        id: "decisions-3", title: "Test the edge values", minutes: 20, mode: "blocks", objective: "Test conditions at, below and above a boundary value.",
-        notes: ["A boundary value is where a condition changes from false to true.", "For score === 3, test 2, 3 and 4.", "Testing nearby values catches comparison mistakes such as using > instead of >=."],
-        exampleTitle: "Three useful tests", exampleCode: "score 2 → keep playing\nscore 3 → win\nscore 4 → inspect why it was possible", exampleExplanation: "The middle test checks the exact boundary and the others check nearby behaviour.",
-        question: { prompt: "Which three values best test lives === 0?", options: ["3, 3, 3", "1, 0, -1", "10, 20, 30"], answer: 1, explanation: "The values sit above, at and below the boundary." },
-        task: "Keep both ending conditions and add a reset control for another round.", starterBlocks: ["start", "win", "lose"], availableBlocks: ["reset", "right", "timer30"], solutionBlocks: ["start", "win", "lose", "reset"],
-        hints: ["A completed round needs a way to start again.", "Choose the reset control.", "Place reset after the two ending checks."], reflection: "Which boundary value did you test exactly?", evidence: "I can test a condition around its boundary.",
-      },
-      {
-        id: "decisions-4", title: "Checkpoint: a complete round", minutes: 25, mode: "blocks", objective: "Play one full round from start to win or retry.",
-        notes: ["A complete round has a start, a playing state and a clear ending.", "Winning and losing should both allow a clean restart.", "A test record should name the input, expected result and actual result."],
-        exampleTitle: "A simple test record", exampleCode: "Input: collect third item\nExpected: win screen\nActual: win screen\nResult: pass", exampleExplanation: "The record makes the evidence easy to understand later.",
-        question: { prompt: "Which test proves retry works?", options: ["Lose the final life, press retry, check starting values", "Read the score", "Move once"], answer: 0, explanation: "It reaches the retry state and checks the new round is clean." },
-        task: "Build the win, retry and reset flow, then save Project Checkpoint 6.", starterBlocks: ["start", "score0", "lives3"], availableBlocks: ["win", "lose", "reset"], solutionBlocks: ["start", "score0", "lives3", "win", "lose", "reset"],
-        hints: ["Prepare score and lives before checking them.", "Add both end states.", "Finish with reset so another round can begin."], reflection: "Describe one full test from input to result.", evidence: "I can build and test a complete game round.",
-      },
+    project: { id: "project", title: "Add useful page information", minutes: 24, objective: "Use variables and a function in the project.", language: "Web project", explanation: ["Add JavaScript without removing the HTML and CSS. Show one useful value on the page."], keyTerms: ["variable", "function", "output"], exampleTitle: "A project function", exampleCode: "const total = 3;\nfunction showTotal() { totalText.textContent = total; }\nshowTotal();", exampleExplanation: "A named value is shown through a function.", task: "Create pageTitle, itemCount and showSummary, then update #summary.", starterFiles: files("<header><h1>{{TITLE}}</h1></header><main><p>{{INTRO}}</p><p id=\"summary\">Summary loading...</p><section class=\"cards\"><article class=\"card\">{{ITEM1}}</article><article class=\"card\">{{ITEM2}}</article><article class=\"card\">{{ITEM3}}</article></section></main>", shared.cssProject, "// Add values and a function"), editableFiles: ["html", "css", "javascript"], tests: [t("javascript", "pageTitle stores text", "(?:const|let)\\s+pageTitle\\s*=\\s*[\"'][^\"']+[\"']"), t("javascript", "itemCount stores a number", "(?:const|let)\\s+itemCount\\s*=\\s*\\d+"), t("javascript", "showSummary is defined", "function\\s+showSummary\\s*\\("), t("javascript", "The function updates #summary and is called", "querySelector\\([\"']#summary[\"']\\)[\\s\\S]*textContent\\s*=[\\s\\S]*showSummary\\s*\\(")], hints: ["Create both variables before the function.", "Select #summary inside showSummary.", "Call showSummary after the function."], question: q("Why use a named function?", "The task becomes organised and reusable", "HTML stops working", "The browser hides the code", "Functions organise reusable instructions."), reflection: "What value did JavaScript place on the page?" },
+    projectQuestion: q("Which line calls showSummary?", "showSummary();", "function showSummary", "#showSummary", "A name followed by parentheses calls the function."),
+  }),
+  makeStage({
+    id: "javascript-logic", number: 6, title: "Make decisions and repeat work", description: "Use comparisons, conditions, arrays and loops.", outcome: "Code that chooses an outcome and handles several values.",
+    challenges: [
+      { id: "compare", title: "Compare values", minutes: 10, objective: "Create a boolean result.", language: "JavaScript", explanation: ["A comparison asks a question answered by true or false.", "Strict equality uses three equals signs and checks value and type."], keyTerms: ["comparison", "boolean", "strict equality"], exampleTitle: "Check a total", exampleCode: "const count = 3;\nconst complete = count === 3;", exampleExplanation: "complete becomes true.", task: "Create isReady by checking if lessonCount is exactly 4.", starterFiles: files("<p>Check the value.</p>", "", "const lessonCount = 4;\n// Create isReady"), editableFiles: ["javascript"], tests: [t("javascript", "isReady compares lessonCount with 4", "(?:const|let)\\s+isReady\\s*=\\s*lessonCount\\s*===\\s*4")], hints: ["Begin with const isReady =.", "Compare the existing variable.", "Use three equals signs."], question: q("What can a boolean hold?", "true or false", "Only sentences", "Only colours", "A boolean has two logical values.") },
+      { id: "conditions", title: "Choose with if and else", minutes: 12, objective: "Run different code based on a condition.", language: "JavaScript", explanation: ["if runs its block when a condition is true.", "else handles the other outcome."], keyTerms: ["if", "else", "condition"], exampleTitle: "Choose a message", exampleCode: "if (count > 0) { message = \"Available\"; } else { message = \"Nothing yet\"; }", exampleExplanation: "Only one message is chosen.", task: "Set message to Ready when score is 5 or higher, otherwise Keep going.", starterFiles: files("<p id=\"message\"></p>", "", "const score = 5;\nlet message = \"\";\n// Add if and else\ndocument.querySelector(\"#message\").textContent = message;"), editableFiles: ["javascript"], tests: [t("javascript", "The condition checks score", "if\\s*\\(\\s*score\\s*>=\\s*5"), t("javascript", "The true result is Ready", "message\\s*=\\s*[\"']Ready[\"']"), t("javascript", "The else result is Keep going", "else\\s*\\{[\\s\\S]*message\\s*=\\s*[\"']Keep going[\"']")], hints: ["Place if before textContent.", "Use score >= 5.", "Add else after the first block."], question: q("When does an if block run?", "When its condition is true", "Whenever CSS loads", "Only when an image fails", "if runs when its condition evaluates to true.") },
+      { id: "arrays", title: "Store a group in an array", minutes: 11, objective: "Create an array and read an item.", language: "JavaScript", explanation: ["An array stores an ordered group inside square brackets.", "Indexes start at 0, so the second item is at 1."], keyTerms: ["array", "item", "index"], exampleTitle: "Three topics", exampleCode: "const topics = [\"Design\", \"Science\", \"Music\"];\nconst first = topics[0];", exampleExplanation: "topics[0] reads the first value.", task: "Create a three-item tools array and store its second item in chosenTool.", starterFiles: files("<p>Use an array.</p>", "", "// Create tools\n// Read the second item"), editableFiles: ["javascript"], tests: [t("javascript", "tools has at least three values", "(?:const|let)\\s+tools\\s*=\\s*\\[[^\\]]+,[^\\]]+,[^\\]]+\\]"), t("javascript", "chosenTool reads index 1", "(?:const|let)\\s+chosenTool\\s*=\\s*tools\\s*\\[\\s*1\\s*\\]")], hints: ["Use square brackets.", "Separate values with commas.", "The second item is tools[1]."], question: q("What is the first array index?", "0", "1", "-1", "JavaScript arrays begin at 0.") },
+      { id: "loops", title: "Repeat work with a loop", minutes: 14, objective: "Use forEach with an array.", language: "JavaScript", explanation: ["A loop repeats instructions without copying them.", "forEach runs once for each array item."], keyTerms: ["loop", "forEach", "iteration"], exampleTitle: "Use every topic", exampleCode: "topics.forEach(function (topic) {\n  console.log(topic);\n});", exampleExplanation: "The function runs once for each topic.", task: "Use forEach to add every skill to output.", starterFiles: files("<p id=\"output\"></p>", "", "const skills = [\"HTML\", \"CSS\", \"JavaScript\"];\nlet output = \"\";\n// Add the loop\ndocument.querySelector(\"#output\").textContent = output;"), editableFiles: ["javascript"], tests: [t("javascript", "forEach processes every skill", "skills\\.forEach\\s*\\(\\s*function\\s*\\(\\s*skill\\s*\\)[\\s\\S]*output\\s*(?:\\+=|=\\s*output\\s*\\+)")], hints: ["Begin with skills.forEach.", "Name the current item skill.", "Add skill to output inside the function."], question: q("Why loop over an array?", "To repeat a job for its items", "To create an image", "To rename a browser", "Loops process repeated data efficiently.") },
     ],
-    checkpoint: { title: "Checkpoint 6: Complete round", checks: ["Three collected items trigger win", "Zero lives triggers retry", "Normal controls pause after an ending", "Retry starts with clean values"] },
-  },
-  {
-    id: "levels",
-    number: 7,
-    title: "Build a second level",
-    focus: "Functions, decomposition and reusable behaviour",
-    projectStep: "Add a second map without copying every instruction.",
-    mentor: "elephant",
-    lessons: [
-      {
-        id: "levels-1", title: "Break a large job into smaller jobs", minutes: 18, mode: "blocks", objective: "Decompose the game into named parts.",
-        notes: ["Decomposition means breaking a large problem into smaller parts.", "A function is a named set of instructions for one job.", "Good function names describe actions, such as resetGame or loadLevel."],
-        exampleTitle: "Three jobs", exampleCode: "startGame()\nmovePlayer()\ncheckCollisions()", exampleExplanation: "Each function has one clear responsibility.",
-        question: { prompt: "Which is the clearest function name?", options: ["doThing", "function1", "loadLevel"], answer: 2, explanation: "loadLevel states the job the function performs." },
-        task: "Use the level block to separate map loading from the rest of the game.", starterBlocks: ["start"], availableBlocks: ["level2", "right", "reset"], solutionBlocks: ["start", "level2"],
-        hints: ["The new job is loading a map.", "Choose the level block.", "Use start, then level2."], reflection: "Name one other job that deserves its own function.", evidence: "I can split a game into named jobs.",
-      },
-      {
-        id: "levels-2", title: "Reuse behaviour", minutes: 20, mode: "blocks", objective: "Reuse the same controls and rules on a new map.",
-        notes: ["Reusable code works in more than one place.", "Controls, collection and hazard rules should not be copied for every level.", "Data such as object positions can change while the rules stay the same."],
-        exampleTitle: "Rules stay, map changes", exampleCode: "Level 1 data: three item positions\nLevel 2 data: three different positions\nShared rule: collect when touching", exampleExplanation: "The level data changes, but the collection function is reused.",
-        question: { prompt: "What should change for level two?", options: ["Every control rule", "Map data and difficulty", "The meaning of score"], answer: 1, explanation: "A new level can change layout and difficulty while keeping familiar rules." },
-        task: "Load level two while keeping collect and avoid rules.", starterBlocks: ["start", "collect", "avoid"], availableBlocks: ["level2", "right", "repeat3"], solutionBlocks: ["start", "collect", "avoid", "level2"],
-        hints: ["Do not remove the shared collision rules.", "Add the new level after them.", "Use start, collect, avoid, level2."], reflection: "Which rules stayed the same in both levels?", evidence: "I can reuse behaviour with different level data.",
-      },
-      {
-        id: "levels-3", title: "Increase difficulty one step at a time", minutes: 20, mode: "blocks", objective: "Adjust one game value after a playtest.",
-        notes: ["Difficulty can change speed, space, time or number of hazards.", "Change one factor at a time so the effect is clear.", "A fair second level feels harder but still understandable."],
-        exampleTitle: "One controlled change", exampleCode: "Before: 30 seconds\nChange: 25 seconds\nTest: Can two players still finish?", exampleExplanation: "Only the timer changed, so its effect can be observed.",
-        question: { prompt: "Why change one difficulty value at a time?", options: ["To make the code longer", "To know which change affected play", "To avoid testing"], answer: 1, explanation: "One change makes cause and effect easier to identify." },
-        task: "Keep the level flow and add a shorter repeated route for level two.", starterBlocks: ["start", "level2"], availableBlocks: ["repeat3", "right", "left"], solutionBlocks: ["start", "level2", "repeat3"],
-        hints: ["Add one challenge after loading level two.", "Use the counted repeat.", "The solution is start, level2, repeat3."], reflection: "What single difficulty value would you test next?", evidence: "I can adjust and test one difficulty factor.",
-      },
-      {
-        id: "levels-4", title: "Checkpoint: two connected levels", minutes: 28, mode: "blocks", objective: "Finish a two-level version of the mission game.",
-        notes: ["Level two should begin only after level one is complete.", "Show the new level number and restore the player to a safe start tile.", "Run the whole path from level one start to level two finish."],
-        exampleTitle: "A level transition", exampleCode: "if score is 3\n  show level complete\n  loadLevel(2)\n  reset player position", exampleExplanation: "The transition gives feedback, changes data and prepares the player safely.",
-        question: { prompt: "What must happen when a new level loads?", options: ["Keep the player inside a hazard", "Prepare the new map and safe start", "Erase all controls"], answer: 1, explanation: "A level needs its map data and a clear, fair starting state." },
-        task: "Connect win, level two and reset behaviour, then save Project Checkpoint 7.", starterBlocks: ["start", "win"], availableBlocks: ["level2", "reset", "lose"], solutionBlocks: ["start", "win", "level2", "reset"],
-        hints: ["The win check comes before the transition.", "Load the new level next.", "Reset the player after the map changes."], reflection: "What did you reuse instead of copying?", evidence: "I can connect two levels using reusable behaviour.",
-      },
+    project: { id: "project", title: "Generate content from data", minutes: 25, objective: "Use an array, condition and loop together.", language: "Web project", explanation: ["Replace repeated hand-written output with organised data and code."], keyTerms: ["data", "condition", "loop"], exampleTitle: "Build a list from data", exampleCode: "topics.forEach(function (topic) { list.innerHTML += `<li>${topic}</li>`; });", exampleExplanation: "The loop creates one li for each value.", task: "Create topics, loop through them and add each item to #topic-list. Show a message when topics exist.", starterFiles: files("<header><h1>{{TITLE}}</h1></header><main><p id=\"message\"></p><ul id=\"topic-list\"></ul></main>", shared.cssProject, "const topics = [\"{{ITEM1}}\", \"{{ITEM2}}\", \"{{ITEM3}}\"];\nconst list = document.querySelector(\"#topic-list\");\n// Add the condition and loop"), editableFiles: ["html", "css", "javascript"], tests: [t("javascript", "The project stores three topics", "const\\s+topics\\s*=\\s*\\[[^\\]]+,[^\\]]+,[^\\]]+\\]"), t("javascript", "A condition checks topics", "if\\s*\\([^)]*topics"), t("javascript", "A loop processes topics", "topics\\.forEach\\s*\\("), t("javascript", "The loop adds list item HTML", "innerHTML\\s*(?:\\+=|=)[\\s\\S]*<li>")], hints: ["Check topics.length.", "Run forEach after selecting the list.", "Add one li string per loop."], question: q("Why store content in an array?", "Related values stay together and can be processed", "It replaces all HTML", "It creates a browser", "Arrays organise related data."), reflection: "Which repeated instruction did your loop remove?" },
+    projectQuestion: q("What builds several list items from data?", "An array and loop", "A border and margin", "A heading and image", "The array stores values and the loop processes them."),
+  }),
+  makeStage({
+    id: "dom-interaction", number: 7, title: "Make the page interactive", description: "Connect buttons and fields to JavaScript.", outcome: "Controls that respond with clear feedback.",
+    challenges: [
+      { id: "select", title: "Select an element", minutes: 10, objective: "Find and store an HTML element.", language: "JavaScript", explanation: ["The DOM represents the page as objects JavaScript can use.", "querySelector accepts a CSS selector and returns the matching element."], keyTerms: ["DOM", "querySelector", "element"], exampleTitle: "Store a button", exampleCode: "const openButton = document.querySelector(\"#open-button\");", exampleExplanation: "The variable now refers to that button.", task: "Store #details in a variable named details.", starterFiles: files("<section id=\"details\">Details</section>", "", "// Select the section"), editableFiles: ["javascript"], tests: [t("javascript", "details stores the #details element", "(?:const|let)\\s+details\\s*=\\s*document\\.querySelector\\([\"']#details[\"']\\)")], hints: ["Begin with const details =.", "Call document.querySelector.", "Pass #details inside quotes."], question: q("What does querySelector receive?", "A CSS selector", "A password", "A file download", "querySelector uses a CSS selector.") },
+      { id: "events", title: "Respond to a click", minutes: 13, objective: "Run code after a button click.", language: "JavaScript", explanation: ["An event is something that happens in the browser.", "addEventListener connects an event to a function."], keyTerms: ["event", "event listener", "click"], exampleTitle: "A working button", exampleCode: "button.addEventListener(\"click\", function () { message.textContent = \"Button used\"; });", exampleExplanation: "The function waits for the click.", task: "Make the button change #message to Details opened.", starterFiles: files("<button id=\"open-button\">Open</button><p id=\"message\">Waiting</p>", "", "const button = document.querySelector(\"#open-button\");\nconst message = document.querySelector(\"#message\");\n// Add the click listener"), editableFiles: ["javascript"], tests: [t("javascript", "The button listens for click", "button\\.addEventListener\\s*\\(\\s*[\"']click[\"']"), t("javascript", "The click changes the message", "addEventListener[\\s\\S]*message\\.textContent\\s*=\\s*[\"']Details opened[\"']")], hints: ["Call addEventListener on button.", "The event name is click.", "Change message.textContent inside the function."], question: q("When does the listener function run?", "When its event happens", "Before HTML exists", "When CSS has an error", "The listener waits for its event.") },
+      { id: "classes", title: "Toggle a class", minutes: 12, objective: "Use classList.toggle to change state.", language: "JavaScript", explanation: ["JavaScript can change classes while CSS controls their appearance.", "toggle adds a class when missing and removes it when present."], keyTerms: ["classList", "toggle", "state"], exampleTitle: "Switch a class", exampleCode: "details.classList.toggle(\"is-open\");", exampleExplanation: "Each call switches is-open on or off.", task: "Toggle is-highlighted on the article after a click.", starterFiles: files("<button id=\"highlight\">Highlight</button><article id=\"article\">Important</article>", ".is-highlighted { background: #f2bf62; }", "const button = document.querySelector(\"#highlight\");\nconst article = document.querySelector(\"#article\");\nbutton.addEventListener(\"click\", function () {\n  // Toggle the class\n});"), editableFiles: ["javascript"], tests: [t("javascript", "The click toggles is-highlighted", "article\\.classList\\.toggle\\s*\\(\\s*[\"']is-highlighted[\"']")], hints: ["Use article inside the click function.", "Call classList.toggle.", "Pass is-highlighted as text."], question: q("What does classList.toggle do?", "Adds or removes one class", "Deletes HTML", "Changes a number to an image", "toggle switches a named class.") },
+      { id: "forms", title: "Read visitor input", minutes: 14, objective: "Read a value after form submission.", language: "JavaScript", explanation: ["An input's value property contains what was typed.", "preventDefault keeps the practice page from reloading before code handles the form."], keyTerms: ["value", "submit", "preventDefault"], exampleTitle: "Read a submitted value", exampleCode: "form.addEventListener(\"submit\", function (event) {\n  event.preventDefault();\n  output.textContent = input.value;\n});", exampleExplanation: "The submitted input appears in output.", task: "On submit, prevent reload and show input.value in #result.", starterFiles: files("<form id=\"topic-form\"><label for=\"topic\">Topic</label><input id=\"topic\"><button>Show</button></form><p id=\"result\"></p>", "", "const form = document.querySelector(\"#topic-form\");\nconst input = document.querySelector(\"#topic\");\nconst result = document.querySelector(\"#result\");\n// Handle the form"), editableFiles: ["javascript"], tests: [t("javascript", "The form listens for submit", "form\\.addEventListener\\s*\\(\\s*[\"']submit[\"']"), t("javascript", "Submission is prevented", "event\\.preventDefault\\s*\\("), t("javascript", "The result uses input.value", "result\\.textContent\\s*=\\s*input\\.value")], hints: ["Give the listener an event parameter.", "Call event.preventDefault first.", "Assign input.value to result.textContent."], question: q("Where is typed input text stored?", "Its value property", "Its border", "Its href", "value provides the current input text.") },
     ],
-    checkpoint: { title: "Checkpoint 7: Two-level game", checks: ["Level one leads to level two", "Controls and collision rules are reused", "Level two makes one fair difficulty change", "The full two-level path is tested"] },
-  },
-  {
-    id: "javascript",
-    number: 8,
-    title: "Read the JavaScript",
-    focus: "Syntax, variables, functions and block-to-text translation",
-    projectStep: "Open the code behind the blocks and make the first text-code changes.",
-    mentor: "owl",
-    lessons: [
-      {
-        id: "javascript-1", title: "Blocks and text can express the same idea", minutes: 20, mode: "javascript", objective: "Match familiar blocks with JavaScript statements.",
-        notes: ["Syntax is the punctuation and structure a language expects.", "A semicolon marks the end of many JavaScript statements.", "Function calls such as startGame() tell a named job to run."],
-        exampleTitle: "A familiar movement", exampleCode: "movePlayer(1, 0);", exampleExplanation: "The first number changes x by one. The second keeps y unchanged. This is one move right.",
-        question: { prompt: "Which JavaScript line matches move left one step?", options: ["movePlayer(1, 0);", "movePlayer(-1, 0);", "movePlayer(0, 1);"], answer: 1, explanation: "A negative x change moves left." },
-        task: "Change the movement call so the player moves left instead of right.", starterCode: "movePlayer(1, 0);", requiredCode: ["movePlayer(-1, 0)"],
-        hints: ["Only the x value needs to change.", "Left uses a negative x value.", "Use movePlayer(-1, 0);"], reflection: "Which part of the function call controls horizontal direction?", evidence: "I can match a movement block with JavaScript.",
-      },
-      {
-        id: "javascript-2", title: "Variables in JavaScript", minutes: 22, mode: "javascript", objective: "Declare and update score and lives in text code.",
-        notes: ["let creates a variable whose value may change.", "The equals sign stores the value on its right in the variable on its left.", "score = score + 1 reads the old score, adds one and stores the new score."],
-        exampleTitle: "Score in text", exampleCode: "let score = 0;\nscore = score + 1;", exampleExplanation: "The first line creates score. The second line updates it after an action.",
-        question: { prompt: "What is score after this code runs twice: score = score + 1? It starts at 0.", options: ["0", "1", "2"], answer: 2, explanation: "Each update adds one, so two updates make 2." },
-        task: "Create lives with a starting value of 3 and subtract one.", starterCode: "let score = 0;\nscore = score + 1;\n\n// Add lives below", requiredCode: ["let lives = 3", "lives = lives - 1"],
-        hints: ["Use let to create the variable.", "Start lives at 3.", "Write let lives = 3; then lives = lives - 1;"], reflection: "What is the difference between creating and updating a variable?", evidence: "I can declare and update numeric variables in JavaScript.",
-      },
-      {
-        id: "javascript-3", title: "Functions organise the project", minutes: 22, mode: "javascript", objective: "Read and call a JavaScript function.",
-        notes: ["A function definition stores instructions under a name.", "Calling a function runs those stored instructions.", "Parentheses follow the function name in both definitions and calls."],
-        exampleTitle: "Define, then call", exampleCode: "function resetGame() {\n  score = 0;\n}\n\nresetGame();", exampleExplanation: "The definition describes the job. The final line calls it once.",
-        question: { prompt: "Which line calls the function?", options: ["function resetGame() {", "score = 0;", "resetGame();"], answer: 2, explanation: "The name with parentheses runs the function." },
-        task: "Complete resetGame so it restores score and lives, then call it.", starterCode: "let score = 2;\nlet lives = 1;\n\nfunction resetGame() {\n  // restore both values\n}\n\n// call the function", requiredCode: ["score = 0", "lives = 3", "resetGame();"],
-        hints: ["Put both updates inside the braces.", "Score returns to 0 and lives returns to 3.", "Add resetGame(); after the closing brace."], reflection: "What is the job of resetGame?", evidence: "I can complete and call a JavaScript function.",
-      },
-      {
-        id: "javascript-4", title: "Checkpoint: first text-code version", minutes: 28, mode: "javascript", objective: "Read, change and explain a small section of the mission game.",
-        notes: ["Read text code one statement at a time, just as you read blocks top to bottom.", "Use the error line and nearby punctuation as clues.", "Make one change, run the check and keep the last working version."],
-        exampleTitle: "A tiny debug record", exampleCode: "Expected: score becomes 1\nActual: score stays 0\nChange: call collectItem()\nRetest: score becomes 1", exampleExplanation: "The record connects the symptom, change and result.",
-        question: { prompt: "A function name is underlined as unknown. What should you inspect first?", options: ["Its spelling", "The page colour", "The timer value"], answer: 0, explanation: "A misspelled name is a common cause of an unknown function error." },
-        task: "Repair the score update and call collectItem once.", starterCode: `${javascriptBase}\n\n// Run one collection below`, requiredCode: ["score = score + 1", "collectItem();"],
-        hints: ["The function already contains the score update.", "The remaining job is to call it.", "Add collectItem(); after the function."], reflection: "What clue helped you understand or repair the text code?", evidence: "I can modify, test and explain working JavaScript.",
-      },
+    project: { id: "project", title: "Build a working interaction", minutes: 28, objective: "Connect a form to useful behaviour.", language: "Web project", explanation: ["A visitor should understand the control, use it and receive visible feedback."], keyTerms: ["interaction", "event", "feedback"], exampleTitle: "Interaction flow", exampleCode: "Select form → listen for submit → read value → update page", exampleExplanation: "Each step has one testable job.", task: "When the form is submitted, show the entered topic in #result and add is-ready.", starterFiles: files("<header><h1>{{TITLE}}</h1></header><main><p>{{INTRO}}</p><form id=\"topic-form\"><label for=\"topic\">Choose a topic</label><input id=\"topic\" required><button>Update page</button></form><p id=\"result\">Your choice appears here.</p></main>", shared.cssProject + "\n.is-ready { border-left: 5px solid #5a2676; padding-left: 1rem; }", "const form = document.querySelector(\"#topic-form\");\nconst input = document.querySelector(\"#topic\");\nconst result = document.querySelector(\"#result\");\n// Build the interaction"), editableFiles: ["html", "css", "javascript"], tests: [t("html", "The input has a connected label", "<label[^>]+for=[\"']topic[\"'][^>]*>[\\s\\S]*<input[^>]+id=[\"']topic[\"']"), t("javascript", "The form listens for submit", "form\\.addEventListener\\s*\\(\\s*[\"']submit[\"']"), t("javascript", "The result uses the input value", "result\\.textContent\\s*=[^;]*input\\.value"), t("javascript", "The result receives is-ready", "result\\.classList\\.(?:add|toggle)\\s*\\(\\s*[\"']is-ready[\"']")], hints: ["Connect the submit listener first.", "Prevent the reload before reading input.", "Update textContent, then add the class."], question: q("What should feedback do?", "Show the result of an action clearly", "Hide the control", "Reload every second", "Feedback confirms what happened."), reflection: "What can a visitor do on your page now?" },
+    projectQuestion: q("Which event handles a completed form?", "submit", "colour", "margin", "Forms produce a submit event."),
+  }),
+  makeStage({
+    id: "quality", number: 8, title: "Test and finish the website", description: "Repair errors, improve access and prepare a safe final version.", outcome: "A tested website the learner can demonstrate and explain.",
+    challenges: [
+      { id: "html", title: "Repair broken HTML", minutes: 11, objective: "Fix mismatched closing tags.", language: "HTML", explanation: ["Debugging starts by comparing expected and actual results.", "Check opening tags, closing tags and nesting before changing unrelated code."], keyTerms: ["debugging", "expected result", "actual result"], exampleTitle: "Matched tags", exampleCode: "<section><h2>News</h2></section>", exampleExplanation: "The h2 closes before the section.", task: "Repair the heading and paragraph tags.", starterFiles: files("<section>\n  <h2>Latest article</h3>\n  <p>Read the new story.</div>\n</section>"), editableFiles: ["html"], tests: [t("html", "The h2 closes correctly", "<h2>Latest article</h2>"), t("html", "The paragraph closes correctly", "<p>Read the new story\\.</p>")], hints: ["Compare each opening and closing tag.", "The heading begins with h2.", "The paragraph begins with p."], question: q("What should you compare first?", "Expected and actual behaviour", "Two random colours", "Age and nickname", "The difference guides the repair.") },
+      { id: "syntax", title: "Repair CSS and JavaScript", minutes: 13, objective: "Fix one error in each language.", language: "JavaScript", explanation: ["Small punctuation and spelling mistakes can stop code.", "Read the exact line, change one thing and run again."], keyTerms: ["syntax", "error", "test"], exampleTitle: "Two repairs", exampleCode: ".card { color: #111936; }\nconst card = document.querySelector(\".card\");", exampleExplanation: "CSS uses a colon and querySelector is spelled correctly.", task: "Repair the CSS declaration and querySelector spelling.", starterFiles: files("<article class=\"card\">Test</article>", ".card { color = #111936; }", "const card = document.querySelecter(\".card\");\ncard.textContent = \"Repair complete\";"), editableFiles: ["css", "javascript"], tests: [t("css", "CSS uses a colon", "color\\s*:\\s*#111936"), t("javascript", "querySelector is correct", "document\\.querySelector\\(")], hints: ["CSS uses a colon between property and value.", "Compare the method name with earlier lessons.", "Repair only the two broken pieces."], question: q("Why change one thing before running?", "It identifies which change solved the problem", "It makes the file longer", "It hides the error", "Small changes give useful evidence.") },
+      { id: "access", title: "Check accessibility", minutes: 13, objective: "Use alt text, labels and keyboard focus.", language: "CSS", explanation: ["Accessible code helps more people use a webpage.", "Images need descriptions, inputs need labels and controls need visible focus."], keyTerms: ["accessibility", "keyboard focus", "focus-visible"], exampleTitle: "Visible keyboard focus", exampleCode: "button:focus-visible { outline: 3px solid #ee9d2b; }", exampleExplanation: "The outline shows the currently selected control.", task: "Add alt text, connect the label and style button focus.", starterFiles: files("<img src=\"photo.jpg\">\n<label>Search</label><input id=\"search\">\n<button>Search</button>", "/* Add focus style */"), editableFiles: ["html", "css"], tests: [t("html", "The image has alt text", "<img[^>]+alt=[\"'][^\"']{5,}[\"']"), t("html", "The label connects to search", "<label[^>]+for=[\"']search[\"']"), t("css", "Button focus is visible", "button:focus-visible\\s*\\{[\\s\\S]*outline\\s*:")], hints: ["Describe the image with alt.", "Add for=search to the label.", "Use button:focus-visible with outline."], question: q("Why show keyboard focus?", "It shows which control is selected", "It reloads the page", "It replaces labels", "A focus indicator helps keyboard users follow position.") },
+      { id: "sharing", title: "Write a safe project note", minutes: 10, objective: "Describe the work without personal details.", language: "HTML", explanation: ["A project note should state what was built and which technologies were used.", "Use a nickname. Do not publish a full name, school, phone number, home address or exact location."], keyTerms: ["project note", "privacy", "credit"], exampleTitle: "A safe creator note", exampleCode: "<footer><p>Built by SkyCoder using HTML, CSS and JavaScript.</p></footer>", exampleExplanation: "It credits the skill without identifying the child.", task: "Write a footer note with a nickname and all three technologies.", starterFiles: files("<footer>\n  <!-- Add the safe note -->\n</footer>"), editableFiles: ["html"], tests: [t("html", "The note mentions HTML", "HTML"), t("html", "The note mentions CSS", "CSS"), t("html", "The note mentions JavaScript", "JavaScript"), t("html", "The note is in a footer", "<footer[\\s>][\\s\\S]+</footer>")], hints: ["Begin with Built by and a nickname.", "Name HTML, CSS and JavaScript.", "Keep the sentence inside footer."], question: q("What stays off a public child project?", "School and exact location", "Technologies used", "Project title", "Identifying location details should stay private.") },
     ],
-    checkpoint: { title: "Checkpoint 8: JavaScript bridge", checks: ["The learner matches blocks to text", "Variables are declared and updated", "A function is completed and called", "One text-code change is explained"] },
-  },
-  {
-    id: "polish",
-    number: 9,
-    title: "Finish the experience",
-    focus: "DOM events, feedback, accessibility and comfort",
-    projectStep: "Add clear interface feedback and controls that work for more players.",
-    mentor: "butterfly",
-    lessons: [
-      {
-        id: "polish-1", title: "Connect code to the screen", minutes: 22, mode: "javascript", objective: "Update visible text from a JavaScript value.",
-        notes: ["The DOM is the browser's representation of page elements.", "querySelector finds an element using a CSS selector.", "textContent replaces the visible text inside an element."],
-        exampleTitle: "Show the current score", exampleCode: "const scoreLabel = document.querySelector(\"#score\");\nscoreLabel.textContent = score;", exampleExplanation: "The first line finds the label. The second shows the variable value.",
-        question: { prompt: "Which property changes visible text?", options: ["textContent", "querySelector", "addEventListener"], answer: 0, explanation: "textContent controls the text shown inside the selected element." },
-        task: "Update the score label after score changes.", starterCode: "let score = 0;\nconst scoreLabel = document.querySelector(\"#score\");\nscore = score + 1;\n// show the new score", requiredCode: ["scoreLabel.textContent", "score"],
-        hints: ["Use the scoreLabel variable.", "Change its textContent.", "Write scoreLabel.textContent = score;"], reflection: "Why should the visible score match the stored score?", evidence: "I can show a JavaScript value on a webpage.",
-      },
-      {
-        id: "polish-2", title: "Buttons need events", minutes: 22, mode: "javascript", objective: "Connect a button click to a game function.",
-        notes: ["addEventListener connects an event to code.", "The click event works with mouse, touch and keyboard activation on a real button.", "Pass a function name without parentheses when registering it as a handler."],
-        exampleTitle: "A retry button", exampleCode: "retryButton.addEventListener(\"click\", resetGame);", exampleExplanation: "The browser calls resetGame when the button is activated.",
-        question: { prompt: "Which element is best for a retry action?", options: ["A paragraph", "A button", "A decorative image"], answer: 1, explanation: "A button is keyboard accessible and clearly represents an action." },
-        task: "Connect the retry button to resetGame.", starterCode: "const retryButton = document.querySelector(\"#retry\");\nfunction resetGame() {\n  score = 0;\n}\n// connect the button", requiredCode: ["addEventListener", "click", "resetGame"],
-        hints: ["Use the retryButton variable.", "Listen for click.", "Write retryButton.addEventListener(\"click\", resetGame);"], reflection: "Why is a real button better than clickable text?", evidence: "I can connect an accessible control to JavaScript.",
-      },
-      {
-        id: "polish-3", title: "Accessibility is part of the build", minutes: 22, mode: "javascript", objective: "Add settings and feedback that support different players.",
-        notes: ["Keyboard controls should have visible instructions.", "Important information should not depend on colour alone.", "Sound needs a mute option, and motion should respect reduced-motion preferences."],
-        exampleTitle: "More than colour", exampleCode: "status.textContent = \"Signal collected: 2 of 3\";\nstatus.dataset.state = \"collected\";", exampleExplanation: "Text communicates the result even when colour cannot be distinguished.",
-        question: { prompt: "Which feedback is most accessible?", options: ["A colour change only", "Text plus a visual change", "A very fast flash"], answer: 1, explanation: "Two forms of feedback make the result understandable to more people." },
-        task: "Add a clear text status after an item is collected.", starterCode: "const status = document.querySelector(\"#status\");\nlet score = 2;\n// announce the collected total", requiredCode: ["status.textContent", "score"],
-        hints: ["Use the status element.", "Include the current score in the message.", "Set status.textContent to a message containing score."], reflection: "Which player need does your change support?", evidence: "I can improve feedback without relying on colour alone.",
-      },
-      {
-        id: "polish-4", title: "Checkpoint: ready for playtesting", minutes: 30, mode: "javascript", objective: "Complete the interface for a playable two-level build.",
-        notes: ["A player needs a goal, controls, score and ending they can understand.", "Test with keyboard and touch-friendly buttons where available.", "Fix the biggest point of confusion before adding decoration."],
-        exampleTitle: "A useful polish order", exampleCode: "1. Clear controls\n2. Clear goal\n3. Clear feedback\n4. Comfortable motion and sound\n5. Decoration", exampleExplanation: "Understanding and control come before visual extras.",
-        question: { prompt: "What should you fix first after a player gets stuck?", options: ["The biggest source of confusion", "The logo size", "An unrelated animation"], answer: 0, explanation: "The main usability problem most affects whether the game can be played." },
-        task: "Finish score feedback and the retry event, then save Project Checkpoint 9.", starterCode: "const scoreLabel = document.querySelector(\"#score\");\nconst retryButton = document.querySelector(\"#retry\");\nlet score = 0;\nfunction resetGame() { score = 0; }\n\n// update score text\n// connect retry", requiredCode: ["scoreLabel.textContent", "addEventListener", "resetGame"],
-        hints: ["Update the score label first.", "Then listen for the retry click.", "Use scoreLabel.textContent and retryButton.addEventListener."], reflection: "What must a first-time player understand without your help?", evidence: "I can finish a clear and accessible game interface.",
-      },
-    ],
-    checkpoint: { title: "Checkpoint 9: Playtest-ready build", checks: ["Goal and controls are visible", "Score and state changes use text feedback", "Retry works with a button", "Motion and sound have comfortable settings"] },
-  },
-  {
-    id: "showcase",
-    number: 10,
-    title: "Test, improve and present",
-    focus: "Debugging, evaluation, digital safety and communication",
-    projectStep: "Turn the working game into a project the learner can confidently show.",
-    mentor: "lion",
-    lessons: [
-      {
-        id: "showcase-1", title: "Use the Owl Check", minutes: 22, mode: "javascript", objective: "Debug with evidence instead of random changes.",
-        notes: ["The Owl Check is: expected, actual, smallest difference, one change, retest.", "Reproduce the bug before editing so you know how to check the repair.", "Keep a working checkpoint before a risky change."],
-        exampleTitle: "A complete bug note", exampleCode: "Expected: third item wins\nActual: score shows 3 but play continues\nDifference: win check is not called\nChange: call checkWin()\nRetest: pass", exampleExplanation: "The note records both the reasoning and the proof of repair.",
-        question: { prompt: "What comes after making one repair?", options: ["Make three more changes", "Retest the original problem", "Delete the checkpoint"], answer: 1, explanation: "Retesting shows whether the specific repair worked." },
-        task: "Fix the misspelled function call, then record expected and actual results.", starterCode: "function checkWin() {\n  return score === 3;\n}\nlet score = 3;\nchekWin();", requiredCode: ["checkWin();", "score === 3"],
-        hints: ["Compare the function definition and call.", "One letter is missing in the call.", "Change chekWin() to checkWin()."], reflection: "What was the smallest difference in the broken code?", evidence: "I can reproduce, repair and retest a bug.",
-      },
-      {
-        id: "showcase-2", title: "Watch two people play", minutes: 28, mode: "javascript", objective: "Collect useful playtest evidence without coaching the player.",
-        notes: ["A silent playtest reveals what the interface communicates on its own.", "Record where the player pauses, retries or asks a question.", "A useful change connects directly to an observed problem."],
-        exampleTitle: "Observation to improvement", exampleCode: "Observation: both players missed the goal text\nChange: place the goal above the game\nRetest: both players began without asking", exampleExplanation: "The improvement responds to evidence rather than preference.",
-        question: { prompt: "Which is an observation rather than an opinion?", options: ["The game feels bad", "The player paused for 12 seconds at the start", "Purple is best"], answer: 1, explanation: "The pause is a specific behaviour that can be recorded." },
-        task: "Add a visible goal message that includes the number 3.", starterCode: "const goal = document.querySelector(\"#goal\");\n// tell the player what to collect", requiredCode: ["goal.textContent", "3"],
-        hints: ["Use the goal element.", "State the number of items.", "Set goal.textContent to a short message containing 3."], reflection: "What did a tester do, and what will you change because of it?", evidence: "I can turn a playtest observation into an improvement.",
-      },
-      {
-        id: "showcase-3", title: "Share safely and give credit", minutes: 20, mode: "javascript", objective: "Prepare a project description without personal information.",
-        notes: ["Use a nickname or project name, not a full name, school, phone number or location.", "Credit assets made by someone else with creator, title, source and licence when known.", "A grown-up should approve any public sharing for this age group."],
-        exampleTitle: "A safe project note", exampleCode: "Made by: SkyCoder\nProject: Wildlife Signal Rescue\nAssets: Original shapes and sounds\nPublic sharing: waiting for grown-up approval", exampleExplanation: "The note explains the work without exposing identifying details.",
-        question: { prompt: "Which detail should stay private?", options: ["Project title", "School and home location", "Game controls"], answer: 1, explanation: "School and exact location can identify or locate a child." },
-        task: "Add a safe creator credit and a grown-up approval reminder.", starterCode: "const credits = document.querySelector(\"#credits\");\n// add a safe credit message", requiredCode: ["credits.textContent", "approval"],
-        hints: ["Use a nickname, not a full identity.", "Mention approval before public sharing.", "Set credits.textContent to a message that includes approval."], reflection: "Which details did you deliberately leave out?", evidence: "I can prepare a safe, credited project description.",
-      },
-      {
-        id: "showcase-4", title: "Final build and reflection", minutes: 35, mode: "javascript", objective: "Save and explain the final version of the mission game.",
-        notes: ["A finished project meets its success checks and has known limitations recorded.", "A strong explanation covers the goal, one important code idea, one bug and one improvement.", "The final exam checks understanding, but the project proves the skill."],
-        exampleTitle: "A concise project explanation", exampleCode: "Goal: collect 3 items and reach the destination\nCode idea: conditions control win and retry\nBug: one item scored twice\nImprovement: clearer goal text after playtesting", exampleExplanation: "Four short points show purpose, knowledge, debugging and evaluation.",
-        question: { prompt: "Which evidence best proves coding skill?", options: ["Time spent on the page", "A working project the learner can explain", "Opening every lesson"], answer: 1, explanation: "Working, tested code plus explanation demonstrates both skill and understanding." },
-        task: "Complete the final project note and save the showcase version.", starterCode: "const projectNote = {\n  goal: \"\",\n  importantCode: \"\",\n  repairedBug: \"\",\n  improvement: \"\"\n};", requiredCode: ["goal:", "importantCode:", "repairedBug:", "improvement:"],
-        hints: ["Use one short sentence for each field.", "Name a real bug you repaired.", "Name a change that came from testing."], reflection: "What can you build now that you could not build at the start?", evidence: "I can present a working project and explain how it improved.",
-      },
-    ],
-    checkpoint: { title: "Checkpoint 10: Showcase version", checks: ["Two playtests are recorded", "At least one bug is repaired with evidence", "Project information is safe and credited", "The learner explains the finished game"] },
-  },
+    project: { id: "project", title: "Complete the final website", minutes: 35, objective: "Finish, test and explain a responsive interactive website.", language: "Web project", explanation: ["A finished project meets its requirements, has been tested and can be explained.", "Keep every feature purposeful and repair only what the checks show is missing."], keyTerms: ["final build", "testing", "explanation"], exampleTitle: "Final evidence", exampleCode: "Structure works\nDesign responds\nInteraction gives feedback\nCreator explains one repair", exampleExplanation: "The evidence checks knowledge and skill.", task: "Finish with semantic HTML, responsive CSS, one interaction and a safe creator note.", starterFiles: files(shared.htmlProject.replace("Built while learning web development.", "Built by SkyCoder using HTML, CSS and JavaScript."), shared.cssProject + "\nbutton:focus-visible { outline: 3px solid #ee9d2b; outline-offset: 3px; }", "const button = document.querySelector(\"button\");\nbutton.addEventListener(\"click\", function () {\n  document.querySelector(\"h1\").textContent = \"Thanks for visiting\";\n});"), editableFiles: ["html", "css", "javascript"], tests: [t("html", "The page uses semantic regions", "<header[\\s>][\\s\\S]*<main[\\s>][\\s\\S]*<footer[\\s>]"), t("css", "The layout has a media query", "@media\\s*\\("), t("javascript", "The page has an event listener", "addEventListener\\s*\\("), t("javascript", "The interaction updates content", "textContent\\s*="), t("html", "The footer names all three technologies", "<footer[\\s\\S]*HTML[\\s\\S]*CSS[\\s\\S]*JavaScript[\\s\\S]*</footer>")], hints: ["Run the current version first.", "Check structure, design and interaction separately.", "Repair only the missing requirement."], question: q("What proves practical coding skill?", "A working website the learner can explain", "The number of pages opened", "A badge alone", "A working, tested and explained product proves skill."), reflection: "What can you build now that you could not build before?" },
+    projectQuestion: q("What is the strongest final evidence?", "Working code, passed checks and an explanation", "A long activity total", "A colourful screen without working controls", "The product, tests and explanation show understanding."),
+  }),
 ];
-
-function unique(values: string[]) {
-  return [...new Set(values)];
-}
-
-function buildStageActivities(stage: Stage): Lesson[] {
-  const sourceLessons = stage.lessons;
-  const keyTerms = unique(
-    stage.focus
-      .split(/,| and /)
-      .map((term) => term.trim())
-      .filter(Boolean),
-  );
-  const theoryQuestions = sourceLessons.slice(0, 3).map((lesson) => lesson.question);
-  const stageQuiz: PracticeQuestion[] = [
-    ...sourceLessons.map((lesson) => lesson.question),
-    {
-      prompt: `Which result belongs in ${stage.checkpoint.title}?`,
-      options: [stage.checkpoint.checks[0], "The activity page was opened", "A decoration changed without a test"],
-      answer: 0,
-      explanation: `${stage.checkpoint.checks[0]} is one of the practical checks for this stage.`,
-    },
-  ];
-
-  const theory: Lesson = {
-    ...sourceLessons[0],
-    id: `${stage.id}-theory`,
-    title: `Learn: ${stage.title}`,
-    minutes: 18,
-    objective: `Understand ${stage.focus.toLowerCase()} before changing the project.`,
-    activityType: "theory",
-    activityNumber: 1,
-    sections: sourceLessons.map((lesson) => ({
-      title: lesson.title.replace(/^Checkpoint:\s*/i, "Putting the ideas together"),
-      paragraphs: lesson.notes,
-      exampleTitle: lesson.exampleTitle,
-      exampleCode: lesson.exampleCode,
-      exampleExplanation: lesson.exampleExplanation,
-    })),
-    questions: theoryQuestions,
-    keyTerms,
-  };
-
-  const workshops = sourceLessons.slice(0, 3).map((lesson, index): Lesson => ({
-    ...lesson,
-    id: `${stage.id}-workshop-${index + 1}`,
-    title: `Build ${index + 1}: ${lesson.title}`,
-    activityType: "workshop",
-    activityNumber: index + 2,
-    steps: [
-      `Read the goal: ${lesson.objective}`,
-      `Study “${lesson.exampleTitle}” and predict what its instructions will do.`,
-      lesson.task,
-      "Run the project and compare the game preview with the goal.",
-      "Check your work. Read the failed requirement before opening a hint.",
-      "Keep the working version and continue to the next build.",
-    ],
-    requirements: [lesson.evidence, "The required instructions appear in a useful order"],
-  }));
-
-  const lab: Lesson = {
-    ...sourceLessons[3],
-    id: `${stage.id}-checkpoint`,
-    title: stage.checkpoint.title,
-    activityType: "lab",
-    activityNumber: 5,
-    requirements: stage.checkpoint.checks,
-    steps: [
-      "Read every requirement before changing the project.",
-      "Plan the smallest change that could satisfy the requirements.",
-      "Build and run your solution without copying a finished answer.",
-      "Use the automated checks, repair one failed requirement and test again.",
-      "Explain one decision before saving this project version.",
-    ],
-  };
-
-  const review: Lesson = {
-    ...sourceLessons[3],
-    id: `${stage.id}-review`,
-    title: `${stage.title} review`,
-    minutes: 10,
-    objective: "Bring the important ideas and examples together before the quiz.",
-    activityType: "review",
-    activityNumber: 6,
-    notes: unique(sourceLessons.flatMap((lesson) => lesson.notes)),
-    sections: sourceLessons.map((lesson) => ({
-      title: lesson.title.replace(/^Checkpoint:\s*/i, "Checkpoint thinking"),
-      paragraphs: lesson.notes,
-      exampleTitle: lesson.exampleTitle,
-      exampleCode: lesson.exampleCode,
-      exampleExplanation: lesson.exampleExplanation,
-    })),
-    keyTerms,
-  };
-
-  const quiz: Lesson = {
-    ...sourceLessons[3],
-    id: `${stage.id}-quiz`,
-    title: `${stage.title} quiz`,
-    minutes: 8,
-    objective: "Answer five questions using only ideas already taught in this stage.",
-    activityType: "quiz",
-    activityNumber: 7,
-    questions: stageQuiz,
-    keyTerms,
-  };
-
-  return [theory, ...workshops, lab, review, quiz];
-}
-
-export const stages: Stage[] = stageSeeds.map((stage) => ({
-  ...stage,
-  lessons: buildStageActivities(stage),
-}));
 
 export const lessons = stages.flatMap((stage) => stage.lessons);
 
 export const finalExam: PracticeQuestion[] = [
-  { prompt: "What is an algorithm?", options: ["A set of ordered steps", "A computer picture", "A score"], answer: 0, explanation: "An algorithm is a sequence of instructions for completing a task." },
-  { prompt: "Which structure is best for ten identical movements?", options: ["A variable", "A repeat loop", "A title"], answer: 1, explanation: "A loop handles repeated work clearly." },
-  { prompt: "What does a variable do?", options: ["Stores a value", "Draws every image", "Turns off the computer"], answer: 0, explanation: "Variables remember values such as score, lives and time." },
-  { prompt: "Which is a true-or-false condition?", options: ["Move right", "Is score equal to 3?", "Play sound"], answer: 1, explanation: "The comparison has a true or false answer." },
-  { prompt: "What should happen before random code changes?", options: ["Describe expected and actual results", "Delete the project", "Add more hazards"], answer: 0, explanation: "A comparison helps locate the problem." },
-  { prompt: "Which JavaScript creates a score variable?", options: ["let score = 0;", "score?", "move(score);"], answer: 0, explanation: "let declares the variable and assigns its starting value." },
-  { prompt: "Which line calls a function named resetGame?", options: ["function resetGame", "resetGame();", "let resetGame"], answer: 1, explanation: "The function name followed by parentheses calls it." },
-  { prompt: "What is a useful playtest observation?", options: ["I like it", "The player missed the goal text twice", "The game is cool"], answer: 1, explanation: "Specific observed behaviour can guide an improvement." },
-  { prompt: "Which feedback is most accessible?", options: ["Colour only", "Text plus a visual change", "A fast flash only"], answer: 1, explanation: "Multiple forms of feedback support more players." },
-  { prompt: "Which detail should not appear on a child's public project page?", options: ["Game controls", "Project title", "School and exact location"], answer: 2, explanation: "Identifying and location information should stay private." },
+  q("Which element is the main page heading?", "h1", "p", "a", "h1 represents the main heading."),
+  q("Which attribute describes an image?", "alt", "href", "className", "alt provides an alternative description."),
+  q("How does CSS select class card?", ".card", "#card", "<card>", "A class selector begins with a full stop."),
+  q("What creates space inside a border?", "padding", "margin", "display", "Padding creates inner space."),
+  q("What is useful for a row of links?", "Flexbox", "alt text", "querySelector", "Flexbox controls one-dimensional layouts."),
+  q("What declares a changing JavaScript variable?", "let", "href", "style", "let creates a reassignable variable."),
+  q("What does a condition produce?", "A true or false decision", "An image", "A border", "A condition evaluates to true or false."),
+  q("What is the first array index?", "0", "1", "10", "Array indexing begins at 0."),
+  q("What connects a click to JavaScript?", "An event listener", "An h1", "A media query", "An event listener runs code after a click."),
+  q("What should happen first when code fails?", "Compare expected and actual behaviour", "Rewrite every file", "Add random code", "A clear comparison guides repair."),
 ];
 
 export const practicalExam = {
-  title: "Repair the final checkpoint",
-  brief: "The retry code should restore score to 0 and lives to 3. Repair it and explain your change in one sentence.",
-  starterCode: "let score = 3;\nlet lives = 0;\n\nfunction resetGame() {\n  score = 3;\n  lives = 0;\n}\n\nresetGame();",
-  requiredCode: ["score = 0", "lives = 3", "resetGame()"],
+  title: "Repair a small webpage",
+  language: "HTML and JavaScript",
+  brief: "Repair the heading tag, correct querySelector and make the button change the message to Ready.",
+  starterCode: "<h2>Final check</h3>\n<button id=\"check\">Check work</button>\n<p id=\"message\">Waiting</p>\n\n<script>\nconst button = document.querySelecter(\"#check\");\nconst message = document.querySelector(\"#message\");\nbutton.addEventListener(\"click\", function () {\n  message.textContent = \"\";\n});\n</script>",
+  requiredPatterns: [
+    "</h2>",
+    "querySelector\\(\\s*[\"']#check[\"']\\s*\\)",
+    "textContent\\s*=\\s*[\"']Ready[\"']",
+  ],
 };
 
-export const courseFacts = {
-  title: "Mission Game: From Blocks to JavaScript",
-  ageRange: "Ages 10 to 12",
-  lessonCount: lessons.length,
-  stageCount: stages.length,
-  estimatedHours: "20 to 24 hours",
-  passMark: 7,
-};
+export const courseFacts = { title: "Web Coding Foundations", ageRange: "Ages 10 to 12", lessonCount: lessons.length, stageCount: stages.length, estimatedHours: "18 to 22 hours", passMark: 7 };

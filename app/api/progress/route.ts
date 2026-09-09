@@ -9,8 +9,9 @@ const progressSchema = z.object({
   questionCorrect: z.boolean(),
   reflection: z.string().max(1200),
   workspace: z.object({
-    blocks: z.array(z.string()).max(40).optional(),
-    code: z.string().max(12000).optional(),
+    html: z.string().max(20000),
+    css: z.string().max(20000),
+    javascript: z.string().max(20000),
   }),
 });
 

@@ -4,19 +4,21 @@ KidyCode is a self-paced coding platform for young learners and adults. The firs
 
 ## Ages 10 to 12 course
 
-Learners choose one of three mission-game themes, then build the same project from its first route to a tested two-level game. The pathway begins with visual command blocks and moves into JavaScript after the learner already understands the ideas.
+Learners choose one of three website ideas, then build it from the first HTML heading to a responsive, interactive final version. Coding begins in the first activity. Every lesson combines a concise explanation, a worked example, a real editor, a browser preview and automatic checks.
 
 The course contains:
 
-- 10 stages in prerequisite order
-- 70 focused activities arranged as 7 activities in each stage
-- a concept lesson with four teaching sections and three understanding questions in every stage
-- three guided builds, one independent checkpoint, one review and one five-question quiz in every stage
-- immediate project checks and three graduated hints during practical work
-- 10 saved project checkpoints
-- 10 final knowledge questions and one practical JavaScript repair
-- a guided lesson sequence that reveals one step at a time
-- a working map game with controls, collection, hazards, score, lives, time, levels and retry states
+- 8 modules in prerequisite order
+- 48 focused activities: 32 coding lessons, 8 project checkpoints and 8 quizzes
+- HTML, CSS and JavaScript taught through typed code from lesson one
+- an editor with separate HTML, CSS and JavaScript files plus a live browser preview
+- automatic requirement checks, useful feedback and three graduated hints
+- one growing website chosen from Interest Guide, Club Website or Mini Magazine
+- 8 saved project checkpoints
+- 10 final knowledge questions and one practical HTML and JavaScript repair
+- progress saved in Cloudflare D1
+
+Python is planned as a separate next course for ages 10 to 12. It is not mixed into Web Coding Foundations, so learners can first become confident building for the web.
 
 All learning material lives in `lib/course.ts`. The main learning interface lives in `components/LearningApp.tsx`.
 
@@ -35,7 +37,7 @@ The public landing page remains available at `/`. The complete course is at `/le
 ```bash
 bash scripts/sites-env.sh -- ./node_modules/.bin/tsc --noEmit
 node scripts/validate-full-course.mjs
-node /root/.codex/plugins/cache/openai-curated-remote/sites/0.1.51/scripts/build-site.mjs
+node /root/.codex/plugins/cache/openai-curated-remote/sites/0.1.52/scripts/build-site.mjs
 ```
 
 ## Privacy choices

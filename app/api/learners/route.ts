@@ -4,7 +4,7 @@ import { databaseError, getDatabase } from "@/lib/server-database";
 const learnerSchema = z.object({
   nickname: z.string().trim().min(2).max(20).regex(/^[\p{L}\p{N} _-]+$/u),
   age: z.number().int().min(10).max(12),
-  theme: z.enum(["wildlife", "museum", "space"]),
+  theme: z.enum(["interest", "club", "magazine"]),
 });
 
 function makeAccessKey(): string {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   try {
     const parsed = learnerSchema.safeParse(await request.json());
     if (!parsed.success) {
-      return Response.json({ error: "Use a nickname, choose age 10 to 12 and select one project." }, { status: 400 });
+      return Response.json({ error: "Use a nickname, choose age 10 to 12 and select one website project." }, { status: 400 });
     }
 
     const id = crypto.randomUUID();

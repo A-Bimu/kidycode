@@ -47,7 +47,7 @@ export function ExamPanel({ onBack }: { onBack: () => void }) {
           <p className="kicker">FINAL CHECK RESULT</p>
           <h1>{result.attempt.passed ? "You proved the foundations." : "Review a few ideas, then try again."}</h1>
           <div className="result-score">{result.attempt.score}<span>/{result.attempt.total}</span></div>
-          <p>{result.attempt.practicalPassed ? "The code repair passed." : "The code repair still needs score 0 and lives 3."}</p>
+          <p>{result.attempt.practicalPassed ? "The code repair passed." : "The webpage still has one or more broken pieces."}</p>
           <p>{result.attempt.passed ? "Your project and final check now show both knowledge and practical skill." : `A pass needs ${courseFacts.passMark} correct answers and a working code repair.`}</p>
         </section>
         <section className="correction-list" aria-label="Question review">
@@ -68,8 +68,8 @@ export function ExamPanel({ onBack }: { onBack: () => void }) {
       <button className="text-button" type="button" onClick={onBack}>← Return to course</button>
       <header className="exam-heading">
         <p className="kicker">SMALL FINAL CHECK</p>
-        <h1>Show what you know, then repair one piece of code.</h1>
-        <p>Ten short questions and one practical fix. This is not timed. Read carefully and test the code before submitting.</p>
+        <h1>Show what you know, then repair a small webpage.</h1>
+        <p>Ten short questions and one practical HTML and JavaScript repair. This is not timed.</p>
       </header>
 
       <section className="exam-questions">
@@ -95,7 +95,7 @@ export function ExamPanel({ onBack }: { onBack: () => void }) {
         <p className="kicker">PRACTICAL REPAIR</p>
         <h2>{practicalExam.title}</h2>
         <p>{practicalExam.brief}</p>
-        <label htmlFor="exam-code">JavaScript</label>
+        <label htmlFor="exam-code">{practicalExam.language}</label>
         <textarea id="exam-code" value={practicalCode} onChange={(event) => setPracticalCode(event.target.value)} spellCheck={false} />
         <label htmlFor="exam-explanation">Explain your repair</label>
         <textarea id="exam-explanation" value={explanation} onChange={(event) => setExplanation(event.target.value)} placeholder="I changed... because..." />

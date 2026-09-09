@@ -18,8 +18,7 @@ export async function POST(request: Request) {
     }
 
     const knowledgeScore = finalExam.reduce((score, question, index) => score + (parsed.data.answers[index] === question.answer ? 1 : 0), 0);
-    const compactCode = parsed.data.practicalCode.replace(/\s+/g, " ");
-    const practicalPassed = practicalExam.requiredCode.every((token) => compactCode.includes(token));
+    const practicalPassed = practicalExam.requiredPatterns.every((pattern) => new RegExp(pattern, "i").test(parsed.data.practicalCode));
     const passed = knowledgeScore >= courseFacts.passMark && practicalPassed;
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();

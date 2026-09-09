@@ -7,8 +7,9 @@ const checkpointSchema = z.object({
   stageId: z.string().min(1),
   reflection: z.string().trim().min(10).max(1200),
   project: z.object({
-    blocks: z.array(z.string()).max(80).optional(),
-    code: z.string().max(16000).optional(),
+    html: z.string().max(24000),
+    css: z.string().max(24000),
+    javascript: z.string().max(24000),
     theme: z.string().max(30),
   }),
 });
