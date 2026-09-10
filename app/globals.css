@@ -95,7 +95,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .course-header nav button.is-active { background: var(--navy); color: var(--white); }
 .learner-name { display: flex; align-items: center; gap: .55rem; font-size: .82rem; font-weight: 850; }
 .learner-name span { width: 2rem; height: 2rem; display: grid; place-items: center; background: var(--amber-pale); border-radius: 50%; }
-.fcc-course-layout { display: grid; grid-template-columns: 19rem minmax(0, 1fr); min-height: calc(100vh - 4.75rem); }
+.fcc-course-layout { width: 100%; display: grid; grid-template-columns: 19rem minmax(0, 1fr); min-height: calc(100vh - 4.75rem); overflow: clip; }
 .fcc-rail { height: calc(100vh - 4.75rem); overflow-y: auto; position: sticky; top: 4.75rem; background: var(--navy); color: var(--paper); border-right: 1px solid var(--navy-deep); }
 .rail-title { padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,.13); }
 .rail-title .kicker { color: var(--amber); }
@@ -120,7 +120,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 /* Coding lesson */
 .coding-lesson-page { min-width: 0; }
-.coding-workbench { display: grid; grid-template-columns: minmax(20rem, 29rem) minmax(36rem, 1fr); min-height: calc(100vh - 4.75rem); }
+.coding-workbench { width: 100%; display: grid; grid-template-columns: minmax(18rem, 26rem) minmax(0, 1fr); min-height: calc(100vh - 4.75rem); }
 .coding-instructions { padding: 2.2rem clamp(1.3rem, 3vw, 2.5rem) 4rem; background: var(--paper); border-right: 1px solid var(--line); }
 .lesson-position { display: flex; justify-content: space-between; gap: .75rem; color: var(--purple); font-size: .76rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .coding-instructions > h1 { margin: 1rem 0 .8rem; font: 500 clamp(2.5rem, 4vw, 4rem)/.97 Georgia, serif; letter-spacing: -.035em; }
@@ -143,7 +143,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .hint-panel > div { display: flex; justify-content: space-between; gap: 1rem; }
 .hint-panel button { border: 0; background: transparent; color: var(--purple); cursor: pointer; font-size: .82rem; font-weight: 850; text-decoration: underline; }
 .hint-panel p { margin: .8rem 0 0; padding: .8rem; background: var(--amber-pale); line-height: 1.5; }
-.coding-studio { min-width: 0; display: grid; grid-template-columns: minmax(24rem, 1fr) minmax(20rem, .8fr); grid-auto-rows: min-content; align-content: start; gap: 1rem; padding: 1.25rem; background: var(--navy-deep); color: var(--paper); }
+.coding-studio { min-width: 0; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .9fr); grid-auto-rows: min-content; align-content: start; gap: 1rem; padding: 1.25rem; background: var(--navy-deep); color: var(--paper); }
 .editor-panel, .preview-panel { min-width: 0; background: var(--white); color: var(--navy); border: 1px solid #38415f; }
 .file-tabs { min-height: 3rem; display: flex; align-items: end; background: var(--navy); border-bottom: 1px solid #3c4564; }
 .file-tabs button { min-height: 3rem; padding: .7rem 1rem; border: 0; background: transparent; color: #c9cad7; cursor: pointer; font-size: .82rem; font-weight: 850; }
@@ -255,19 +255,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .correction-list h2 { margin: .5rem 0; font: 500 1.2rem/1.2 Georgia, serif; }
 .correction-list p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
 
-@media (max-width: 1180px) {
+@media (max-width: 1220px) {
   .course-header { grid-template-columns: 11rem 1fr auto; }
   .course-header .learner-name { grid-column: 3; grid-row: 1; }
   .course-header nav { grid-column: 1 / -1; grid-row: 2; justify-content: center; }
   .course-header { position: static; }
   .fcc-rail { top: 0; height: 100vh; }
-  .coding-workbench { grid-template-columns: minmax(19rem, 25rem) minmax(30rem, 1fr); }
+  .coding-workbench { grid-template-columns: minmax(0, 1fr); }
+  .coding-instructions { border-right: 0; border-bottom: 1px solid var(--line); }
   .coding-studio { grid-template-columns: 1fr; }
   .code-actions, .workspace-message, .test-results, .quick-check, .project-reflection, .completion-bar { grid-column: 1; }
   .editor-panel textarea, .preview-panel iframe { min-height: 29rem; }
 }
 
-@media (max-width: 860px) {
+@media (max-width: 980px) {
   .onboarding-page { display: block; }
   .onboarding-copy { min-height: auto; padding: 8rem 1.4rem 4rem; }
   .onboarding-form { padding: 3rem 1.4rem; }
