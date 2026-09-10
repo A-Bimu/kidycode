@@ -4,8 +4,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  languageGuidance,
   lessons,
   projectChoices,
+  termDefinitions,
   type CodeFile,
   type Lesson,
   type PracticeQuestion,
@@ -225,7 +227,7 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
     const passed = results.length > 0 && results.every((result) => result.passed);
     setTestResults(results);
     setWorkChecked(passed);
-    setMessage(passed ? "Code checks passed. Answer the quick check below." : "Read the failed check, make one repair and test again.");
+    setMessage(passed ? "Code checks passed. Continue to the quick check." : "Read the failed check, make one repair and test again.");
   }
 
   async function saveActivity(status: "started" | "completed", knowledgePassed: boolean) {
@@ -316,27 +318,65 @@ function CourseRail({ stages, currentStage, completed, currentIndex, firstIncomp
 function CodingActivity({ activity, stage, projectId, workspace, updateWorkspace, checkWork, message, results, hintIndex, setHintIndex, reflection, setReflection, practiceAnswer, practiceChecked, setPracticeAnswer, setPracticeChecked, complete, saving, autosaveStatus, done, ready }: { activity: Lesson; stage: Stage; projectId: ProjectId; workspace: WorkspaceFiles; updateWorkspace: (files: WorkspaceFiles) => void; checkWork: () => void; message: string; results: CheckResult[]; hintIndex: number; setHintIndex: React.Dispatch<React.SetStateAction<number>>; reflection: string; setReflection: React.Dispatch<React.SetStateAction<string>>; practiceAnswer: number; practiceChecked: boolean; setPracticeAnswer: (answer: number) => void; setPracticeChecked: React.Dispatch<React.SetStateAction<boolean>>; complete: () => void; saving: boolean; autosaveStatus: "idle" | "saving" | "saved"; done: boolean; ready: boolean }) {
   const [activeFile, setActiveFile] = useState<CodeFile>(activity.editableFiles[0] || "html");
   const [preview, setPreview] = useState(() => buildPreview(workspace));
+  const [lessonStep, setLessonStep] = useState<"notes" | "practice" | "check">("notes");
+  const guidance = languageGuidance[activity.language];
+  const practiceFiles = activity.editableFiles.map((file) => fileNames[file]).join(", ");
+  const codePassed = results.length > 0 && results.every((result) => result.passed);
   function runCode() { setPreview(buildPreview(workspace)); }
-  return <div className="coding-workbench">
-    <section className="coding-instructions">
+  function openStep(step: "notes" | "practice" | "check") {
+    setLessonStep(step);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  return <div className={`guided-lesson is-${lessonStep}`}>
+    <header className="guided-lesson-header">
       <div className="lesson-position"><span>Module {stage.number} · {activity.minutes} min</span><b>{activityNames[activity.activityType]}</b></div>
-      <h1>{activity.title}</h1><p className="lesson-objective">{activity.objective}</p>
-      <ol className="lesson-path" aria-label="Lesson order"><li><b>1</b>Read</li><li><b>2</b>Study</li><li><b>3</b>Type</li><li><b>4</b>Run</li><li><b>5</b>Check</li><li><b>6</b>Answer</li></ol>
-      <div className="lesson-notes"><h2>Learn</h2>{activity.explanation.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}<div className="term-list">{activity.keyTerms.map((term) => <span key={term}>{term}</span>)}</div></div>
-      <div className="code-example"><small>EXAMPLE</small><h2>{activity.exampleTitle}</h2><pre><code>{activity.exampleCode}</code></pre><p>{activity.exampleExplanation}</p></div>
-      <div className="coding-task"><small>YOUR TASK</small><h2>{activity.task}</h2><p>Change the code, run it and use the checks to find anything missing.</p></div>
-      <div className="hint-panel"><div><b>Need a hint?</b><button type="button" onClick={() => setHintIndex((current) => Math.min(current + 1, activity.hints.length - 1))}>Show hint {Math.min(hintIndex + 2, activity.hints.length)}</button></div>{hintIndex >= 0 && <p>{activity.hints[hintIndex]}</p>}</div>
-    </section>
-    <section className="coding-studio">
-      <div className="editor-panel"><div className="file-tabs" role="tablist" aria-label="Code files">{activity.editableFiles.map((file) => <button key={file} role="tab" aria-selected={activeFile === file} className={activeFile === file ? "is-active" : ""} onClick={() => setActiveFile(file)} type="button">{fileNames[file]}</button>)}</div><textarea aria-label={`${fileNames[activeFile]} code editor`} spellCheck={false} value={workspace[activeFile]} onChange={(event) => updateWorkspace({ ...workspace, [activeFile]: event.target.value })} /></div>
-      <div className="preview-panel"><div><b>Browser preview</b><span>Updates when you run the code</span></div><iframe title="Website preview" sandbox="allow-scripts" srcDoc={preview} /></div>
-      <div className="code-actions"><button className="outline-button" type="button" onClick={runCode}>Run code</button><button className="primary-button" type="button" onClick={() => { runCode(); checkWork(); }}>Check code</button><button className="text-button" type="button" onClick={() => updateWorkspace(fillProjectTokens(activity.starterFiles, projectId))}>Reset lesson</button><span className="autosave-status" aria-live="polite">{autosaveStatus === "saving" ? "Saving draft..." : autosaveStatus === "saved" ? "Draft saved" : "Changes save automatically"}</span></div>
-      {message && <p className="workspace-message" aria-live="polite">{message}</p>}
-      {results.length > 0 && <div className="test-results">{results.map((result) => <p className={result.passed ? "is-pass" : "is-fail"} key={result.label}><span>{result.passed ? "✓" : "×"}</span>{result.label}</p>)}</div>}
-      {activity.question && <QuickCheck question={activity.question} selected={practiceAnswer} checked={practiceChecked} onSelect={setPracticeAnswer} onCheck={() => setPracticeChecked(true)} />}
-      {activity.activityType === "project" && <div className="project-reflection"><label htmlFor="project-reflection"><b>Explain one choice</b><span>{activity.reflection}</span></label><textarea id="project-reflection" value={reflection} onChange={(event) => setReflection(event.target.value)} placeholder="I chose... because..." /></div>}
-      <div className="completion-bar"><span>{ready ? "The code and quick check passed." : activity.activityType === "project" ? "Pass the code checks, answer the quick check and explain one choice." : "Pass the code checks and quick check to continue."}</span><button className="primary-button" type="button" disabled={!ready || saving || done} onClick={complete}>{done ? "Lesson complete" : saving ? "Saving..." : activity.activityType === "project" ? "Save project version" : "Complete lesson"}</button></div>
-    </section>
+      <div className="guided-title"><div><span className="language-pill">{activity.language}</span><h1>{activity.title}</h1><p>{activity.objective}</p></div></div>
+      <nav className="lesson-stepper" aria-label="Lesson steps">
+        <button type="button" className={lessonStep === "notes" ? "is-current" : ""} aria-current={lessonStep === "notes" ? "step" : undefined} onClick={() => openStep("notes")}><span>1</span><b>Notes</b><small>Learn the idea</small></button>
+        <button type="button" className={`${lessonStep === "practice" ? "is-current" : ""}${codePassed ? " is-complete" : ""}`} aria-current={lessonStep === "practice" ? "step" : undefined} onClick={() => openStep("practice")}><span>2</span><b>Practice</b><small>Write real code</small></button>
+        <button type="button" disabled={!done && !codePassed} className={`${lessonStep === "check" ? "is-current" : ""}${done ? " is-complete" : ""}`} aria-current={lessonStep === "check" ? "step" : undefined} onClick={() => openStep("check")}><span>3</span><b>Quick check</b><small>Show what you know</small></button>
+      </nav>
+    </header>
+
+    {lessonStep === "notes" && <main className="lesson-screen notes-screen">
+      <section className="notes-sheet">
+        <div className="notes-section">
+          <p className="section-label">FIRST, UNDERSTAND THE IDEA</p>
+          <h2>What you are learning</h2>
+          {activity.explanation.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+        </div>
+        <aside className="language-guide" aria-label={`${activity.language} guide`}><span>{activity.language}</span><div><h3>Where this lesson fits</h3><p>{guidance.purpose}</p><p>{guidance.next}</p></div></aside>
+        <div className="worked-example">
+          <div className="example-heading"><div><p className="section-label">WORKED EXAMPLE</p><h2>{activity.exampleTitle}</h2></div><span>Read it before typing</span></div>
+          <pre><code>{activity.exampleCode}</code></pre>
+          <div className="example-reading"><h3>What the example does</h3><p>{activity.exampleExplanation}</p><h3>How to read this language</h3><p>{guidance.reading}</p></div>
+        </div>
+        <div className="key-words"><div><p className="section-label">WORDS TO KNOW</p><h2>Keep these meanings nearby</h2></div><dl>{activity.keyTerms.map((term) => <div key={term}><dt>{term}</dt><dd>{termDefinitions[term] || `A coding idea used in this lesson.`}</dd></div>)}</dl></div>
+        <div className="lesson-next"><p><b>Ready for practice?</b> The next screen gives you one task and the {practiceFiles || activity.language} code you need.</p><button className="primary-button" type="button" onClick={() => openStep("practice")}>Start practice</button></div>
+      </section>
+    </main>}
+
+    {lessonStep === "practice" && <main className="lesson-screen practice-screen">
+      <section className="practice-brief"><div><p className="section-label">YOUR PRACTICE TASK</p><h2>{activity.task}</h2><p>Work in {practiceFiles || activity.language}. Make one small change, run it, then compare the preview with the task.</p></div><button className="text-button" type="button" onClick={() => openStep("notes")}>Read the notes again</button></section>
+      <section className="coding-studio">
+        <div className="editor-panel"><div className="file-tabs" role="tablist" aria-label="Code files">{activity.editableFiles.map((file) => <button key={file} role="tab" aria-selected={activeFile === file} className={activeFile === file ? "is-active" : ""} onClick={() => setActiveFile(file)} type="button">{fileNames[file]}</button>)}</div><textarea aria-label={`${fileNames[activeFile]} code editor`} spellCheck={false} value={workspace[activeFile]} onChange={(event) => updateWorkspace({ ...workspace, [activeFile]: event.target.value })} /></div>
+        <div className="preview-panel"><div><b>Browser preview</b><span>Updates when you run the code</span></div><iframe title="Website preview" sandbox="allow-scripts" srcDoc={preview} /></div>
+        <div className="code-actions"><button className="outline-button" type="button" onClick={runCode}>Run code</button><button className="primary-button" type="button" onClick={() => { runCode(); checkWork(); }}>Check my code</button><button className="text-button" type="button" onClick={() => updateWorkspace(fillProjectTokens(activity.starterFiles, projectId))}>Start again</button><span className="autosave-status" aria-live="polite">{autosaveStatus === "saving" ? "Saving draft..." : autosaveStatus === "saved" ? "Draft saved" : "Changes save automatically"}</span></div>
+        {message && <p className="workspace-message" aria-live="polite">{message}</p>}
+        {results.length > 0 && <div className="test-results">{results.map((result) => <p className={result.passed ? "is-pass" : "is-fail"} key={result.label}><span>{result.passed ? "✓" : "×"}</span>{result.label}</p>)}</div>}
+        <div className="practice-help"><div className="hint-panel"><div><b>Stuck on this task?</b><button type="button" onClick={() => setHintIndex((current) => Math.min(current + 1, activity.hints.length - 1))}>Show hint {Math.min(hintIndex + 2, activity.hints.length)}</button></div>{hintIndex >= 0 && <p>{activity.hints[hintIndex]}</p>}</div><div className="practice-next"><p>{codePassed ? "Your code passed. Now answer one short question." : "Use Check my code before moving to the last step."}</p><button className="primary-button" type="button" disabled={!done && !codePassed} onClick={() => openStep("check")}>Continue to quick check</button></div></div>
+      </section>
+    </main>}
+
+    {lessonStep === "check" && <main className="lesson-screen check-screen">
+      <section className="check-card">
+        <header><p className="section-label">ONE LAST STEP</p><h2>Check what you understood</h2><p>Your code already passed. Answer this question without guessing, then read the explanation.</p></header>
+        {activity.question && <QuickCheck question={activity.question} selected={practiceAnswer} checked={practiceChecked} onSelect={setPracticeAnswer} onCheck={() => setPracticeChecked(true)} />}
+        {activity.activityType === "project" && <div className="project-reflection"><label htmlFor="project-reflection"><b>Explain one choice</b><span>{activity.reflection}</span></label><textarea id="project-reflection" value={reflection} onChange={(event) => setReflection(event.target.value)} placeholder="I chose... because..." /></div>}
+        <div className="completion-bar"><span>{ready ? "You passed the code task and the quick check." : activity.activityType === "project" ? "Answer correctly and explain one project choice." : "Choose an answer and check it to complete the lesson."}</span><button className="primary-button" type="button" disabled={!ready || saving || done} onClick={complete}>{done ? "Lesson complete" : saving ? "Saving..." : activity.activityType === "project" ? "Save project version" : "Complete lesson"}</button></div>
+        <button className="text-button back-to-practice" type="button" onClick={() => openStep("practice")}>Return to practice</button>
+      </section>
+    </main>}
   </div>;
 }
 
