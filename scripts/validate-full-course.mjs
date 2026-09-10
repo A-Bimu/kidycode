@@ -17,6 +17,12 @@ vm.runInNewContext(`(function(exports, require) { ${compiled}\n})(exports, requi
 
 const { stages, lessons, finalExam, practicalExam } = exportsObject;
 const codeFiles = new Set(["html", "css", "javascript"]);
+const validateQuestion = (question, label) => {
+  assert(question, `${label} needs a question.`);
+  assert.equal(question.options.length, 3, `${label} needs three answer options.`);
+  assert(question.answer >= 0 && question.answer < 3, `${label} has an invalid answer.`);
+  assert(question.explanation.length > 8, `${label} needs answer feedback.`);
+};
 
 assert.equal(stages.length, 8, "The ages 10 to 12 course needs 8 modules.");
 assert.equal(lessons.length, 48, "The ages 10 to 12 course needs 48 activities.");
@@ -42,17 +48,19 @@ for (const stage of stages) {
       assert(lesson.explanation.length > 0, `${lesson.id} needs concise teaching notes.`);
       assert(lesson.editableFiles.length > 0, `${lesson.id} needs a real editable code file.`);
       assert(lesson.tests.length > 0, `${lesson.id} needs automatic code checks.`);
-      assert(lesson.question, `${lesson.id} needs a practice question.`);
+      validateQuestion(lesson.question, lesson.id);
     }
 
     if (lesson.activityType === "project") {
       assert(lesson.editableFiles.length > 0, `${lesson.id} needs editable project files.`);
       assert(lesson.tests.length >= 4, `${lesson.id} needs at least four project requirements.`);
       assert(lesson.reflection && lesson.reflection.length > 10, `${lesson.id} needs a useful reflection prompt.`);
+      validateQuestion(lesson.question, lesson.id);
     }
 
     if (lesson.activityType === "quiz") {
       assert.equal(lesson.questions.length, 5, `${lesson.id} needs five module questions.`);
+      lesson.questions.forEach((question, index) => validateQuestion(question, `${lesson.id} question ${index + 1}`));
     }
 
     for (const test of lesson.tests) {
@@ -61,6 +69,9 @@ for (const stage of stages) {
     }
   }
 }
+
+finalExam.forEach((question, index) => validateQuestion(question, `Final question ${index + 1}`));
+assert(new Set(finalExam.map((question) => question.answer)).size > 1, "Final answers must not all appear in the same position.");
 
 for (const pattern of practicalExam.requiredPatterns) {
   assert.doesNotThrow(() => new RegExp(pattern, "i"), "The practical exam has an invalid test pattern.");
@@ -75,5 +86,7 @@ assert(!visibleSource.includes("—"), "Visible course source contains an em das
 assert(!/\bgreen\b/i.test(visibleSource), "Visible course source contains a banned colour name.");
 assert(!visibleSource.includes("MissionGame"), "The rejected mission game is still referenced.");
 assert(!visibleSource.includes("blockCatalog"), "The rejected block editor is still referenced.");
+assert(visibleSource.includes("QuickCheck"), "Coding lessons must show their practice questions.");
+assert(visibleSource.includes("Saving draft"), "Coding work must autosave before completion.");
 
 console.log(`Validated ${stages.length} modules, ${lessons.length} code-first activities, ${stages.length} project checkpoints and ${finalExam.length} final questions.`);

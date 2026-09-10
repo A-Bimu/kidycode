@@ -63,7 +63,15 @@ export const projectChoices: Array<{
 ];
 
 const files = (html: string, css = "", javascript = ""): WorkspaceFiles => ({ html, css, javascript });
-const q = (prompt: string, correct: string, wrongOne: string, wrongTwo: string, explanation: string): PracticeQuestion => ({ prompt, options: [correct, wrongOne, wrongTwo], answer: 0, explanation });
+const q = (prompt: string, correct: string, wrongOne: string, wrongTwo: string, explanation: string): PracticeQuestion => {
+  const answer = Array.from(prompt).reduce((total, character) => total + character.charCodeAt(0), 0) % 3;
+  const options: [string, string, string] = answer === 0
+    ? [correct, wrongOne, wrongTwo]
+    : answer === 1
+      ? [wrongOne, correct, wrongTwo]
+      : [wrongOne, wrongTwo, correct];
+  return { prompt, options, answer, explanation };
+};
 const t = (file: CodeFile, label: string, pattern: string): CodeTest => ({ file, label, pattern });
 
 type LessonSeed = Omit<Lesson, "id" | "activityType" | "activityNumber"> & { id: string };

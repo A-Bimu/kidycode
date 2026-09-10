@@ -74,12 +74,15 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [assessmentChecked, setAssessmentChecked] = useState(false);
+  const [practiceAnswer, setPracticeAnswer] = useState(-1);
+  const [practiceChecked, setPracticeChecked] = useState(false);
   const [workChecked, setWorkChecked] = useState(false);
   const [testResults, setTestResults] = useState<CheckResult[]>([]);
   const [reflection, setReflection] = useState("");
   const [hintIndex, setHintIndex] = useState(-1);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [view, setView] = useState<"course" | "project" | "exam">("course");
   const [checkpoints, setCheckpoints] = useState<Array<{ id: string; stageId: string; version: number; createdAt: string }>>([]);
 
@@ -97,6 +100,8 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
   const answeredCount = Object.keys(answers).length;
   const correctCount = questions.filter((question, index) => answers[index] === question.answer).length;
   const quizPassed = currentActivity.activityType === "quiz" && assessmentChecked && correctCount >= 4;
+  const practiceCorrect = currentActivity.activityType !== "quiz" && Boolean(currentActivity.question) && practiceChecked && practiceAnswer === currentActivity.question?.answer;
+  const currentDraft = workspaces[currentActivity.id];
 
   function starterFor(activity: Lesson): WorkspaceFiles {
     const direct = workspaces[activity.id];
@@ -121,11 +126,14 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
     setCurrentIndex(index);
     setAnswers({});
     setAssessmentChecked(false);
+    setPracticeAnswer(-1);
+    setPracticeChecked(false);
     setWorkChecked(record?.status === "completed" && activity.activityType !== "quiz");
     setTestResults([]);
     setReflection(record?.reflection || "");
     setHintIndex(-1);
     setMessage("");
+    setAutosaveStatus("idle");
   }
 
   useEffect(() => {
@@ -166,6 +174,34 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (!session || currentActivity.activityType === "quiz" || !currentDraft || activityDone) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setAutosaveStatus("saving");
+      try {
+        const response = await fetch("/api/progress", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ lessonId: currentActivity.id, status: "started", questionCorrect: practiceCorrect, reflection, workspace: currentDraft }),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Draft could not be saved.");
+        setSaved((current) => ({ ...current, [currentActivity.id]: { status: "started", questionCorrect: practiceCorrect, reflection, workspaceJson: JSON.stringify(currentDraft) } }));
+        setBackendReady(true);
+        setAutosaveStatus("saved");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setBackendReady(false);
+        setAutosaveStatus("idle");
+      }
+    }, 900);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [activityDone, currentActivity, currentDraft, practiceCorrect, reflection, session]);
+
   function chooseActivity(index: number) {
     const unlockedThrough = firstIncomplete === -1 ? lessons.length - 1 : firstIncomplete;
     if (index > unlockedThrough) return;
@@ -189,7 +225,7 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
     const passed = results.length > 0 && results.every((result) => result.passed);
     setTestResults(results);
     setWorkChecked(passed);
-    setMessage(passed ? "All checks passed. You can complete this lesson." : "Read the failed check, make one repair and test again.");
+    setMessage(passed ? "Code checks passed. Answer the quick check below." : "Read the failed check, make one repair and test again.");
   }
 
   async function saveActivity(status: "started" | "completed", knowledgePassed: boolean) {
@@ -210,9 +246,9 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
 
   async function completeActivity() {
     if (activityDone) { if (currentIndex < lessons.length - 1) chooseActivity(currentIndex + 1); return; }
-    const allowed = currentActivity.activityType === "challenge" ? workChecked : currentActivity.activityType === "project" ? workChecked && reflection.trim().length >= 10 : quizPassed;
+    const allowed = currentActivity.activityType === "challenge" ? workChecked && practiceCorrect : currentActivity.activityType === "project" ? workChecked && practiceCorrect && reflection.trim().length >= 10 : quizPassed;
     if (!allowed) return;
-    const knowledgePassed = currentActivity.activityType === "quiz" ? correctCount >= 4 : true;
+    const knowledgePassed = currentActivity.activityType === "quiz" ? correctCount >= 4 : practiceCorrect;
     const didSave = await saveActivity("completed", knowledgePassed);
     if (!didSave) return;
 
@@ -263,7 +299,7 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
             {currentActivity.activityType === "quiz" ? (
               <QuizActivity activity={currentActivity} answers={answers} setAnswers={setAnswers} checked={assessmentChecked} setChecked={setAssessmentChecked} correctCount={correctCount} answeredCount={answeredCount} complete={() => void completeActivity()} saving={saving} done={activityDone} />
             ) : (
-              <CodingActivity key={currentActivity.id} activity={currentActivity} stage={currentStage} projectId={projectId} workspace={workspace} updateWorkspace={updateWorkspace} checkWork={checkWork} message={message} results={testResults} hintIndex={hintIndex} setHintIndex={setHintIndex} reflection={reflection} setReflection={setReflection} complete={() => void completeActivity()} saving={saving} done={activityDone} ready={workChecked && (currentActivity.activityType !== "project" || reflection.trim().length >= 10)} />
+              <CodingActivity key={currentActivity.id} activity={currentActivity} stage={currentStage} projectId={projectId} workspace={workspace} updateWorkspace={updateWorkspace} checkWork={checkWork} message={message} results={testResults} hintIndex={hintIndex} setHintIndex={setHintIndex} reflection={reflection} setReflection={setReflection} practiceAnswer={practiceAnswer} practiceChecked={practiceChecked} setPracticeAnswer={(answer) => { setPracticeAnswer(answer); setPracticeChecked(false); }} setPracticeChecked={setPracticeChecked} complete={() => void completeActivity()} saving={saving} autosaveStatus={autosaveStatus} done={activityDone} ready={workChecked && practiceCorrect && (currentActivity.activityType !== "project" || reflection.trim().length >= 10)} />
             )}
             <footer className="activity-footer"><button type="button" disabled={currentIndex === 0} onClick={() => chooseActivity(currentIndex - 1)}>← Previous</button><span>Module {currentStage.number}, lesson {stageActivityIndex + 1}</span><button type="button" disabled={!activityDone || currentIndex === lessons.length - 1} onClick={() => chooseActivity(currentIndex + 1)}>Next →</button></footer>
           </article>
@@ -277,14 +313,15 @@ function CourseRail({ stages, currentStage, completed, currentIndex, firstIncomp
   return <aside className="fcc-rail coding-rail"><div className="rail-title"><p className="kicker">AGES 10 TO 12</p><h2>{courseFacts.title}</h2><p>Real code · {courseFacts.estimatedHours}</p></div><div className="stage-list">{stages.map((stage) => { const done = stage.lessons.filter((lesson) => completed.has(lesson.id)).length; return <details key={stage.id} open={stage.id === currentStage.id}><summary><span>{String(stage.number).padStart(2, "0")}</span><div><b>{stage.title}</b><small>{done} of {stage.lessons.length} complete</small></div></summary><div className="rail-lessons">{stage.lessons.map((activity) => { const index = lessons.findIndex((item) => item.id === activity.id); const unlockedThrough = firstIncomplete === -1 ? lessons.length - 1 : firstIncomplete; return <button key={activity.id} type="button" disabled={index > unlockedThrough} className={`${index === currentIndex ? "is-current" : ""}${completed.has(activity.id) ? " is-done" : ""}`} onClick={() => chooseActivity(index)}><i>{completed.has(activity.id) ? "✓" : activity.activityNumber}</i><span><small>{activityLabel(activity)}</small>{activity.title}</span></button>; })}</div></details>; })}</div></aside>;
 }
 
-function CodingActivity({ activity, stage, projectId, workspace, updateWorkspace, checkWork, message, results, hintIndex, setHintIndex, reflection, setReflection, complete, saving, done, ready }: { activity: Lesson; stage: Stage; projectId: ProjectId; workspace: WorkspaceFiles; updateWorkspace: (files: WorkspaceFiles) => void; checkWork: () => void; message: string; results: CheckResult[]; hintIndex: number; setHintIndex: React.Dispatch<React.SetStateAction<number>>; reflection: string; setReflection: React.Dispatch<React.SetStateAction<string>>; complete: () => void; saving: boolean; done: boolean; ready: boolean }) {
+function CodingActivity({ activity, stage, projectId, workspace, updateWorkspace, checkWork, message, results, hintIndex, setHintIndex, reflection, setReflection, practiceAnswer, practiceChecked, setPracticeAnswer, setPracticeChecked, complete, saving, autosaveStatus, done, ready }: { activity: Lesson; stage: Stage; projectId: ProjectId; workspace: WorkspaceFiles; updateWorkspace: (files: WorkspaceFiles) => void; checkWork: () => void; message: string; results: CheckResult[]; hintIndex: number; setHintIndex: React.Dispatch<React.SetStateAction<number>>; reflection: string; setReflection: React.Dispatch<React.SetStateAction<string>>; practiceAnswer: number; practiceChecked: boolean; setPracticeAnswer: (answer: number) => void; setPracticeChecked: React.Dispatch<React.SetStateAction<boolean>>; complete: () => void; saving: boolean; autosaveStatus: "idle" | "saving" | "saved"; done: boolean; ready: boolean }) {
   const [activeFile, setActiveFile] = useState<CodeFile>(activity.editableFiles[0] || "html");
   const [preview, setPreview] = useState(() => buildPreview(workspace));
   function runCode() { setPreview(buildPreview(workspace)); }
   return <div className="coding-workbench">
     <section className="coding-instructions">
-      <div className="lesson-position"><span>Module {stage.number}</span><b>{activityNames[activity.activityType]}</b></div>
+      <div className="lesson-position"><span>Module {stage.number} · {activity.minutes} min</span><b>{activityNames[activity.activityType]}</b></div>
       <h1>{activity.title}</h1><p className="lesson-objective">{activity.objective}</p>
+      <ol className="lesson-path" aria-label="Lesson order"><li><b>1</b>Read</li><li><b>2</b>Study</li><li><b>3</b>Type</li><li><b>4</b>Run</li><li><b>5</b>Check</li><li><b>6</b>Answer</li></ol>
       <div className="lesson-notes"><h2>Learn</h2>{activity.explanation.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}<div className="term-list">{activity.keyTerms.map((term) => <span key={term}>{term}</span>)}</div></div>
       <div className="code-example"><small>EXAMPLE</small><h2>{activity.exampleTitle}</h2><pre><code>{activity.exampleCode}</code></pre><p>{activity.exampleExplanation}</p></div>
       <div className="coding-task"><small>YOUR TASK</small><h2>{activity.task}</h2><p>Change the code, run it and use the checks to find anything missing.</p></div>
@@ -293,13 +330,19 @@ function CodingActivity({ activity, stage, projectId, workspace, updateWorkspace
     <section className="coding-studio">
       <div className="editor-panel"><div className="file-tabs" role="tablist" aria-label="Code files">{activity.editableFiles.map((file) => <button key={file} role="tab" aria-selected={activeFile === file} className={activeFile === file ? "is-active" : ""} onClick={() => setActiveFile(file)} type="button">{fileNames[file]}</button>)}</div><textarea aria-label={`${fileNames[activeFile]} code editor`} spellCheck={false} value={workspace[activeFile]} onChange={(event) => updateWorkspace({ ...workspace, [activeFile]: event.target.value })} /></div>
       <div className="preview-panel"><div><b>Browser preview</b><span>Updates when you run the code</span></div><iframe title="Website preview" sandbox="allow-scripts" srcDoc={preview} /></div>
-      <div className="code-actions"><button className="outline-button" type="button" onClick={runCode}>Run code</button><button className="primary-button" type="button" onClick={() => { runCode(); checkWork(); }}>Check code</button><button className="text-button" type="button" onClick={() => updateWorkspace(fillProjectTokens(activity.starterFiles, projectId))}>Reset lesson</button></div>
+      <div className="code-actions"><button className="outline-button" type="button" onClick={runCode}>Run code</button><button className="primary-button" type="button" onClick={() => { runCode(); checkWork(); }}>Check code</button><button className="text-button" type="button" onClick={() => updateWorkspace(fillProjectTokens(activity.starterFiles, projectId))}>Reset lesson</button><span className="autosave-status" aria-live="polite">{autosaveStatus === "saving" ? "Saving draft..." : autosaveStatus === "saved" ? "Draft saved" : "Changes save automatically"}</span></div>
       {message && <p className="workspace-message" aria-live="polite">{message}</p>}
       {results.length > 0 && <div className="test-results">{results.map((result) => <p className={result.passed ? "is-pass" : "is-fail"} key={result.label}><span>{result.passed ? "✓" : "×"}</span>{result.label}</p>)}</div>}
+      {activity.question && <QuickCheck question={activity.question} selected={practiceAnswer} checked={practiceChecked} onSelect={setPracticeAnswer} onCheck={() => setPracticeChecked(true)} />}
       {activity.activityType === "project" && <div className="project-reflection"><label htmlFor="project-reflection"><b>Explain one choice</b><span>{activity.reflection}</span></label><textarea id="project-reflection" value={reflection} onChange={(event) => setReflection(event.target.value)} placeholder="I chose... because..." /></div>}
-      <div className="completion-bar"><span>{ready ? "Checks passed. This lesson is ready." : activity.activityType === "project" ? "Pass the checks and explain one choice." : "Pass every code check to continue."}</span><button className="primary-button" type="button" disabled={!ready || saving || done} onClick={complete}>{done ? "Lesson complete" : saving ? "Saving..." : activity.activityType === "project" ? "Save project version" : "Complete lesson"}</button></div>
+      <div className="completion-bar"><span>{ready ? "The code and quick check passed." : activity.activityType === "project" ? "Pass the code checks, answer the quick check and explain one choice." : "Pass the code checks and quick check to continue."}</span><button className="primary-button" type="button" disabled={!ready || saving || done} onClick={complete}>{done ? "Lesson complete" : saving ? "Saving..." : activity.activityType === "project" ? "Save project version" : "Complete lesson"}</button></div>
     </section>
   </div>;
+}
+
+function QuickCheck({ question, selected, checked, onSelect, onCheck }: { question: PracticeQuestion; selected: number; checked: boolean; onSelect: (answer: number) => void; onCheck: () => void }) {
+  const correct = selected === question.answer;
+  return <fieldset className="quick-check"><legend><span>Quick check</span>{question.prompt}</legend><div>{question.options.map((option, index) => <label key={option} className={selected === index ? "is-selected" : ""}><input type="radio" name="practice-question" checked={selected === index} onChange={() => onSelect(index)} /><b>{String.fromCharCode(65 + index)}</b>{option}</label>)}</div><button className="outline-button" type="button" disabled={selected < 0} onClick={onCheck}>Check answer</button>{checked && <p className={correct ? "is-correct" : "is-wrong"}><b>{correct ? "Correct." : "Try that idea again."}</b> {question.explanation}</p>}</fieldset>;
 }
 
 function QuizActivity({ activity, answers, setAnswers, checked, setChecked, correctCount, answeredCount, complete, saving, done }: { activity: Lesson; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; checked: boolean; setChecked: React.Dispatch<React.SetStateAction<boolean>>; correctCount: number; answeredCount: number; complete: () => void; saving: boolean; done: boolean }) {

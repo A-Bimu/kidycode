@@ -12,7 +12,8 @@ The course contains:
 - 48 focused activities: 32 coding lessons, 8 project checkpoints and 8 quizzes
 - HTML, CSS and JavaScript taught through typed code from lesson one
 - an editor with separate HTML, CSS and JavaScript files plus a live browser preview
-- automatic requirement checks, useful feedback and three graduated hints
+- automatic requirement checks, one quick practice question and three graduated hints in every coding lesson
+- unfinished code saved automatically before the learner completes a lesson
 - one growing website chosen from Interest Guide, Club Website or Mini Magazine
 - 8 saved project checkpoints
 - 10 final knowledge questions and one practical HTML and JavaScript repair
@@ -37,7 +38,7 @@ The public landing page remains available at `/`. The complete course is at `/le
 ```bash
 bash scripts/sites-env.sh -- ./node_modules/.bin/tsc --noEmit
 node scripts/validate-full-course.mjs
-node /root/.codex/plugins/cache/openai-curated-remote/sites/0.1.52/scripts/build-site.mjs
+node /root/.codex/plugins/cache/openai-curated-remote/sites/0.1.56/scripts/build-site.mjs
 ```
 
 ## Privacy choices
