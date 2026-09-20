@@ -1,33 +1,40 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { courseFacts, finalExam, practicalExam } from "@/lib/course";
+import type { CourseBundle } from "@/lib/course";
 
 type ExamResult = {
   attempt: { score: number; total: number; practicalPassed: boolean; passed: boolean };
   corrections: Array<{ correct: boolean; answer: number; explanation: string }>;
 };
 
-export function ExamPanel({ onBack }: { onBack: () => void }) {
+export function ExamPanel({ course, onBack }: { course: CourseBundle; onBack: () => void }) {
+  const { courseFacts, finalExam, practicalExam } = course;
   const [answers, setAnswers] = useState<number[]>(() => finalExam.map(() => -1));
   const [practicalCode, setPracticalCode] = useState(practicalExam.starterCode);
   const [explanation, setExplanation] = useState("");
   const [result, setResult] = useState<ExamResult | null>(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const complete = useMemo(() => answers.every((answer) => answer >= 0) && explanation.trim().length >= 10, [answers, explanation]);
+  const complete = useMemo(
+    () => answers.every((answer) => answer >= 0) && explanation.trim().length >= 10,
+    [answers, explanation],
+  );
 
   async function submitExam() {
-    if (!complete) return;
+    if (!complete || submitting) return;
     setSubmitting(true);
     setMessage("");
     try {
       const response = await fetch("/api/exam", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ answers, practicalCode, explanation }),
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          courseId: courseFacts.id,
+          answers,
+          practicalCode,
+          explanation,
+        }),
       });
       const data = await response.json() as ExamResult & { error?: string };
       if (!response.ok) throw new Error(data.error || "The final check could not be saved.");
@@ -52,10 +59,10 @@ export function ExamPanel({ onBack }: { onBack: () => void }) {
         </section>
         <section className="correction-list" aria-label="Question review">
           {finalExam.map((question, index) => (
-            <article key={question.prompt} className={result.corrections[index].correct ? "is-correct" : "is-wrong"}>
-              <span>{result.corrections[index].correct ? "Correct" : "Review"}</span>
+            <article key={question.prompt} className={result.corrections[index]?.correct ? "is-correct" : "is-wrong"}>
+              <span>{result.corrections[index]?.correct ? "Correct" : "Review"}</span>
               <h2>{index + 1}. {question.prompt}</h2>
-              <p>{result.corrections[index].explanation}</p>
+              <p>{result.corrections[index]?.explanation || question.explanation}</p>
             </article>
           ))}
         </section>
@@ -69,7 +76,7 @@ export function ExamPanel({ onBack }: { onBack: () => void }) {
       <header className="exam-heading">
         <p className="kicker">SMALL FINAL CHECK</p>
         <h1>Show what you know, then repair a small webpage.</h1>
-        <p>Ten short questions and one practical HTML and JavaScript repair. This is not timed.</p>
+        <p>Ten short questions and one practical code repair. This is not timed.</p>
       </header>
 
       <section className="exam-questions">
@@ -80,7 +87,7 @@ export function ExamPanel({ onBack }: { onBack: () => void }) {
               <label key={option}>
                 <input
                   type="radio"
-                  name={`question-${questionIndex}`}
+                  name={`exam-question-${questionIndex}`}
                   checked={answers[questionIndex] === optionIndex}
                   onChange={() => setAnswers((current) => current.map((answer, index) => index === questionIndex ? optionIndex : answer))}
                 />
@@ -102,7 +109,7 @@ export function ExamPanel({ onBack }: { onBack: () => void }) {
       </section>
 
       {message && <p className="form-message is-error" role="alert">{message}</p>}
-      <button className="primary-button exam-submit" type="button" disabled={!complete || submitting} onClick={submitExam}>
+      <button className="primary-button exam-submit" type="button" disabled={!complete || submitting} onClick={() => void submitExam()}>
         {submitting ? "Checking..." : "Submit final check"}
       </button>
     </main>

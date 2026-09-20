@@ -1,46 +1,59 @@
 # KidyCode
 
-KidyCode is a self-paced coding platform for young learners and adults. The first complete pathway is for ages 10 to 12.
+KidyCode is a self-paced coding platform for learners aged 10 and above. It teaches real HTML, CSS and JavaScript through focused notes, worked examples, typed code, automatic checks, short assessments and one website that grows throughout each course.
 
-## Ages 10 to 12 course
+## Complete learning paths
 
-Learners choose one of three website ideas, then build it from the first HTML heading to a responsive, interactive final version. Coding begins in the first activity. Every lesson combines a concise explanation, a worked example, a real editor, a browser preview and automatic checks.
+| Path | Course | Project outcome |
+| --- | --- | --- |
+| Ages 10 to 12 | Web Coding Foundations | Interest Guide, Club Website or Mini Magazine |
+| Ages 13 to 15 | Practical Web Development | Personal Portfolio, Community Event Hub or Small Business Website |
+| Ages 16 to 18 | Web Application Development | Revision Planner, Opportunity Directory or Service Dashboard |
+| Adults | Web Skills for Work and Business | Professional Portfolio, Organisation Website or Service Business Website |
 
-The course contains:
+Every path contains eight modules and 48 activities in a consistent sequence:
 
-- 8 modules in prerequisite order
-- 48 focused activities: 32 coding lessons, 8 project checkpoints and 8 quizzes
-- HTML, CSS and JavaScript taught through typed code from lesson one
-- an editor with separate HTML, CSS and JavaScript files plus a live browser preview
-- automatic requirement checks, one quick practice question and three graduated hints in every coding lesson
-- unfinished code saved automatically before the learner completes a lesson
-- one growing website chosen from Interest Guide, Club Website or Mini Magazine
-- 8 saved project checkpoints
-- 10 final knowledge questions and one practical HTML and JavaScript repair
-- progress saved in Cloudflare D1
+1. Read clear notes and a worked example.
+2. Type and run real code.
+3. Use graduated hints only when needed.
+4. Pass automatic code requirements.
+5. Answer a quick knowledge check.
+6. Save the next checkpoint of one continuous project.
 
-Python is planned as a separate next course for ages 10 to 12. It is not mixed into Web Coding Foundations, so learners can first become confident building for the web.
+Each course closes with a ten-question knowledge check and a practical code repair. Learners need both knowledge and working code to pass.
 
-All learning material lives in `lib/course.ts`. The main learning interface lives in `components/LearningApp.tsx`.
+## Product routes
+
+- Marketing site: `/`
+- Ages 10 to 12: `/learn`
+- Ages 13 to 15: `/learn/13-15`
+- Ages 16 to 18: `/learn/16-18`
+- Adults: `/learn/adults`
+
+The interface is designed for phones, tablets and laptops. Draft work, completed activities, project checkpoints and final attempts are stored in Cloudflare D1. The learner session uses an HttpOnly cookie.
 
 ## Technology
 
 - Next.js App Router compiled for Cloudflare Workers with Vinext
-- TypeScript and React
-- Cloudflare D1 for learner profiles, progress, project checkpoints and exam attempts
-- Drizzle schema and versioned SQL migrations
-- HttpOnly learner session cookie
+- React and TypeScript
+- Cloudflare D1 with Drizzle schema and versioned SQL migrations
+- Server-side course gating, grading and project checkpoint verification
+- Static marketing pages served with the application
 
-The public landing page remains available at `/`. The complete course is at `/learn`.
-
-## Local checks
+## Local setup and checks
 
 ```bash
-bash scripts/sites-env.sh -- ./node_modules/.bin/tsc --noEmit
-node scripts/validate-full-course.mjs
-node /root/.codex/plugins/cache/openai-curated-remote/sites/0.1.56/scripts/build-site.mjs
+npm run install:ci
+npm run check
+npm run build
 ```
 
-## Privacy choices
+Run the supported Sites build from a configured environment with:
 
-The learner profile asks for a nickname, age and project choice. It does not ask for a full name, school or location. The browser receives an HttpOnly session cookie, while the learning record is stored in D1.
+```bash
+node /root/.codex/plugins/cache/openai-curated-remote/sites/0.1.65/scripts/build-site.mjs
+```
+
+## Privacy
+
+KidyCode asks for a nickname, age group and project choice. It does not require a child’s full name, school, phone number or location. Public projects remind younger learners to use a nickname and remove identifying information before sharing.

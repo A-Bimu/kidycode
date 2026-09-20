@@ -1,0 +1,1 @@
+ALTER TABLE `learner_profiles` ADD `course_id` text DEFAULT 'ages-10-12' NOT NULL;

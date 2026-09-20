@@ -3,151 +3,142 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="See what young people ages 10 to 18 learn with KidyCode, from visual coding and websites to Python, APIs and portfolio projects." />
+    <meta name="description" content="Explore KidyCode courses for ages 10 to 18. Learners study HTML, CSS and JavaScript at their own pace while building one complete web project." />
     <title>Ages 10 to 18 | KidyCode</title>
     <link rel="stylesheet" href="../styles.css" />
     <script src="../app.js" defer></script>
   </head>
-  <body class="path-page youth-page">
+  <body class="marketing-page detail-page youth-page">
+    <a class="skip-link" href="#main">Skip to the main content</a>
     <header class="site-header">
-      <a class="brand" href="../" aria-label="KidyCode home"><span class="brand-mark" aria-hidden="true">K</span><span class="brand-name">KidyCode</span></a>
+      <a class="brand" href="../" aria-label="KidyCode home"><span class="brand-mark" aria-hidden="true">K</span><span>KidyCode</span></a>
       <nav aria-label="Page navigation">
-        <a href="#ages">Age groups</a>
-        <a href="#journey">Course journey</a>
-        <a href="#finish">At the finish</a>
+        <a href="#courses">Courses</a>
+        <a href="#progression">What changes</a>
+        <a href="#parent-view">For grown-ups</a>
       </nav>
-      <a class="nav-cta" href="../adult/">Adult path</a>
+      <a class="button button-small button-dark" href="#courses">Choose a course</a>
     </header>
 
-    <main>
-      <section class="path-hero">
-        <div class="path-hero-copy reveal">
-          <a class="back-link" href="../">← Back to KidyCode</a>
-          <p class="plain-label">THE YOUNG MAKER PATH · AGES 10 TO 18</p>
-          <h1>Not the same lesson for every age.</h1>
-          <p class="hero-text">A ten-year-old should feel capable, not overwhelmed. An eighteen-year-old should feel challenged, not patronised. The projects, tools and independence grow with the learner.</p>
-          <a class="primary" href="#ages">Find the right starting point <span>↓</span></a>
+    <main id="main">
+      <section class="detail-hero shell">
+        <div class="detail-hero-copy reveal">
+          <a class="back-link" href="../">← KidyCode home</a>
+          <p class="eyebrow">AGES 10 TO 18</p>
+          <h1>Three age groups. Three honest next steps.</h1>
+          <p class="hero-lead">A ten-year-old needs patient explanations. An eighteen-year-old needs room to handle data, errors and real product decisions. Both deserve to write actual code and finish work they can explain.</p>
+          <a class="button button-warm" href="#courses">See the three courses <span aria-hidden="true">↓</span></a>
         </div>
-        <div class="path-animal-stage youth-animal-stage">
-          <img class="path-fox" src="../assets/origami-fox.webp" alt="A purple and amber origami fox" />
-          <img class="path-bird" src="../assets/origami-bird.webp" alt="A navy and purple origami bird" />
-          <p>PLAY <span>→</span> BUILD <span>→</span> CREATE</p>
-        </div>
-      </section>
-
-      <section class="age-section section" id="ages">
-        <div class="detail-heading reveal">
-          <p class="section-label">THREE WAYS IN</p>
-          <h2>Start at the level that feels exciting, not frightening.</h2>
-          <p>Age is the guide. Experience decides the exact starting lesson.</p>
-        </div>
-        <div class="age-grid">
-          <article class="age-card reveal">
-            <div class="age-card-head"><span>10</span><i>TO</i><span>12</span></div>
-            <p class="age-title">Code Explorers</p>
-            <h3>Make the screen respond.</h3>
-            <p class="age-intro">Stories, movement and games make invisible ideas easy to see.</p>
-            <h4>They learn</h4>
-            <ul>
-              <li>Algorithms and clear instructions</li>
-              <li>Events, loops and conditions</li>
-              <li>Variables, coordinates and simple logic</li>
-              <li>Testing and finding small mistakes</li>
-              <li>Basic HTML and CSS</li>
-              <li>Safe and responsible internet habits</li>
-            </ul>
-            <div class="build-box"><b>THEY BUILD</b><span>An animated story, a Scratch game and a one-page website.</span></div>
-            <p class="tools">TOOLS: SCRATCH · MAKECODE · HTML · CSS</p>
-            <a class="age-start" href="../learn/">Enter the ages 10 to 12 course <span>→</span></a>
-          </article>
-
-          <article class="age-card featured reveal">
-            <div class="age-card-head"><span>13</span><i>TO</i><span>15</span></div>
-            <p class="age-title">Code Builders</p>
-            <h3>Move from blocks to typed code.</h3>
-            <p class="age-intro">The learner keeps the visual confidence and begins controlling the details.</p>
-            <h4>They learn</h4>
-            <ul>
-              <li>HTML structure and responsive CSS</li>
-              <li>JavaScript events and page interactions</li>
-              <li>Python variables, functions and lists</li>
-              <li>User input and basic validation</li>
-              <li>Data tables and simple visualisations</li>
-              <li>Debugging from error messages</li>
-            </ul>
-            <div class="build-box"><b>THEY BUILD</b><span>An interactive website, a browser game and a useful Python program.</span></div>
-            <p class="tools">TOOLS: HTML · CSS · JAVASCRIPT · PYTHON</p>
-          </article>
-
-          <article class="age-card reveal">
-            <div class="age-card-head"><span>16</span><i>TO</i><span>18</span></div>
-            <p class="age-title">Code Creators</p>
-            <h3>Build work that can leave the classroom.</h3>
-            <p class="age-intro">Projects begin with a person or problem, then move from sketch to a working release.</p>
-            <h4>They learn</h4>
-            <ul>
-              <li>Structured JavaScript and Python</li>
-              <li>Git and version history</li>
-              <li>APIs and basic databases</li>
-              <li>Accessible, responsive interfaces</li>
-              <li>Input security and software testing</li>
-              <li>Responsible use of AI-generated code</li>
-            </ul>
-            <div class="build-box"><b>THEY BUILD</b><span>A deployed website, a data project and an original community-focused app.</span></div>
-            <p class="tools">TOOLS: JAVASCRIPT · PYTHON · GIT · APIS</p>
-          </article>
+        <div class="detail-visual reveal">
+          <figure class="human-frame detail-photo"><img src="../assets/kids-kidycode.webp" alt="Three young learners sharing a coding project on a laptop" fetchpriority="high" /></figure>
+          <figure class="solo-origami detail-animal"><img src="../assets/origami-bird.webp" alt="A navy and dark purple origami bird" /></figure>
+          <p class="detail-stamp">LEARN IT<br />USE IT<br />EXPLAIN IT</p>
         </div>
       </section>
 
-      <section class="journey-section" id="journey">
-        <div class="section">
-          <div class="detail-heading light reveal">
-            <p class="section-label light">THE COURSE JOURNEY</p>
-            <h2>Eight missions. Each one unlocks a new kind of making.</h2>
+      <section class="detail-intro shell">
+        <div class="section-heading reveal">
+          <p class="eyebrow">THE STANDARD WE USE</p>
+          <h2>The learner should not need a second website to understand the lesson.</h2>
+        </div>
+        <div class="principle-grid">
+          <article class="reveal"><span>01</span><h3>Notes before the test</h3><p>New terms are introduced in plain language, with real code and a visible result.</p></article>
+          <article class="reveal"><span>02</span><h3>Practice before progress</h3><p>The learner types, runs and checks the code before an activity can be finished.</p></article>
+          <article class="reveal"><span>03</span><h3>One project, not loose exercises</h3><p>Each module adds a useful piece to the same website from beginning to final review.</p></article>
+        </div>
+      </section>
+
+      <section class="course-section" id="courses">
+        <div class="shell">
+          <div class="section-heading section-heading-light reveal">
+            <p class="eyebrow">CHOOSE BY AGE</p>
+            <h2>The right amount of support, challenge and independence.</h2>
           </div>
-          <div class="mission-roadmap">
-            <article class="reveal"><span>01</span><div><h3>Think like a computer</h3><p>Sequences, instructions and breaking a problem into parts.</p></div></article>
-            <article class="reveal"><span>02</span><div><h3>Bring a story to life</h3><p>Events, movement, sound and choices that change what happens.</p></div></article>
-            <article class="reveal"><span>03</span><div><h3>Build a game</h3><p>Rules, scores, collisions, levels and testing with another learner.</p></div></article>
-            <article class="reveal"><span>04</span><div><h3>Claim a place on the web</h3><p>Structure, visual style, interaction and publishing.</p></div></article>
-            <article class="reveal"><span>05</span><div><h3>Make decisions with code</h3><p>Python or JavaScript programs that respond to real input.</p></div></article>
-            <article class="reveal"><span>06</span><div><h3>Become a data detective</h3><p>Collect, clean and question information before drawing conclusions.</p></div></article>
-            <article class="reveal"><span>07</span><div><h3>Use AI without losing the thinking</h3><p>Ask for hints, inspect generated code and test every claim.</p></div></article>
-            <article class="reveal"><span>08</span><div><h3>Solve something real</h3><p>Interview a user, build a first version, gather feedback and improve it.</p></div></article>
+          <div class="course-stack">
+            <article class="course-row reveal">
+              <div class="course-age"><strong>10</strong><span>TO</span><strong>12</strong></div>
+              <div class="course-copy">
+                <p class="mini-label">FIRST WEBSITE · 18 TO 22 HOURS</p>
+                <h3>Learn what a browser reads, then make it respond.</h3>
+                <p>Clear, detailed notes carry the learner from their first HTML element to a styled, responsive website with beginner JavaScript.</p>
+                <div class="skill-pills"><span>HTML structure</span><span>Links and images</span><span>CSS selectors</span><span>Responsive pages</span><span>Buttons and input</span><span>Testing</span></div>
+              </div>
+              <div class="course-project"><b>PROJECT CHOICES</b><p>Interest Guide, Club Website or Mini Magazine</p><a href="../learn/">Start ages 10 to 12 <span aria-hidden="true">→</span></a></div>
+            </article>
+
+            <article class="course-row course-row-warm reveal">
+              <div class="course-age"><strong>13</strong><span>TO</span><strong>15</strong></div>
+              <div class="course-copy">
+                <p class="mini-label">PRACTICAL WEB DEVELOPMENT · 24 TO 30 HOURS</p>
+                <h3>Build a useful website that works across screen sizes.</h3>
+                <p>The learner works with semantic sections, forms, browser validation, reusable CSS, JavaScript functions, the DOM and saved data.</p>
+                <div class="skill-pills"><span>Semantic HTML</span><span>Forms</span><span>Mobile first CSS</span><span>Functions</span><span>DOM</span><span>Browser storage</span></div>
+              </div>
+              <div class="course-project"><b>PROJECT CHOICES</b><p>Personal Portfolio, Community Event Hub or Small Business Website</p><a href="../learn/13-15/">Start ages 13 to 15 <span aria-hidden="true">→</span></a></div>
+            </article>
+
+            <article class="course-row course-row-purple reveal">
+              <div class="course-age"><strong>16</strong><span>TO</span><strong>18</strong></div>
+              <div class="course-copy">
+                <p class="mini-label">WEB APPLICATION DEVELOPMENT · 30 TO 38 HOURS</p>
+                <h3>Move from making pages to managing application behaviour.</h3>
+                <p>The learner handles state, records, CRUD actions, asynchronous requests, failure states, accessibility, input safety and a documented release.</p>
+                <div class="skill-pills"><span>Application state</span><span>CRUD</span><span>Fetch</span><span>Error handling</span><span>Accessibility</span><span>Release testing</span></div>
+              </div>
+              <div class="course-project"><b>PROJECT CHOICES</b><p>Revision Planner, Opportunity Directory or Service Dashboard</p><a href="../learn/16-18/">Start ages 16 to 18 <span aria-hidden="true">→</span></a></div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section class="finish-section section" id="finish">
-        <div class="finish-copy reveal">
-          <p class="section-label">THE REAL GRADUATION TEST</p>
-          <h2>Give them a problem they have never seen before.</h2>
-          <p>Can they understand it, break it down, try an approach, investigate the mistake, ask for useful help and explain the final result? That is the skill we are building.</p>
+      <section class="progression-section shell" id="progression">
+        <div class="progression-heading reveal">
+          <p class="eyebrow">THE SAME CRAFT, AT A DEEPER LEVEL</p>
+          <h2>What changes as the learner grows.</h2>
+          <p>We do not make older learners repeat a childish version of the same course. The decisions become less guided and the project becomes more demanding.</p>
         </div>
-        <div class="finish-list reveal">
-          <h3>What they leave with</h3>
-          <ul>
-            <li><b>3 to 5 projects</b><span>Work they can open and demonstrate</span></li>
-            <li><b>Independent debugging habits</b><span>A method for getting unstuck</span></li>
-            <li><b>Clear explanations</b><span>The ability to talk through their own code</span></li>
-            <li><b>A next direction</b><span>Web, Python, games, data, AI, robotics or security</span></li>
-          </ul>
+        <div class="comparison-table reveal" role="table" aria-label="How course expectations grow by age">
+          <div class="comparison-row comparison-head" role="row"><span role="columnheader">Area</span><span role="columnheader">10 to 12</span><span role="columnheader">13 to 15</span><span role="columnheader">16 to 18</span></div>
+          <div class="comparison-row" role="row"><b role="rowheader">Explanations</b><span>Detailed and concrete</span><span>Concise with new terms</span><span>Technical with tradeoffs</span></div>
+          <div class="comparison-row" role="row"><b role="rowheader">Code</b><span>Short visible changes</span><span>Reusable functions</span><span>State and data flows</span></div>
+          <div class="comparison-row" role="row"><b role="rowheader">Support</b><span>Frequent examples</span><span>Hints after an attempt</span><span>Debugging evidence</span></div>
+          <div class="comparison-row" role="row"><b role="rowheader">Final proof</b><span>Explain a complete site</span><span>Test a responsive site</span><span>Release a documented app</span></div>
         </div>
       </section>
 
-      <section class="path-final">
-        <img src="../assets/origami-bird.webp" alt="" aria-hidden="true" />
-        <div class="reveal">
-          <p class="section-label light">THEIR FIRST PROJECT CAN START SMALL</p>
-          <h2>Small is how capable begins.</h2>
-          <a class="primary" href="../learn/">Start Code Explorers, ages 10 to 12 <span>↗</span></a>
+      <section class="parent-section" id="parent-view">
+        <div class="shell parent-layout">
+          <figure class="solo-origami parent-animal reveal"><img src="../assets/origami-elephant.webp" alt="A navy and purple origami elephant" loading="lazy" /></figure>
+          <div class="parent-copy reveal">
+            <p class="eyebrow">YOU DO NOT NEED TO KNOW CODE</p>
+            <h2>Ask for a tour, not a score.</h2>
+            <p>At the end of a study session, three questions reveal more than a percentage:</p>
+            <ol>
+              <li>What did you add to your website today?</li>
+              <li>Which line did not work the first time?</li>
+              <li>What would you improve next?</li>
+            </ol>
+            <p>The learner should be able to open the result, point to their code and answer in their own words.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-closing">
+        <div class="shell reveal">
+          <p class="eyebrow">READY WHEN THEY ARE</p>
+          <h2>Choose the course. Keep the first session simple.</h2>
+          <div class="button-row">
+            <a class="button button-warm" href="../learn/">Ages 10 to 12</a>
+            <a class="button button-outline" href="../learn/13-15/">Ages 13 to 15</a>
+            <a class="button button-outline" href="../learn/16-18/">Ages 16 to 18</a>
+          </div>
         </div>
       </section>
     </main>
 
-    <footer>
-      <a class="brand footer-brand" href="../"><span class="brand-mark" aria-hidden="true">K</span><span class="brand-name">KidyCode</span></a>
-      <p>Ages 10 to 18 learning path</p>
+    <footer class="site-footer">
+      <a class="brand footer-brand" href="../"><span class="brand-mark" aria-hidden="true">K</span><span>KidyCode</span></a>
+      <p>Young learner courses</p>
       <p>© 2026 KidyCode</p>
     </footer>
   </body>

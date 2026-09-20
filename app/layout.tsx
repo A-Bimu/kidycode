@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "KidyCode",
-  description: "A practical self-paced course where ages 10 to 12 learn HTML, CSS and JavaScript by building a real website.",
+  description: "Self-paced HTML, CSS and JavaScript courses for ages 10 and above, taught through real code and one complete website project.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

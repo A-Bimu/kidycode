@@ -34,6 +34,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .kicker { margin: 0 0 .75rem; color: var(--purple); font-size: .78rem; font-weight: 900; letter-spacing: .12em; }
 .primary-button, .outline-button, .text-button { border: 0; cursor: pointer; font-weight: 850; }
 .primary-button { min-height: 3rem; padding: .8rem 1.15rem; background: var(--purple); color: var(--white); border: 2px solid var(--purple); box-shadow: 4px 4px 0 var(--amber); }
+a.primary-button { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .primary-button:hover { background: var(--purple-dark); }
 .outline-button { min-height: 3rem; padding: .8rem 1.15rem; background: var(--white); border: 2px solid var(--navy); }
 .outline-button:hover { background: var(--amber-pale); }
@@ -43,6 +44,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 .course-brand { display: inline-flex; align-items: center; gap: .65rem; text-decoration: none; font-size: 1.05rem; }
 .course-brand > span { width: 2.15rem; height: 2.15rem; display: grid; place-items: center; background: var(--purple); color: var(--white); font: 700 1.15rem/1 Georgia, serif; transform: rotate(45deg); }
+.load-error { background: var(--paper); color: var(--navy); }
+.load-error h1 { max-width: 20ch; margin: 0 auto; font: 500 clamp(2rem, 6vw, 4rem)/1 Georgia, serif; }
+.load-error p { max-width: 38rem; margin: 0 auto; line-height: 1.6; }
+.load-error .primary-button { justify-self: center; }
+.profile-mismatch { min-height: 100vh; display: grid; place-items: center; padding: clamp(1.25rem, 5vw, 4rem); background: var(--navy); color: var(--paper); }
+.profile-mismatch > .course-brand { position: absolute; top: 2rem; left: 2rem; }
+.profile-mismatch > section { width: min(46rem, 100%); padding: clamp(1.4rem, 5vw, 4rem); background: var(--white); color: var(--navy); border-top: 7px solid var(--purple); box-shadow: 12px 12px 0 var(--amber); }
+.profile-mismatch h1 { margin: 0 0 1rem; font: 500 clamp(2.4rem, 6vw, 5rem)/.96 Georgia, serif; letter-spacing: -.04em; }
+.profile-mismatch > section > p:not(.kicker, .form-message) { color: var(--ink-soft); font-size: 1.05rem; line-height: 1.65; }
+.mismatch-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
 
 /* Start page */
 .onboarding-page { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(24rem, .85fr); }
@@ -95,6 +106,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .course-header nav button.is-active { background: var(--navy); color: var(--white); }
 .learner-name { display: flex; align-items: center; gap: .55rem; font-size: .82rem; font-weight: 850; }
 .learner-name span { width: 2rem; height: 2rem; display: grid; place-items: center; background: var(--amber-pale); border-radius: 50%; }
+.learner-name.is-adult span { width: auto; min-width: 3.5rem; padding: 0 .6rem; border-radius: 1rem; }
 .fcc-course-layout { width: 100%; display: grid; grid-template-columns: 19rem minmax(0, 1fr); min-height: calc(100vh - 4.75rem); overflow: clip; }
 .fcc-rail { height: calc(100vh - 4.75rem); overflow-y: auto; position: sticky; top: 4.75rem; background: var(--navy); color: var(--paper); border-right: 1px solid var(--navy-deep); }
 .rail-title { padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,.13); }
@@ -116,7 +128,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .rail-lessons button.is-current { background: var(--purple); color: var(--white); }
 .rail-lessons button.is-done i { background: var(--amber); color: var(--navy); }
 .rail-lessons button:disabled { cursor: not-allowed; opacity: .42; }
-.backend-warning { padding: .8rem 3vw; background: #f8d4ce; color: #6f2018; border-bottom: 2px solid var(--coral); font-weight: 750; }
+.backend-warning { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .8rem 3vw; background: #f8d4ce; color: #6f2018; border-bottom: 2px solid var(--coral); font-weight: 750; }
+.backend-warning button { min-height: 2.4rem; flex: 0 0 auto; padding: .45rem .8rem; border: 2px solid currentColor; background: var(--white); color: inherit; cursor: pointer; font-weight: 850; }
 
 /* Coding lesson */
 .coding-lesson-page { min-width: 0; }
@@ -220,11 +233,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .file-tabs button { min-height: 3rem; padding: .7rem 1rem; border: 0; background: transparent; color: #c9cad7; cursor: pointer; font-size: .82rem; font-weight: 850; }
 .file-tabs button.is-active { background: var(--white); color: var(--purple); }
 .editor-panel textarea { width: 100%; min-height: 37rem; display: block; resize: vertical; padding: 1.15rem; border: 0; background: var(--navy); color: #f8d9a4; font: .94rem/1.68 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 2; }
+.code-shortcuts { display: none; }
 .preview-panel > div { min-height: 3rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .7rem 1rem; background: var(--paper-deep); border-bottom: 1px solid var(--line); }
 .preview-panel > div span { color: var(--ink-soft); font-size: .78rem; }
 .preview-panel iframe { width: 100%; min-height: 37rem; display: block; border: 0; background: var(--white); }
+.preview-panel > .preview-runtime { min-height: 0; display: grid; justify-content: stretch; align-items: start; gap: .35rem; padding: .8rem 1rem; background: #f8d4ce; color: #6f2018; border-top: 2px solid var(--coral); border-bottom: 0; }
+.preview-runtime code { overflow-wrap: anywhere; font: .78rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .code-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: .8rem; padding: 1rem; background: var(--white); color: var(--navy); }
 .autosave-status { margin-left: auto; color: var(--ink-soft); font-size: .8rem; font-weight: 750; }
+.autosave-status.is-error { color: var(--coral); }
 .workspace-message { grid-column: 1 / -1; margin: 0; padding: .9rem 1rem; background: var(--amber-pale); color: var(--navy); font-weight: 750; }
 .test-results { grid-column: 1 / -1; display: grid; gap: .45rem; padding: 1rem; background: var(--white); color: var(--navy); }
 .test-results p { display: flex; align-items: center; gap: .65rem; margin: 0; }
@@ -355,6 +372,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .fcc-rail { position: static; width: 100%; height: auto; max-height: none; overflow: visible; }
   .fcc-rail .rail-title { display: none; }
   .stage-list > details:not([open]) { display: none; }
+  .stage-list > details[data-current="true"] { display: block; }
   .stage-list summary { padding: .75rem 1rem; }
   .rail-lessons { display: flex; gap: .45rem; overflow-x: auto; padding: 0 .75rem .75rem; scroll-snap-type: x proximity; }
   .rail-lessons button { min-width: min(15rem, 72vw); scroll-snap-align: start; background: rgba(255,255,255,.05); }
@@ -404,6 +422,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .coding-instructions > h1 { font-size: 2.7rem; }
   .coding-studio { padding: .7rem; }
   .editor-panel textarea, .preview-panel iframe, .practice-screen .editor-panel textarea, .practice-screen .preview-panel iframe { min-height: 22rem; }
+  .code-shortcuts { display: grid; grid-template-columns: repeat(9, minmax(2.35rem, 1fr)); gap: 1px; overflow-x: auto; padding: 1px; background: #3c4564; }
+  .code-shortcuts button { min-width: 2.35rem; min-height: 2.75rem; border: 0; background: var(--navy-soft); color: var(--paper); font: 800 1rem/1 ui-monospace, monospace; cursor: pointer; }
   .file-tabs { overflow-x: auto; }
   .file-tabs button { flex: 1 0 auto; padding-inline: .75rem; }
   .code-actions { flex-wrap: wrap; }
@@ -415,6 +435,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .question-list fieldset { padding: .9rem; }
   .question-list label { grid-template-columns: 1.5rem 1.5rem 1fr; }
   .checkpoint-history { grid-template-columns: 1fr; }
+  .backend-warning { align-items: stretch; flex-direction: column; }
+  .backend-warning button { width: 100%; }
+  .mismatch-actions { display: grid; }
 }
 
 @media (prefers-reduced-motion: reduce) {

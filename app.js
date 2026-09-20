@@ -1,44 +1,32 @@
-document.documentElement.classList.add('js');
+document.documentElement.classList.add("js");
 
-const revealItems = document.querySelectorAll('.reveal');
+const revealItems = document.querySelectorAll(".reveal");
 
-if ('IntersectionObserver' in window) {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('is-visible');
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.12 });
+if ("IntersectionObserver" in window) {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.1, rootMargin: "0px 0px -36px 0px" },
+  );
 
   revealItems.forEach((item) => observer.observe(item));
 } else {
-  revealItems.forEach((item) => item.classList.add('is-visible'));
+  revealItems.forEach((item) => item.classList.add("is-visible"));
 }
 
-const robot = document.querySelector('#robot');
-const command = document.querySelector('#missing-command');
-const feedback = document.querySelector('#mission-feedback');
+const header = document.querySelector(".site-header");
 
-if (robot && command && feedback) {
-  document.querySelectorAll('[data-command]').forEach((button) => {
-    button.addEventListener('click', () => {
-      robot.classList.remove('success', 'wrong');
-      feedback.classList.remove('good', 'bad');
-      command.textContent = button.textContent;
+if (header) {
+  const updateHeader = () => {
+    header.style.boxShadow = window.scrollY > 24 ? "0 10px 32px rgba(17, 25, 54, .08)" : "none";
+  };
 
-      window.setTimeout(() => {
-        if (button.dataset.command === 'jump') {
-          robot.classList.add('success');
-          feedback.textContent = 'That worked. You chose the instruction that handles the obstacle.';
-          feedback.classList.add('good');
-        } else {
-          robot.classList.add('wrong');
-          feedback.textContent = 'Kito is still stuck. Now you know more than you did before. Try the command that handles the rock.';
-          feedback.classList.add('bad');
-        }
-      }, 40);
-    });
-  });
+  updateHeader();
+  window.addEventListener("scroll", updateHeader, { passive: true });
 }

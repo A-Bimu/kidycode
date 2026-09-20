@@ -28,6 +28,7 @@ export async function authenticateLearner(request: Request): Promise<{
   nickname: string;
   age: number;
   theme: string;
+  courseId: "ages-10-12" | "ages-13-15" | "ages-16-18" | "adults";
 } | null> {
   const cookieValue = request.headers
     .get("cookie")
@@ -48,17 +49,17 @@ export async function authenticateLearner(request: Request): Promise<{
   const accessHash = await hashAccessKey(accessKey);
   const database = getDatabase();
   const learner = await database
-    .prepare("SELECT id, nickname, age, theme FROM learner_profiles WHERE id = ? AND access_hash = ?")
+    .prepare("SELECT id, nickname, age, theme, course_id AS courseId FROM learner_profiles WHERE id = ? AND access_hash = ?")
     .bind(learnerId, accessHash)
-    .first<{ id: string; nickname: string; age: number; theme: string }>();
+    .first<{
+      id: string;
+      nickname: string;
+      age: number;
+      theme: string;
+      courseId: "ages-10-12" | "ages-13-15" | "ages-16-18" | "adults";
+    }>();
 
   if (!learner) return null;
-
-  await database
-    .prepare("UPDATE learner_profiles SET last_seen_at = ? WHERE id = ?")
-    .bind(new Date().toISOString(), learner.id)
-    .run();
-
   return learner;
 }
 

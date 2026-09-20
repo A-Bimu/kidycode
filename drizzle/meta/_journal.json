@@ -15,6 +15,13 @@
       "when": 1788871408576,
       "tag": "0001_regular_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789923173070,
+      "tag": "0002_good_master_mold",
+      "breakpoints": true
     }
   ]
 }

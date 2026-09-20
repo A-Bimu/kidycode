@@ -8,6 +8,7 @@ export const learnerProfiles = sqliteTable(
     nickname: text("nickname").notNull(),
     age: integer("age").notNull(),
     theme: text("theme").notNull(),
+    courseId: text("course_id").notNull().default("ages-10-12"),
     createdAt: text("created_at").notNull(),
     lastSeenAt: text("last_seen_at").notNull(),
   },

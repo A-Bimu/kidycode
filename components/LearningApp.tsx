@@ -2,32 +2,69 @@
 
 /* eslint-disable @next/next/no-html-link-for-pages */
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type FormEvent,
+  type SetStateAction,
+} from "react";
+import { ExamPanel } from "@/components/ExamPanel";
 import {
   languageGuidance,
-  lessons,
-  projectChoices,
   termDefinitions,
   type CodeFile,
+  type CourseBundle,
+  type CourseId,
   type Lesson,
   type PracticeQuestion,
+  type ProjectChoice,
   type ProjectId,
   type Stage,
   type WorkspaceFiles,
 } from "@/lib/course";
-import { ExamPanel } from "@/components/ExamPanel";
 
-type CourseFacts = { title: string; ageRange: string; lessonCount: number; stageCount: number; estimatedHours: string; passMark: number };
-type Session = { learner: { id: string; nickname: string; age: number; theme: string } };
-type SavedProgress = { status: "started" | "completed"; questionCorrect: boolean | number; reflection: string; workspaceJson: string };
+type Learner = {
+  id: string;
+  nickname: string;
+  age: number;
+  theme: string;
+  courseId?: CourseId;
+};
+
+type Session = { learner: Learner };
+type SavedProgress = {
+  status: "started" | "completed";
+  questionCorrect?: boolean | number;
+  reflection: string;
+  workspaceJson: string;
+};
+type Checkpoint = { id: string; stageId: string; version: number; createdAt: string };
 type CheckResult = { label: string; passed: boolean };
+type LessonStep = "notes" | "practice" | "check";
+type AutosaveStatus = "idle" | "saving" | "saved" | "error";
+type PreviewStorage = Record<string, string>;
 
 const emptyFiles: WorkspaceFiles = { html: "", css: "", javascript: "" };
 const activityNames = { challenge: "Coding lesson", project: "Project checkpoint", quiz: "Module check" };
 const fileNames: Record<CodeFile, string> = { html: "HTML", css: "CSS", javascript: "JavaScript" };
+const courseRoutes: Record<CourseId, string> = {
+  "ages-10-12": "/learn",
+  "ages-13-15": "/learn/13-15",
+  "ages-16-18": "/learn/16-18",
+  adults: "/learn/adults",
+};
+const codeShortcuts = ["<", ">", "/", "{", "}", '"', "'", ";", "="];
 
 function parseWorkspace(value: string): Partial<WorkspaceFiles> {
-  try { return JSON.parse(value) as Partial<WorkspaceFiles>; } catch { return {}; }
+  try {
+    return JSON.parse(value) as Partial<WorkspaceFiles>;
+  } catch {
+    return {};
+  }
 }
 
 function normaliseFiles(value: Partial<WorkspaceFiles> | undefined, fallback: WorkspaceFiles = emptyFiles): WorkspaceFiles {
@@ -38,12 +75,12 @@ function normaliseFiles(value: Partial<WorkspaceFiles> | undefined, fallback: Wo
   };
 }
 
-function normaliseProject(value: string): ProjectId {
-  return projectChoices.some((choice) => choice.id === value) ? value as ProjectId : "interest";
+function normaliseProject(value: string, choices: ProjectChoice[]): ProjectId {
+  return choices.some((choice) => choice.id === value) ? value as ProjectId : choices[0].id;
 }
 
-function fillProjectTokens(source: WorkspaceFiles, projectId: ProjectId): WorkspaceFiles {
-  const project = projectChoices.find((choice) => choice.id === projectId) || projectChoices[0];
+function fillProjectTokens(source: WorkspaceFiles, projectId: ProjectId, choices: ProjectChoice[]): WorkspaceFiles {
+  const project = choices.find((choice) => choice.id === projectId) || choices[0];
   const replacements: Record<string, string> = {
     "{{TITLE}}": project.siteTitle,
     "{{INTRO}}": project.intro,
@@ -51,13 +88,51 @@ function fillProjectTokens(source: WorkspaceFiles, projectId: ProjectId): Worksp
     "{{ITEM2}}": project.items[1],
     "{{ITEM3}}": project.items[2],
   };
-  const replace = (value: string) => Object.entries(replacements).reduce((result, [token, content]) => result.split(token).join(content), value);
+  const replace = (value: string) => Object.entries(replacements)
+    .reduce((result, [token, content]) => result.split(token).join(content), value);
   return { html: replace(source.html), css: replace(source.css), javascript: replace(source.javascript) };
 }
 
-function buildPreview(source: WorkspaceFiles): string {
+function buildPreview(source: WorkspaceFiles, storedValues: PreviewStorage = {}): string {
+  const css = source.css.replace(/<\/style/gi, "<\\/style");
   const script = source.javascript.replace(/<\/script/gi, "<\\/script");
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;padding:1rem;color:#111936}img{max-width:100%;height:auto}${source.css}</style></head><body>${source.html}<script>${script}</script></body></html>`;
+  const initialStorage = JSON.stringify(storedValues).replace(/</g, "\\u003c");
+  const previewBridge = `
+    (function () {
+      var memory = ${initialStorage};
+      var storage = {
+        getItem: function (key) { return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : null; },
+        setItem: function (key, value) {
+          memory[String(key)] = String(value);
+          report("storage", JSON.stringify({ operation: "set", key: String(key), value: String(value) }));
+        },
+        removeItem: function (key) {
+          delete memory[String(key)];
+          report("storage", JSON.stringify({ operation: "remove", key: String(key) }));
+        },
+        clear: function () {
+          memory = {};
+          report("storage", JSON.stringify({ operation: "clear" }));
+        },
+        key: function (index) { return Object.keys(memory)[index] || null; }
+      };
+      Object.defineProperty(storage, "length", { get: function () { return Object.keys(memory).length; } });
+      try { Object.defineProperty(window, "localStorage", { configurable: true, value: storage }); } catch (error) {}
+      function report(kind, value) {
+        window.parent.postMessage({ source: "kidycode-preview", kind: kind, value: String(value || "Unknown error") }, "*");
+      }
+      window.addEventListener("error", function (event) { report("error", event.message); });
+      window.addEventListener("unhandledrejection", function (event) {
+        report("error", event.reason && event.reason.message ? event.reason.message : event.reason);
+      });
+      var originalError = console.error.bind(console);
+      console.error = function () {
+        originalError.apply(console, arguments);
+        report("error", Array.prototype.map.call(arguments, String).join(" "));
+      };
+      window.__kidycodeReport = report;
+    }());`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;padding:1rem;color:#111936}img{max-width:100%;height:auto}${css}</style></head><body>${source.html}<script>${previewBridge.replace(/<\/script/gi, "<\\/script")}</script><script>try {${script}\n} catch (error) { window.__kidycodeReport("error", error && error.message ? error.message : error); }</script></body></html>`;
 }
 
 function activityLabel(activity: Lesson): string {
@@ -66,9 +141,19 @@ function activityLabel(activity: Lesson): string {
   return activity.language;
 }
 
-export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts; stages: Stage[] }) {
+function inferredCourseId(learner: Learner): CourseId {
+  if (learner.courseId) return learner.courseId;
+  if (learner.age <= 12) return "ages-10-12";
+  if (learner.age <= 15) return "ages-13-15";
+  if (learner.age <= 18) return "ages-16-18";
+  return "adults";
+}
+
+export function LearningApp({ course }: { course: CourseBundle }) {
+  const { courseFacts, stages, lessons, projectChoices } = course;
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [backendReady, setBackendReady] = useState(true);
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [saved, setSaved] = useState<Record<string, SavedProgress>>({});
@@ -84,14 +169,16 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
   const [hintIndex, setHintIndex] = useState(-1);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
-  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
   const [view, setView] = useState<"course" | "project" | "exam">("course");
-  const [checkpoints, setCheckpoints] = useState<Array<{ id: string; stageId: string; version: number; createdAt: string }>>([]);
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+  const [pendingCheckpoint, setPendingCheckpoint] = useState<string | null>(null);
+  const checkpointLock = useRef(new Set<string>());
 
-  const currentActivity = lessons[currentIndex];
+  const currentActivity = lessons[currentIndex] || lessons[0];
   const currentStage = stages.find((stage) => stage.lessons.some((activity) => activity.id === currentActivity.id)) || stages[0];
   const stageActivityIndex = currentStage.lessons.findIndex((activity) => activity.id === currentActivity.id);
-  const projectId = normaliseProject(session?.learner.theme || "interest");
+  const projectId = normaliseProject(session?.learner.theme || projectChoices[0].id, projectChoices);
   const validCompletedCount = lessons.filter((activity) => completed.has(activity.id)).length;
   const firstIncomplete = lessons.findIndex((activity) => !completed.has(activity.id));
   const allComplete = validCompletedCount === lessons.length;
@@ -102,27 +189,37 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
   const answeredCount = Object.keys(answers).length;
   const correctCount = questions.filter((question, index) => answers[index] === question.answer).length;
   const quizPassed = currentActivity.activityType === "quiz" && assessmentChecked && correctCount >= 4;
-  const practiceCorrect = currentActivity.activityType !== "quiz" && Boolean(currentActivity.question) && practiceChecked && practiceAnswer === currentActivity.question?.answer;
+  const practiceCorrect = currentActivity.activityType !== "quiz"
+    && Boolean(currentActivity.question)
+    && practiceChecked
+    && practiceAnswer === currentActivity.question?.answer;
   const currentDraft = workspaces[currentActivity.id];
 
-  function starterFor(activity: Lesson): WorkspaceFiles {
-    const direct = workspaces[activity.id];
-    if (direct) return direct;
+  function projectBaseline(activity: Lesson): WorkspaceFiles {
     if (activity.activityType === "project") {
       const stageIndex = stages.findIndex((stage) => stage.lessons.some((lesson) => lesson.id === activity.id));
       for (let index = stageIndex - 1; index >= 0; index -= 1) {
         const previousProject = stages[index].lessons.find((lesson) => lesson.activityType === "project");
         if (!previousProject) continue;
         if (workspaces[previousProject.id]) return workspaces[previousProject.id];
-        if (saved[previousProject.id]) return normaliseFiles(parseWorkspace(saved[previousProject.id].workspaceJson), fillProjectTokens(activity.starterFiles, projectId));
+        if (saved[previousProject.id]) {
+          return normaliseFiles(
+            parseWorkspace(saved[previousProject.id].workspaceJson),
+            fillProjectTokens(previousProject.starterFiles, projectId, projectChoices),
+          );
+        }
       }
     }
-    return fillProjectTokens(activity.starterFiles, projectId);
+    return fillProjectTokens(activity.starterFiles, projectId, projectChoices);
+  }
+
+  function starterFor(activity: Lesson): WorkspaceFiles {
+    return workspaces[activity.id] || projectBaseline(activity);
   }
 
   const workspace = starterFor(currentActivity);
 
-  function loadActivityState(index: number, records: Record<string, SavedProgress>) {
+  const loadActivityState = useCallback((index: number, records: Record<string, SavedProgress>) => {
     const activity = lessons[index];
     const record = records[activity.id];
     setCurrentIndex(index);
@@ -136,28 +233,37 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
     setHintIndex(-1);
     setMessage("");
     setAutosaveStatus("idle");
-  }
+  }, [lessons]);
 
   useEffect(() => {
     let active = true;
     async function loadProgress() {
+      setLoadError("");
       try {
-        const response = await fetch("/api/progress");
+        const response = await fetch("/api/progress", { cache: "no-store" });
         const data = await response.json() as {
-          learner?: Session["learner"];
+          learner?: Learner;
           progress?: Array<SavedProgress & { lessonId: string }>;
-          checkpoints?: Array<{ id: string; stageId: string; version: number; createdAt: string }>;
+          checkpoints?: Checkpoint[];
           error?: string;
         };
-        if (response.status === 401) { if (active) setSession(null); return; }
+        if (response.status === 401) {
+          if (active) setSession(null);
+          return;
+        }
         if (!response.ok) throw new Error(data.error || "Progress is temporarily unavailable.");
         if (!active) return;
         if (data.learner) setSession({ learner: data.learner });
         const validIds = new Set(lessons.map((activity) => activity.id));
         const progress = (data.progress || []).filter((item) => validIds.has(item.lessonId));
         const records = Object.fromEntries(progress.map((item) => [item.lessonId, item]));
-        const nextWorkspaces = Object.fromEntries(progress.map((item) => [item.lessonId, normaliseFiles(parseWorkspace(item.workspaceJson))]));
-        const nextCompleted = new Set(progress.filter((item) => item.status === "completed").map((item) => item.lessonId));
+        const nextWorkspaces = Object.fromEntries(progress.map((item) => [
+          item.lessonId,
+          normaliseFiles(parseWorkspace(item.workspaceJson)),
+        ]));
+        const nextCompleted = new Set(progress
+          .filter((item) => item.status === "completed")
+          .map((item) => item.lessonId));
         setSaved(records);
         setWorkspaces(nextWorkspaces);
         setCompleted(nextCompleted);
@@ -168,13 +274,15 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
       } catch (error) {
         if (active) {
           setBackendReady(false);
-          setMessage(error instanceof Error ? error.message : "Progress is temporarily unavailable.");
+          setLoadError(error instanceof Error ? error.message : "Progress is temporarily unavailable.");
         }
-      } finally { if (active) setLoading(false); }
+      } finally {
+        if (active) setLoading(false);
+      }
     }
     void loadProgress();
     return () => { active = false; };
-  }, []);
+  }, [courseFacts.id, lessons, loadActivityState]);
 
   useEffect(() => {
     if (!session || currentActivity.activityType === "quiz" || !currentDraft || activityDone) return;
@@ -185,28 +293,44 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
         const response = await fetch("/api/progress", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ lessonId: currentActivity.id, status: "started", questionCorrect: practiceCorrect, reflection, workspace: currentDraft }),
+          body: JSON.stringify({
+            lessonId: currentActivity.id,
+            status: "started",
+            questionAnswer: practiceAnswer,
+            quizAnswers: [],
+            reflection,
+            workspace: currentDraft,
+          }),
           signal: controller.signal,
         });
-        if (!response.ok) throw new Error("Draft could not be saved.");
-        setSaved((current) => ({ ...current, [currentActivity.id]: { status: "started", questionCorrect: practiceCorrect, reflection, workspaceJson: JSON.stringify(currentDraft) } }));
+        const data = await response.json() as { error?: string };
+        if (!response.ok) throw new Error(data.error || "Draft could not be saved.");
+        setSaved((current) => ({
+          ...current,
+          [currentActivity.id]: {
+            status: "started",
+            reflection,
+            workspaceJson: JSON.stringify(currentDraft),
+          },
+        }));
         setBackendReady(true);
         setAutosaveStatus("saved");
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setBackendReady(false);
-        setAutosaveStatus("idle");
+        setAutosaveStatus("error");
+        setMessage(error instanceof Error ? error.message : "Draft could not be saved.");
       }
     }, 900);
     return () => {
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [activityDone, currentActivity, currentDraft, practiceCorrect, reflection, session]);
+  }, [activityDone, currentActivity.activityType, currentActivity.id, currentDraft, practiceAnswer, reflection, session]);
 
   function chooseActivity(index: number) {
     const unlockedThrough = firstIncomplete === -1 ? lessons.length - 1 : firstIncomplete;
-    if (index > unlockedThrough) return;
+    if (index < 0 || index > unlockedThrough) return;
     loadActivityState(index, saved);
     setView("course");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -216,25 +340,53 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
     setWorkspaces((current) => ({ ...current, [currentActivity.id]: next }));
     setWorkChecked(false);
     setTestResults([]);
+    setAutosaveStatus("idle");
   }
 
   function checkWork() {
-    const results = currentActivity.tests.map((test) => {
+    const results = currentActivity.tests.map((codeTest) => {
       let passed = false;
-      try { passed = new RegExp(test.pattern, "i").test(workspace[test.file]); } catch { passed = false; }
-      return { label: test.label, passed };
+      try {
+        passed = new RegExp(codeTest.pattern, "i").test(workspace[codeTest.file]);
+      } catch {
+        passed = false;
+      }
+      return { label: codeTest.label, passed };
     });
     const passed = results.length > 0 && results.every((result) => result.passed);
     setTestResults(results);
     setWorkChecked(passed);
-    setMessage(passed ? "Code checks passed. Continue to the quick check." : "Read the failed check, make one repair and test again.");
+    setMessage(passed
+      ? "Code checks passed. Continue to the quick check."
+      : "Read the failed check, make one repair and test again.");
   }
 
-  async function saveActivity(status: "started" | "completed", knowledgePassed: boolean) {
+  async function saveActivity(status: "started" | "completed") {
     if (!session) return false;
     setSaving(true);
     try {
-      const response = await fetch("/api/progress", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lessonId: currentActivity.id, status, questionCorrect: knowledgePassed, reflection, workspace }) });
+      const requestBody = currentActivity.activityType === "quiz"
+        ? {
+            lessonId: currentActivity.id,
+            status,
+            questionAnswer: -1,
+            quizAnswers: questions.map((_, index) => answers[index] ?? -1),
+            reflection: "",
+            workspace,
+          }
+        : {
+            lessonId: currentActivity.id,
+            status,
+            questionAnswer: practiceAnswer,
+            quizAnswers: [],
+            reflection,
+            workspace,
+          };
+      const response = await fetch("/api/progress", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
       const data = await response.json() as { error?: string };
       if (!response.ok) throw new Error(data.error || "Progress could not be saved.");
       setBackendReady(true);
@@ -243,67 +395,209 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
       setBackendReady(false);
       setMessage(error instanceof Error ? error.message : "Progress could not be saved.");
       return false;
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveCheckpoint(
+    stage: Stage,
+    progressRecords: Record<string, SavedProgress> = saved,
+    workspaceRecords: Record<string, WorkspaceFiles> = workspaces,
+  ) {
+    if (checkpoints.some((checkpoint) => checkpoint.stageId === stage.id)) {
+      setPendingCheckpoint(null);
+      return true;
+    }
+    if (checkpointLock.current.has(stage.id)) return false;
+    checkpointLock.current.add(stage.id);
+    try {
+      const projectActivity = stage.lessons.find((activity) => activity.activityType === "project");
+      if (!projectActivity) return true;
+      const projectWorkspace = workspaceRecords[projectActivity.id]
+        || normaliseFiles(
+          parseWorkspace(progressRecords[projectActivity.id]?.workspaceJson || "{}"),
+          fillProjectTokens(projectActivity.starterFiles, projectId, projectChoices),
+        );
+      const response = await fetch("/api/checkpoints", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          stageId: stage.id,
+          reflection: progressRecords[projectActivity.id]?.reflection || "Module work completed and checked.",
+          project: { ...projectWorkspace, theme: projectId },
+        }),
+      });
+      const data = await response.json() as { checkpoint?: Checkpoint; error?: string };
+      if (!response.ok || !data.checkpoint) {
+        throw new Error(data.error || "The project version could not be saved.");
+      }
+      setCheckpoints((current) => current.some((item) => item.id === data.checkpoint?.id)
+        ? current
+        : [data.checkpoint!, ...current]);
+      setPendingCheckpoint(null);
+      setBackendReady(true);
+      return true;
+    } catch (error) {
+      setPendingCheckpoint(stage.id);
+      setBackendReady(false);
+      setMessage(error instanceof Error ? error.message : "The project version could not be saved.");
+      return false;
+    } finally {
+      checkpointLock.current.delete(stage.id);
+    }
+  }
+
+  async function retryCheckpoint() {
+    if (!pendingCheckpoint) return;
+    const stage = stages.find((item) => item.id === pendingCheckpoint);
+    if (!stage) return;
+    setMessage("Saving the module project version...");
+    const didSave = await saveCheckpoint(stage);
+    setMessage(didSave ? "The module project version is saved." : "The project version is still waiting. Try again when the connection is ready.");
   }
 
   async function completeActivity() {
-    if (activityDone) { if (currentIndex < lessons.length - 1) chooseActivity(currentIndex + 1); return; }
-    const allowed = currentActivity.activityType === "challenge" ? workChecked && practiceCorrect : currentActivity.activityType === "project" ? workChecked && practiceCorrect && reflection.trim().length >= 10 : quizPassed;
+    if (activityDone) {
+      if (currentIndex < lessons.length - 1) chooseActivity(currentIndex + 1);
+      return;
+    }
+    const allowed = currentActivity.activityType === "challenge"
+      ? workChecked && practiceCorrect
+      : currentActivity.activityType === "project"
+        ? workChecked && practiceCorrect && reflection.trim().length >= 10
+        : quizPassed;
     if (!allowed) return;
-    const knowledgePassed = currentActivity.activityType === "quiz" ? correctCount >= 4 : practiceCorrect;
-    const didSave = await saveActivity("completed", knowledgePassed);
+    const didSave = await saveActivity("completed");
     if (!didSave) return;
 
     const nextCompleted = new Set(completed).add(currentActivity.id);
-    const nextSaved = { ...saved, [currentActivity.id]: { status: "completed" as const, questionCorrect: knowledgePassed, reflection, workspaceJson: JSON.stringify(workspace) } };
+    const nextSaved = {
+      ...saved,
+      [currentActivity.id]: {
+        status: "completed" as const,
+        reflection,
+        workspaceJson: JSON.stringify(workspace),
+      },
+    };
     setCompleted(nextCompleted);
     setSaved(nextSaved);
 
-    if (currentActivity.activityType === "quiz" && session) {
-      const projectActivity = currentStage.lessons.find((activity) => activity.activityType === "project");
-      if (projectActivity) {
-        const projectWorkspace = workspaces[projectActivity.id] || normaliseFiles(parseWorkspace(saved[projectActivity.id]?.workspaceJson || "{}"), fillProjectTokens(projectActivity.starterFiles, projectId));
-        try {
-          const response = await fetch("/api/checkpoints", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ stageId: currentStage.id, reflection: saved[projectActivity.id]?.reflection || reflection || "Module work completed and checked.", project: { ...projectWorkspace, theme: projectId } }) });
-          const data = await response.json() as { checkpoint?: { id: string; stageId: string; version: number; createdAt: string } };
-          if (response.ok && data.checkpoint) setCheckpoints((current) => [data.checkpoint!, ...current]);
-        } catch { setMessage("The module is complete. Its project version can be saved again later."); }
-      }
+    let checkpointSaved = true;
+    if (currentActivity.activityType === "quiz") {
+      checkpointSaved = await saveCheckpoint(currentStage, nextSaved, workspaces);
     }
 
     if (currentIndex < lessons.length - 1) {
       loadActivityState(currentIndex + 1, nextSaved);
-      setMessage(currentActivity.activityType === "quiz" ? `Module ${currentStage.number} complete. The next module is open.` : "Lesson complete. The next coding task is ready.");
+      if (currentActivity.activityType === "quiz") {
+        setMessage(checkpointSaved
+          ? `Module ${currentStage.number} complete. The next module is open.`
+          : `Module ${currentStage.number} is complete. Your project version still needs to be saved.`);
+      } else {
+        setMessage("Lesson complete. The next coding task is ready.");
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } else { setMessage("The course is complete. Your final check is ready."); }
+    } else {
+      setMessage("The course is complete. Your final check is ready.");
+    }
   }
 
-  if (loading) return <main className="loading-page"><div className="loading-mark">K</div><p>Opening your coding course...</p></main>;
-  if (!session) return <Onboarding courseFacts={courseFacts} onCreated={setSession} />;
-  if (view === "exam") return <ExamPanel onBack={() => setView("course")} />;
+  if (loading) {
+    return <main className="loading-page"><div className="loading-mark">K</div><p>Opening your coding course...</p></main>;
+  }
+  if (loadError) {
+    return <main className="loading-page load-error" role="alert"><div className="loading-mark">K</div><h1>We could not open your saved course.</h1><p>{loadError}</p><button className="primary-button" type="button" onClick={() => window.location.reload()}>Try again</button></main>;
+  }
+  if (!session) return <Onboarding course={course} onCreated={setSession} />;
+
+  const learnerCourseId = inferredCourseId(session.learner);
+  if (learnerCourseId !== courseFacts.id) {
+    return <CourseMismatch learner={session.learner} requestedCourse={course} onReset={() => setSession(null)} />;
+  }
+  if (view === "exam") return <ExamPanel course={course} onBack={() => setView("course")} />;
 
   return (
     <div className="course-app coding-course">
       <header className="course-header coding-header">
         <a className="course-brand" href="/" aria-label="KidyCode home"><span>K</span><b>KidyCode</b></a>
-        <div className="local-progress" aria-label={`${stageProgress}% of this module complete`}><div><span>Module {currentStage.number} · lesson {stageActivityIndex + 1} of {currentStage.lessons.length}</span><b>{currentStage.title}</b></div><div className="progress-track"><i style={{ width: `${stageProgress}%` }} /></div></div>
-        <nav aria-label="Course views"><button className={view === "course" ? "is-active" : ""} type="button" onClick={() => setView("course")}>Learn</button><button className={view === "project" ? "is-active" : ""} type="button" onClick={() => setView("project")}>My website</button><button type="button" disabled={!allComplete} onClick={() => setView("exam")}>Final check</button></nav>
-        <div className="learner-name"><span>{session.learner.age}</span>{session.learner.nickname}</div>
+        <div className="local-progress" aria-label={`${stageProgress}% of this module complete`}>
+          <div><span>Module {currentStage.number} · lesson {stageActivityIndex + 1} of {currentStage.lessons.length}</span><b>{currentStage.title}</b></div>
+          <div className="progress-track"><i style={{ width: `${stageProgress}%` }} /></div>
+        </div>
+        <nav aria-label="Course views">
+          <button className={view === "course" ? "is-active" : ""} type="button" onClick={() => setView("course")}>Learn</button>
+          <button className={view === "project" ? "is-active" : ""} type="button" onClick={() => setView("project")}>My website</button>
+          <button type="button" disabled={!allComplete} onClick={() => setView("exam")}>Final check</button>
+        </nav>
+        <div className={`learner-name${courseFacts.id === "adults" ? " is-adult" : ""}`}><span>{courseFacts.id === "adults" ? "Adult" : session.learner.age}</span>{session.learner.nickname}</div>
       </header>
 
       {view === "project" ? (
-        <ProjectPage stages={stages} saved={saved} workspaces={workspaces} projectId={projectId} checkpoints={checkpoints} onContinue={() => setView("course")} />
+        <ProjectPage course={course} saved={saved} workspaces={workspaces} projectId={projectId} checkpoints={checkpoints} onContinue={() => setView("course")} />
       ) : (
         <main className="fcc-course-layout">
-          <CourseRail stages={stages} currentStage={currentStage} completed={completed} currentIndex={currentIndex} firstIncomplete={firstIncomplete} chooseActivity={chooseActivity} courseFacts={courseFacts} />
+          <CourseRail
+            stages={stages}
+            lessons={lessons}
+            currentStage={currentStage}
+            completed={completed}
+            currentIndex={currentIndex}
+            firstIncomplete={firstIncomplete}
+            chooseActivity={chooseActivity}
+            course={course}
+          />
           <article className="coding-lesson-page">
-            {!backendReady && <div className="backend-warning" role="alert">Saving is temporarily unavailable. Keep this page open and try again shortly.</div>}
-            {currentActivity.activityType === "quiz" ? (
-              <QuizActivity activity={currentActivity} answers={answers} setAnswers={setAnswers} checked={assessmentChecked} setChecked={setAssessmentChecked} correctCount={correctCount} answeredCount={answeredCount} complete={() => void completeActivity()} saving={saving} done={activityDone} />
-            ) : (
-              <CodingActivity key={currentActivity.id} activity={currentActivity} stage={currentStage} projectId={projectId} workspace={workspace} updateWorkspace={updateWorkspace} checkWork={checkWork} message={message} results={testResults} hintIndex={hintIndex} setHintIndex={setHintIndex} reflection={reflection} setReflection={setReflection} practiceAnswer={practiceAnswer} practiceChecked={practiceChecked} setPracticeAnswer={(answer) => { setPracticeAnswer(answer); setPracticeChecked(false); }} setPracticeChecked={setPracticeChecked} complete={() => void completeActivity()} saving={saving} autosaveStatus={autosaveStatus} done={activityDone} ready={workChecked && practiceCorrect && (currentActivity.activityType !== "project" || reflection.trim().length >= 10)} />
+            {(!backendReady || pendingCheckpoint) && (
+              <div className="backend-warning" role="alert">
+                <span>{pendingCheckpoint ? "Your course progress is safe, but one module project version still needs to be saved." : "Saving is temporarily unavailable. Keep this page open and try again shortly."}</span>
+                {pendingCheckpoint && <button type="button" onClick={() => void retryCheckpoint()}>Retry project save</button>}
+              </div>
             )}
-            <footer className="activity-footer"><button type="button" disabled={currentIndex === 0} onClick={() => chooseActivity(currentIndex - 1)}>← Previous</button><span>Module {currentStage.number}, lesson {stageActivityIndex + 1}</span><button type="button" disabled={!activityDone || currentIndex === lessons.length - 1} onClick={() => chooseActivity(currentIndex + 1)}>Next →</button></footer>
+            {currentActivity.activityType === "quiz" ? (
+              <QuizActivity
+                activity={currentActivity}
+                answers={answers}
+                setAnswers={setAnswers}
+                checked={assessmentChecked}
+                setChecked={setAssessmentChecked}
+                correctCount={correctCount}
+                answeredCount={answeredCount}
+                complete={() => void completeActivity()}
+                saving={saving}
+                done={activityDone}
+              />
+            ) : (
+              <CodingActivity
+                key={currentActivity.id}
+                activity={currentActivity}
+                stage={currentStage}
+                workspace={workspace}
+                resetFiles={projectBaseline(currentActivity)}
+                updateWorkspace={updateWorkspace}
+                checkWork={checkWork}
+                message={message}
+                results={testResults}
+                hintIndex={hintIndex}
+                setHintIndex={setHintIndex}
+                reflection={reflection}
+                setReflection={setReflection}
+                practiceAnswer={practiceAnswer}
+                practiceChecked={practiceChecked}
+                setPracticeAnswer={(answer) => { setPracticeAnswer(answer); setPracticeChecked(false); }}
+                setPracticeChecked={setPracticeChecked}
+                complete={() => void completeActivity()}
+                saving={saving}
+                autosaveStatus={autosaveStatus}
+                done={activityDone}
+                ready={workChecked && practiceCorrect && (currentActivity.activityType !== "project" || reflection.trim().length >= 10)}
+              />
+            )}
+            <footer className="activity-footer">
+              <button type="button" disabled={currentIndex === 0} onClick={() => chooseActivity(currentIndex - 1)}>← Previous</button>
+              <span>Module {currentStage.number}, lesson {stageActivityIndex + 1}</span>
+              <button type="button" disabled={!activityDone || currentIndex === lessons.length - 1} onClick={() => chooseActivity(currentIndex + 1)}>Next →</button>
+            </footer>
           </article>
         </main>
       )}
@@ -311,118 +605,423 @@ export function LearningApp({ courseFacts, stages }: { courseFacts: CourseFacts;
   );
 }
 
-function CourseRail({ stages, currentStage, completed, currentIndex, firstIncomplete, chooseActivity, courseFacts }: { stages: Stage[]; currentStage: Stage; completed: Set<string>; currentIndex: number; firstIncomplete: number; chooseActivity: (index: number) => void; courseFacts: CourseFacts }) {
-  return <aside className="fcc-rail coding-rail"><div className="rail-title"><p className="kicker">AGES 10 TO 12</p><h2>{courseFacts.title}</h2><p>Real code · {courseFacts.estimatedHours}</p></div><div className="stage-list">{stages.map((stage) => { const done = stage.lessons.filter((lesson) => completed.has(lesson.id)).length; return <details key={stage.id} open={stage.id === currentStage.id}><summary><span>{String(stage.number).padStart(2, "0")}</span><div><b>{stage.title}</b><small>{done} of {stage.lessons.length} complete</small></div></summary><div className="rail-lessons">{stage.lessons.map((activity) => { const index = lessons.findIndex((item) => item.id === activity.id); const unlockedThrough = firstIncomplete === -1 ? lessons.length - 1 : firstIncomplete; return <button key={activity.id} type="button" disabled={index > unlockedThrough} className={`${index === currentIndex ? "is-current" : ""}${completed.has(activity.id) ? " is-done" : ""}`} onClick={() => chooseActivity(index)}><i>{completed.has(activity.id) ? "✓" : activity.activityNumber}</i><span><small>{activityLabel(activity)}</small>{activity.title}</span></button>; })}</div></details>; })}</div></aside>;
+function CourseRail({
+  stages,
+  lessons,
+  currentStage,
+  completed,
+  currentIndex,
+  firstIncomplete,
+  chooseActivity,
+  course,
+}: {
+  stages: Stage[];
+  lessons: Lesson[];
+  currentStage: Stage;
+  completed: Set<string>;
+  currentIndex: number;
+  firstIncomplete: number;
+  chooseActivity: (index: number) => void;
+  course: CourseBundle;
+}) {
+  return (
+    <aside className="fcc-rail coding-rail">
+      <div className="rail-title">
+        <p className="kicker">{course.courseFacts.ageRange.toUpperCase()}</p>
+        <h2>{course.courseFacts.title}</h2>
+        <p>Real code · {course.courseFacts.estimatedHours}</p>
+      </div>
+      <div className="stage-list">
+        {stages.map((stage) => {
+          const done = stage.lessons.filter((lesson) => completed.has(lesson.id)).length;
+          const isCurrent = stage.id === currentStage.id;
+          return (
+            <details
+              key={stage.id}
+              open={isCurrent}
+              data-current={isCurrent ? "true" : "false"}
+              onToggle={(event) => {
+                if (isCurrent && !event.currentTarget.open) event.currentTarget.open = true;
+              }}
+            >
+              <summary><span>{String(stage.number).padStart(2, "0")}</span><div><b>{stage.title}</b><small>{done} of {stage.lessons.length} complete</small></div></summary>
+              <div className="rail-lessons">
+                {stage.lessons.map((activity) => {
+                  const index = lessons.findIndex((item) => item.id === activity.id);
+                  const unlockedThrough = firstIncomplete === -1 ? lessons.length - 1 : firstIncomplete;
+                  return (
+                    <button
+                      key={activity.id}
+                      type="button"
+                      disabled={index > unlockedThrough}
+                      className={`${index === currentIndex ? "is-current" : ""}${completed.has(activity.id) ? " is-done" : ""}`}
+                      onClick={() => chooseActivity(index)}
+                    >
+                      <i>{completed.has(activity.id) ? "✓" : activity.activityNumber}</i>
+                      <span><small>{activityLabel(activity)}</small>{activity.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </aside>
+  );
 }
 
-function CodingActivity({ activity, stage, projectId, workspace, updateWorkspace, checkWork, message, results, hintIndex, setHintIndex, reflection, setReflection, practiceAnswer, practiceChecked, setPracticeAnswer, setPracticeChecked, complete, saving, autosaveStatus, done, ready }: { activity: Lesson; stage: Stage; projectId: ProjectId; workspace: WorkspaceFiles; updateWorkspace: (files: WorkspaceFiles) => void; checkWork: () => void; message: string; results: CheckResult[]; hintIndex: number; setHintIndex: React.Dispatch<React.SetStateAction<number>>; reflection: string; setReflection: React.Dispatch<React.SetStateAction<string>>; practiceAnswer: number; practiceChecked: boolean; setPracticeAnswer: (answer: number) => void; setPracticeChecked: React.Dispatch<React.SetStateAction<boolean>>; complete: () => void; saving: boolean; autosaveStatus: "idle" | "saving" | "saved"; done: boolean; ready: boolean }) {
+function CodingActivity({
+  activity,
+  stage,
+  workspace,
+  resetFiles,
+  updateWorkspace,
+  checkWork,
+  message,
+  results,
+  hintIndex,
+  setHintIndex,
+  reflection,
+  setReflection,
+  practiceAnswer,
+  practiceChecked,
+  setPracticeAnswer,
+  setPracticeChecked,
+  complete,
+  saving,
+  autosaveStatus,
+  done,
+  ready,
+}: {
+  activity: Lesson;
+  stage: Stage;
+  workspace: WorkspaceFiles;
+  resetFiles: WorkspaceFiles;
+  updateWorkspace: (files: WorkspaceFiles) => void;
+  checkWork: () => void;
+  message: string;
+  results: CheckResult[];
+  hintIndex: number;
+  setHintIndex: Dispatch<SetStateAction<number>>;
+  reflection: string;
+  setReflection: Dispatch<SetStateAction<string>>;
+  practiceAnswer: number;
+  practiceChecked: boolean;
+  setPracticeAnswer: (answer: number) => void;
+  setPracticeChecked: Dispatch<SetStateAction<boolean>>;
+  complete: () => void;
+  saving: boolean;
+  autosaveStatus: AutosaveStatus;
+  done: boolean;
+  ready: boolean;
+}) {
   const [activeFile, setActiveFile] = useState<CodeFile>(activity.editableFiles[0] || "html");
   const [preview, setPreview] = useState(() => buildPreview(workspace));
-  const [lessonStep, setLessonStep] = useState<"notes" | "practice" | "check">("notes");
+  const [previewErrors, setPreviewErrors] = useState<string[]>([]);
+  const [previewStorage, setPreviewStorage] = useState<PreviewStorage>({});
+  const [lessonStep, setLessonStep] = useState<LessonStep>("notes");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const guidance = languageGuidance[activity.language];
   const practiceFiles = activity.editableFiles.map((file) => fileNames[file]).join(", ");
   const codePassed = results.length > 0 && results.every((result) => result.passed);
-  function runCode() { setPreview(buildPreview(workspace)); }
-  function openStep(step: "notes" | "practice" | "check") {
+
+  useEffect(() => {
+    function receivePreviewMessage(event: MessageEvent) {
+      if (event.source !== iframeRef.current?.contentWindow) return;
+      const data = event.data as { source?: string; kind?: string; value?: string } | null;
+      if (!data || data.source !== "kidycode-preview" || !data.value) return;
+      if (data.kind === "error") {
+        setPreviewErrors((current) => current.includes(data.value!) ? current : [...current, data.value!].slice(-4));
+        return;
+      }
+      if (data.kind !== "storage") return;
+      try {
+        const change = JSON.parse(data.value) as { operation: "set" | "remove" | "clear"; key?: string; value?: string };
+        setPreviewStorage((current) => {
+          if (change.operation === "clear") return {};
+          if (!change.key) return current;
+          if (change.operation === "remove") {
+            const next = { ...current };
+            delete next[change.key];
+            return next;
+          }
+          return { ...current, [change.key]: change.value || "" };
+        });
+      } catch {
+        return;
+      }
+    }
+    window.addEventListener("message", receivePreviewMessage);
+    return () => window.removeEventListener("message", receivePreviewMessage);
+  }, []);
+
+  function runCode() {
+    setPreviewErrors([]);
+    setPreview(buildPreview(workspace, previewStorage));
+  }
+
+  function openStep(step: LessonStep) {
     setLessonStep(step);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  return <div className={`guided-lesson is-${lessonStep}`}>
-    <header className="guided-lesson-header">
-      <div className="lesson-position"><span>Module {stage.number} · {activity.minutes} min</span><b>{activityNames[activity.activityType]}</b></div>
-      <div className="guided-title"><div><span className="language-pill">{activity.language}</span><h1>{activity.title}</h1><p>{activity.objective}</p></div></div>
-      <nav className="lesson-stepper" aria-label="Lesson steps">
-        <button type="button" className={lessonStep === "notes" ? "is-current" : ""} aria-current={lessonStep === "notes" ? "step" : undefined} onClick={() => openStep("notes")}><span>1</span><b>Notes</b><small>Learn the idea</small></button>
-        <button type="button" className={`${lessonStep === "practice" ? "is-current" : ""}${codePassed ? " is-complete" : ""}`} aria-current={lessonStep === "practice" ? "step" : undefined} onClick={() => openStep("practice")}><span>2</span><b>Practice</b><small>Write real code</small></button>
-        <button type="button" disabled={!done && !codePassed} className={`${lessonStep === "check" ? "is-current" : ""}${done ? " is-complete" : ""}`} aria-current={lessonStep === "check" ? "step" : undefined} onClick={() => openStep("check")}><span>3</span><b>Quick check</b><small>Show what you know</small></button>
-      </nav>
-    </header>
 
-    {lessonStep === "notes" && <main className="lesson-screen notes-screen">
-      <section className="notes-sheet">
-        <div className="notes-section">
-          <p className="section-label">FIRST, UNDERSTAND THE IDEA</p>
-          <h2>What you are learning</h2>
-          {activity.explanation.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-        </div>
-        <aside className="language-guide" aria-label={`${activity.language} guide`}><span>{activity.language}</span><div><h3>Where this lesson fits</h3><p>{guidance.purpose}</p><p>{guidance.next}</p></div></aside>
-        <div className="worked-example">
-          <div className="example-heading"><div><p className="section-label">WORKED EXAMPLE</p><h2>{activity.exampleTitle}</h2></div><span>Read it before typing</span></div>
-          <pre><code>{activity.exampleCode}</code></pre>
-          <div className="example-reading"><h3>What the example does</h3><p>{activity.exampleExplanation}</p><h3>How to read this language</h3><p>{guidance.reading}</p></div>
-        </div>
-        <div className="key-words"><div><p className="section-label">WORDS TO KNOW</p><h2>Keep these meanings nearby</h2></div><dl>{activity.keyTerms.map((term) => <div key={term}><dt>{term}</dt><dd>{termDefinitions[term] || `A coding idea used in this lesson.`}</dd></div>)}</dl></div>
-        <div className="lesson-next"><p><b>Ready for practice?</b> The next screen gives you one task and the {practiceFiles || activity.language} code you need.</p><button className="primary-button" type="button" onClick={() => openStep("practice")}>Start practice</button></div>
-      </section>
-    </main>}
+  function insertShortcut(shortcut: string) {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const current = workspace[activeFile];
+    updateWorkspace({
+      ...workspace,
+      [activeFile]: `${current.slice(0, start)}${shortcut}${current.slice(end)}`,
+    });
+    window.requestAnimationFrame(() => {
+      editor.focus();
+      editor.setSelectionRange(start + shortcut.length, start + shortcut.length);
+    });
+  }
 
-    {lessonStep === "practice" && <main className="lesson-screen practice-screen">
-      <section className="practice-brief"><div><p className="section-label">YOUR PRACTICE TASK</p><h2>{activity.task}</h2><p>Work in {practiceFiles || activity.language}. Make one small change, run it, then compare the preview with the task.</p></div><button className="text-button" type="button" onClick={() => openStep("notes")}>Read the notes again</button></section>
-      <section className="coding-studio">
-        <div className="editor-panel"><div className="file-tabs" role="tablist" aria-label="Code files">{activity.editableFiles.map((file) => <button key={file} role="tab" aria-selected={activeFile === file} className={activeFile === file ? "is-active" : ""} onClick={() => setActiveFile(file)} type="button">{fileNames[file]}</button>)}</div><textarea aria-label={`${fileNames[activeFile]} code editor`} spellCheck={false} value={workspace[activeFile]} onChange={(event) => updateWorkspace({ ...workspace, [activeFile]: event.target.value })} /></div>
-        <div className="preview-panel"><div><b>Browser preview</b><span>Updates when you run the code</span></div><iframe title="Website preview" sandbox="allow-scripts" srcDoc={preview} /></div>
-        <div className="code-actions"><button className="outline-button" type="button" onClick={runCode}>Run code</button><button className="primary-button" type="button" onClick={() => { runCode(); checkWork(); }}>Check my code</button><button className="text-button" type="button" onClick={() => updateWorkspace(fillProjectTokens(activity.starterFiles, projectId))}>Start again</button><span className="autosave-status" aria-live="polite">{autosaveStatus === "saving" ? "Saving draft..." : autosaveStatus === "saved" ? "Draft saved" : "Changes save automatically"}</span></div>
-        {message && <p className="workspace-message" aria-live="polite">{message}</p>}
-        {results.length > 0 && <div className="test-results">{results.map((result) => <p className={result.passed ? "is-pass" : "is-fail"} key={result.label}><span>{result.passed ? "✓" : "×"}</span>{result.label}</p>)}</div>}
-        <div className="practice-help"><div className="hint-panel"><div><b>Stuck on this task?</b><button type="button" onClick={() => setHintIndex((current) => Math.min(current + 1, activity.hints.length - 1))}>Show hint {Math.min(hintIndex + 2, activity.hints.length)}</button></div>{hintIndex >= 0 && <p>{activity.hints[hintIndex]}</p>}</div><div className="practice-next"><p>{codePassed ? "Your code passed. Now answer one short question." : "Use Check my code before moving to the last step."}</p><button className="primary-button" type="button" disabled={!done && !codePassed} onClick={() => openStep("check")}>Continue to quick check</button></div></div>
-      </section>
-    </main>}
+  function resetWorkspace() {
+    const label = activity.activityType === "project" ? "the last saved project version" : "the lesson starter";
+    if (!window.confirm(`Replace your current code with ${label}? Your unsaved changes will be lost.`)) return;
+    updateWorkspace(resetFiles);
+    setPreviewStorage({});
+    setPreviewErrors([]);
+    setPreview(buildPreview(resetFiles));
+  }
 
-    {lessonStep === "check" && <main className="lesson-screen check-screen">
-      <section className="check-card">
-        <header><p className="section-label">ONE LAST STEP</p><h2>Check what you understood</h2><p>Your code already passed. Answer this question without guessing, then read the explanation.</p></header>
-        {activity.question && <QuickCheck question={activity.question} selected={practiceAnswer} checked={practiceChecked} onSelect={setPracticeAnswer} onCheck={() => setPracticeChecked(true)} />}
-        {activity.activityType === "project" && <div className="project-reflection"><label htmlFor="project-reflection"><b>Explain one choice</b><span>{activity.reflection}</span></label><textarea id="project-reflection" value={reflection} onChange={(event) => setReflection(event.target.value)} placeholder="I chose... because..." /></div>}
-        <div className="completion-bar"><span>{ready ? "You passed the code task and the quick check." : activity.activityType === "project" ? "Answer correctly and explain one project choice." : "Choose an answer and check it to complete the lesson."}</span><button className="primary-button" type="button" disabled={!ready || saving || done} onClick={complete}>{done ? "Lesson complete" : saving ? "Saving..." : activity.activityType === "project" ? "Save project version" : "Complete lesson"}</button></div>
-        <button className="text-button back-to-practice" type="button" onClick={() => openStep("practice")}>Return to practice</button>
-      </section>
-    </main>}
-  </div>;
+  return (
+    <div className={`guided-lesson is-${lessonStep}`}>
+      <header className="guided-lesson-header">
+        <div className="lesson-position"><span>Module {stage.number} · {activity.minutes} min</span><b>{activityNames[activity.activityType]}</b></div>
+        <div className="guided-title"><div><span className="language-pill">{activity.language}</span><h1>{activity.title}</h1><p>{activity.objective}</p></div></div>
+        <nav className="lesson-stepper" aria-label="Lesson steps">
+          <button type="button" className={lessonStep === "notes" ? "is-current" : ""} aria-current={lessonStep === "notes" ? "step" : undefined} onClick={() => openStep("notes")}><span>1</span><b>Notes</b><small>Learn the idea</small></button>
+          <button type="button" className={`${lessonStep === "practice" ? "is-current" : ""}${codePassed ? " is-complete" : ""}`} aria-current={lessonStep === "practice" ? "step" : undefined} onClick={() => openStep("practice")}><span>2</span><b>Practice</b><small>Write real code</small></button>
+          <button type="button" disabled={!done && !codePassed} className={`${lessonStep === "check" ? "is-current" : ""}${done ? " is-complete" : ""}`} aria-current={lessonStep === "check" ? "step" : undefined} onClick={() => openStep("check")}><span>3</span><b>Quick check</b><small>Show what you know</small></button>
+        </nav>
+      </header>
+
+      {lessonStep === "notes" && (
+        <section className="lesson-screen notes-screen">
+          <section className="notes-sheet">
+            <div className="notes-section">
+              <p className="section-label">FIRST, UNDERSTAND THE IDEA</p>
+              <h2>What you are learning</h2>
+              {activity.explanation.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+            </div>
+            <aside className="language-guide" aria-label={`${activity.language} guide`}><span>{activity.language}</span><div><h3>Where this lesson fits</h3><p>{guidance.purpose}</p><p>{guidance.next}</p></div></aside>
+            <div className="worked-example">
+              <div className="example-heading"><div><p className="section-label">WORKED EXAMPLE</p><h2>{activity.exampleTitle}</h2></div><span>Read it before typing</span></div>
+              <pre><code>{activity.exampleCode}</code></pre>
+              <div className="example-reading"><h3>What the example does</h3><p>{activity.exampleExplanation}</p><h3>How to read this language</h3><p>{guidance.reading}</p></div>
+            </div>
+            <div className="key-words"><div><p className="section-label">WORDS TO KNOW</p><h2>Keep these meanings nearby</h2></div><dl>{activity.keyTerms.map((term) => <div key={term}><dt>{term}</dt><dd>{termDefinitions[term] || "A coding idea used in this lesson."}</dd></div>)}</dl></div>
+            <div className="lesson-next"><p><b>Ready for practice?</b> The next screen gives you one task and the {practiceFiles || activity.language} code you need.</p><button className="primary-button" type="button" onClick={() => openStep("practice")}>Start practice</button></div>
+          </section>
+        </section>
+      )}
+
+      {lessonStep === "practice" && (
+        <section className="lesson-screen practice-screen">
+          <section className="practice-brief"><div><p className="section-label">YOUR PRACTICE TASK</p><h2>{activity.task}</h2><p>Work in {practiceFiles || activity.language}. Make one small change, run it, then compare the preview with the task.</p></div><button className="text-button" type="button" onClick={() => openStep("notes")}>Read the notes again</button></section>
+          <section className="coding-studio">
+            <div className="editor-panel">
+              <div className="file-tabs" role="tablist" aria-label="Code files">
+                {activity.editableFiles.map((file) => <button key={file} role="tab" aria-selected={activeFile === file} className={activeFile === file ? "is-active" : ""} onClick={() => setActiveFile(file)} type="button">{fileNames[file]}</button>)}
+              </div>
+              <textarea ref={editorRef} aria-label={`${fileNames[activeFile]} code editor`} spellCheck={false} value={workspace[activeFile]} onChange={(event) => updateWorkspace({ ...workspace, [activeFile]: event.target.value })} />
+              <div className="code-shortcuts" aria-label="Code character shortcuts">
+                {codeShortcuts.map((shortcut) => <button key={shortcut} type="button" onClick={() => insertShortcut(shortcut)} aria-label={`Insert ${shortcut}`}>{shortcut}</button>)}
+              </div>
+            </div>
+            <div className="preview-panel">
+              <div><b>Browser preview</b><span>Updates when you run the code</span></div>
+              <iframe ref={iframeRef} title="Website preview" sandbox="allow-scripts" srcDoc={preview} />
+              {previewErrors.length > 0 && <div className="preview-runtime" role="alert"><b>Your code reported a problem</b>{previewErrors.map((error) => <code key={error}>{error}</code>)}</div>}
+            </div>
+            <div className="code-actions">
+              <button className="outline-button" type="button" onClick={runCode}>Run code</button>
+              <button className="primary-button" type="button" onClick={() => { runCode(); checkWork(); }}>Check my code</button>
+              <button className="text-button" type="button" onClick={resetWorkspace}>Start again</button>
+              <span className={`autosave-status is-${autosaveStatus}`} aria-live="polite">{autosaveStatus === "saving" ? "Saving draft..." : autosaveStatus === "saved" ? "Draft saved" : autosaveStatus === "error" ? "Draft not saved yet" : "Changes save automatically"}</span>
+            </div>
+            {message && <p className="workspace-message" aria-live="polite">{message}</p>}
+            {results.length > 0 && <div className="test-results">{results.map((result) => <p className={result.passed ? "is-pass" : "is-fail"} key={result.label}><span>{result.passed ? "✓" : "×"}</span>{result.label}</p>)}</div>}
+            <div className="practice-help"><div className="hint-panel"><div><b>Stuck on this task?</b><button type="button" onClick={() => setHintIndex((current) => Math.min(current + 1, activity.hints.length - 1))}>Show hint {Math.min(hintIndex + 2, activity.hints.length)}</button></div>{hintIndex >= 0 && <p>{activity.hints[hintIndex]}</p>}</div><div className="practice-next"><p>{codePassed ? "Your code passed. Now answer one short question." : "Use Check my code before moving to the last step."}</p><button className="primary-button" type="button" disabled={!done && !codePassed} onClick={() => openStep("check")}>Continue to quick check</button></div></div>
+          </section>
+        </section>
+      )}
+
+      {lessonStep === "check" && (
+        <section className="lesson-screen check-screen">
+          <section className="check-card">
+            <header><p className="section-label">ONE LAST STEP</p><h2>Check what you understood</h2><p>Your code already passed. Answer this question without guessing, then read the explanation.</p></header>
+            {activity.question && <QuickCheck question={activity.question} selected={practiceAnswer} checked={practiceChecked} onSelect={setPracticeAnswer} onCheck={() => setPracticeChecked(true)} />}
+            {activity.activityType === "project" && <div className="project-reflection"><label htmlFor="project-reflection"><b>Explain one choice</b><span>{activity.reflection}</span></label><textarea id="project-reflection" value={reflection} onChange={(event) => setReflection(event.target.value)} placeholder="I chose... because..." /></div>}
+            <div className="completion-bar"><span>{ready ? "You passed the code task and the quick check." : activity.activityType === "project" ? "Answer correctly and explain one project choice." : "Choose an answer and check it to complete the lesson."}</span><button className="primary-button" type="button" disabled={!ready || saving || done} onClick={complete}>{done ? "Lesson complete" : saving ? "Saving..." : activity.activityType === "project" ? "Save project version" : "Complete lesson"}</button></div>
+            <button className="text-button back-to-practice" type="button" onClick={() => openStep("practice")}>Return to practice</button>
+          </section>
+        </section>
+      )}
+    </div>
+  );
 }
 
 function QuickCheck({ question, selected, checked, onSelect, onCheck }: { question: PracticeQuestion; selected: number; checked: boolean; onSelect: (answer: number) => void; onCheck: () => void }) {
   const correct = selected === question.answer;
-  return <fieldset className="quick-check"><legend><span>Quick check</span>{question.prompt}</legend><div>{question.options.map((option, index) => <label key={option} className={selected === index ? "is-selected" : ""}><input type="radio" name="practice-question" checked={selected === index} onChange={() => onSelect(index)} /><b>{String.fromCharCode(65 + index)}</b>{option}</label>)}</div><button className="outline-button" type="button" disabled={selected < 0} onClick={onCheck}>Check answer</button>{checked && <p className={correct ? "is-correct" : "is-wrong"}><b>{correct ? "Correct." : "Try that idea again."}</b> {question.explanation}</p>}</fieldset>;
+  return (
+    <fieldset className="quick-check">
+      <legend><span>Quick check</span>{question.prompt}</legend>
+      <div>{question.options.map((option, index) => <label key={option} className={selected === index ? "is-selected" : ""}><input type="radio" name="practice-question" checked={selected === index} onChange={() => onSelect(index)} /><b>{String.fromCharCode(65 + index)}</b>{option}</label>)}</div>
+      <button className="outline-button" type="button" disabled={selected < 0} onClick={onCheck}>Check answer</button>
+      {checked && <p className={correct ? "is-correct" : "is-wrong"}><b>{correct ? "Correct." : "Try that idea again."}</b> {question.explanation}</p>}
+    </fieldset>
+  );
 }
 
-function QuizActivity({ activity, answers, setAnswers, checked, setChecked, correctCount, answeredCount, complete, saving, done }: { activity: Lesson; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; checked: boolean; setChecked: React.Dispatch<React.SetStateAction<boolean>>; correctCount: number; answeredCount: number; complete: () => void; saving: boolean; done: boolean }) {
+function QuizActivity({ activity, answers, setAnswers, checked, setChecked, correctCount, answeredCount, complete, saving, done }: { activity: Lesson; answers: Record<number, number>; setAnswers: Dispatch<SetStateAction<Record<number, number>>>; checked: boolean; setChecked: Dispatch<SetStateAction<boolean>>; correctCount: number; answeredCount: number; complete: () => void; saving: boolean; done: boolean }) {
   const questions = activity.questions || [];
   const passed = checked && correctCount >= 4;
-  return <div className="quiz-page"><header><p className="activity-type">MODULE CHECK</p><h1>{activity.title}</h1><h2>Five questions. Four correct answers to continue.</h2><p>Every answer comes from code you already wrote.</p></header><QuestionList questions={questions} answers={answers} setAnswers={(next) => { setChecked(false); setAnswers(next); }} showFeedback={checked} />{checked && <div className={`quiz-result ${passed ? "is-pass" : "is-fail"}`}><b>{correctCount} of {questions.length} correct</b><span>{passed ? "The next module is ready." : "Review the lesson examples, then try again."}</span></div>}<div className="completion-bar"><span>{answeredCount} of {questions.length} answered</span>{!checked && <button className="outline-button" type="button" disabled={answeredCount !== questions.length} onClick={() => setChecked(true)}>Check answers</button>}{checked && !passed && <button className="outline-button" type="button" onClick={() => { setAnswers({}); setChecked(false); }}>Try again</button>}{passed && <button className="primary-button" type="button" disabled={saving || done} onClick={complete}>{done ? "Module complete" : saving ? "Saving..." : "Complete module"}</button>}</div></div>;
+  return (
+    <div className="quiz-page">
+      <header><p className="activity-type">MODULE CHECK</p><h1>{activity.title}</h1><h2>Five questions. Four correct answers to continue.</h2><p>Every answer comes from code you already wrote.</p></header>
+      <QuestionList questions={questions} answers={answers} setAnswers={(next) => { setChecked(false); setAnswers(next); }} showFeedback={checked} />
+      {checked && <div className={`quiz-result ${passed ? "is-pass" : "is-fail"}`}><b>{correctCount} of {questions.length} correct</b><span>{passed ? "The next module is ready." : "Review the lesson examples, then try again."}</span></div>}
+      <div className="completion-bar"><span>{answeredCount} of {questions.length} answered</span>{!checked && <button className="outline-button" type="button" disabled={answeredCount !== questions.length} onClick={() => setChecked(true)}>Check answers</button>}{checked && !passed && <button className="outline-button" type="button" onClick={() => { setAnswers({}); setChecked(false); }}>Try again</button>}{passed && <button className="primary-button" type="button" disabled={saving || done} onClick={complete}>{done ? "Module complete" : saving ? "Saving..." : "Complete module"}</button>}</div>
+    </div>
+  );
 }
 
-function QuestionList({ questions, answers, setAnswers, showFeedback }: { questions: PracticeQuestion[]; answers: Record<number, number>; setAnswers: React.Dispatch<React.SetStateAction<Record<number, number>>>; showFeedback: boolean }) {
-  return <div className="question-list">{questions.map((question, questionIndex) => { const selected = answers[questionIndex]; const correct = selected === question.answer; return <fieldset key={question.prompt}><legend><span>{questionIndex + 1}</span>{question.prompt}</legend><div>{question.options.map((option, optionIndex) => <label key={option} className={selected === optionIndex ? "is-selected" : ""}><input type="radio" name={`question-${questionIndex}`} checked={selected === optionIndex} onChange={() => setAnswers((current) => ({ ...current, [questionIndex]: optionIndex }))} /><span>{String.fromCharCode(65 + optionIndex)}</span>{option}</label>)}</div>{showFeedback && selected !== undefined && <p className={correct ? "is-correct" : "is-wrong"}><b>{correct ? "Correct." : "Review this idea."}</b> {question.explanation}</p>}</fieldset>; })}</div>;
+function QuestionList({ questions, answers, setAnswers, showFeedback }: { questions: PracticeQuestion[]; answers: Record<number, number>; setAnswers: Dispatch<SetStateAction<Record<number, number>>>; showFeedback: boolean }) {
+  return (
+    <div className="question-list">
+      {questions.map((question, questionIndex) => {
+        const selected = answers[questionIndex];
+        const correct = selected === question.answer;
+        return (
+          <fieldset key={question.prompt}>
+            <legend><span>{questionIndex + 1}</span>{question.prompt}</legend>
+            <div>{question.options.map((option, optionIndex) => <label key={option} className={selected === optionIndex ? "is-selected" : ""}><input type="radio" name={`question-${questionIndex}`} checked={selected === optionIndex} onChange={() => setAnswers((current) => ({ ...current, [questionIndex]: optionIndex }))} /><span>{String.fromCharCode(65 + optionIndex)}</span>{option}</label>)}</div>
+            {showFeedback && selected !== undefined && <p className={correct ? "is-correct" : "is-wrong"}><b>{correct ? "Correct." : "Review this idea."}</b> {question.explanation}</p>}
+          </fieldset>
+        );
+      })}
+    </div>
+  );
 }
 
-function ProjectPage({ stages, saved, workspaces, projectId, checkpoints, onContinue }: { stages: Stage[]; saved: Record<string, SavedProgress>; workspaces: Record<string, WorkspaceFiles>; projectId: ProjectId; checkpoints: Array<{ id: string; stageId: string; version: number; createdAt: string }>; onContinue: () => void }) {
-  const project = projectChoices.find((choice) => choice.id === projectId) || projectChoices[0];
-  let latestFiles = fillProjectTokens(stages[0].lessons.find((lesson) => lesson.activityType === "project")!.starterFiles, projectId);
-  for (const stage of stages) { const activity = stage.lessons.find((lesson) => lesson.activityType === "project"); if (!activity) continue; if (workspaces[activity.id]) latestFiles = workspaces[activity.id]; else if (saved[activity.id]) latestFiles = normaliseFiles(parseWorkspace(saved[activity.id].workspaceJson), latestFiles); }
-  return <main className="website-project-page">
-    <section className="website-project-heading"><div><p className="kicker">YOUR GROWING WEBSITE</p><h1>{project.title}</h1><p>This is the latest version of the website you are building with HTML, CSS and JavaScript.</p></div><button className="primary-button" type="button" onClick={onContinue}>Continue learning</button></section>
-    <section className="website-project-preview"><div><b>Latest browser preview</b><span>Saved lesson code</span></div><iframe title="Latest project preview" sandbox="allow-scripts" srcDoc={buildPreview(latestFiles)} /></section>
-    <section className="project-code-summary"><details><summary>View HTML</summary><pre><code>{latestFiles.html}</code></pre></details><details><summary>View CSS</summary><pre><code>{latestFiles.css}</code></pre></details><details><summary>View JavaScript</summary><pre><code>{latestFiles.javascript}</code></pre></details></section>
-    <section className="checkpoint-history"><h2>Saved module versions</h2>{checkpoints.length ? checkpoints.map((checkpoint) => <article key={checkpoint.id}><span>Module {stages.find((stage) => stage.id === checkpoint.stageId)?.number}</span><b>Version {checkpoint.version}</b><time>{new Date(checkpoint.createdAt).toLocaleDateString()}</time></article>) : <p>Your first saved version appears after the first module check.</p>}</section>
-  </main>;
+function ProjectPage({ course, saved, workspaces, projectId, checkpoints, onContinue }: { course: CourseBundle; saved: Record<string, SavedProgress>; workspaces: Record<string, WorkspaceFiles>; projectId: ProjectId; checkpoints: Checkpoint[]; onContinue: () => void }) {
+  const project = course.projectChoices.find((choice) => choice.id === projectId) || course.projectChoices[0];
+  const firstProject = course.stages[0].lessons.find((lesson) => lesson.activityType === "project");
+  let latestFiles = firstProject ? fillProjectTokens(firstProject.starterFiles, projectId, course.projectChoices) : emptyFiles;
+  for (const stage of course.stages) {
+    const activity = stage.lessons.find((lesson) => lesson.activityType === "project");
+    if (!activity) continue;
+    if (workspaces[activity.id]) latestFiles = workspaces[activity.id];
+    else if (saved[activity.id]) latestFiles = normaliseFiles(parseWorkspace(saved[activity.id].workspaceJson), latestFiles);
+  }
+  return (
+    <main className="website-project-page">
+      <section className="website-project-heading"><div><p className="kicker">YOUR GROWING WEBSITE</p><h1>{project.title}</h1><p>This is the latest version of the website you are building with HTML, CSS and JavaScript.</p></div><button className="primary-button" type="button" onClick={onContinue}>Continue learning</button></section>
+      <section className="website-project-preview"><div><b>Latest browser preview</b><span>Saved lesson code</span></div><iframe title="Latest project preview" sandbox="allow-scripts" srcDoc={buildPreview(latestFiles)} /></section>
+      <section className="project-code-summary"><details><summary>View HTML</summary><pre><code>{latestFiles.html}</code></pre></details><details><summary>View CSS</summary><pre><code>{latestFiles.css}</code></pre></details><details><summary>View JavaScript</summary><pre><code>{latestFiles.javascript}</code></pre></details></section>
+      <section className="checkpoint-history"><h2>Saved module versions</h2>{checkpoints.length ? checkpoints.map((checkpoint) => <article key={checkpoint.id}><span>Module {course.stages.find((stage) => stage.id === checkpoint.stageId)?.number}</span><b>Version {checkpoint.version}</b><time>{new Date(checkpoint.createdAt).toLocaleDateString()}</time></article>) : <p>Your first saved version appears after the first module check.</p>}</section>
+    </main>
+  );
 }
 
-function Onboarding({ courseFacts, onCreated }: { courseFacts: CourseFacts; onCreated: (session: Session) => void }) {
+function CourseMismatch({ learner, requestedCourse, onReset }: { learner: Learner; requestedCourse: CourseBundle; onReset: () => void }) {
+  const learnerCourseId = inferredCourseId(learner);
+  const [message, setMessage] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  async function resetProfile() {
+    const confirmed = window.confirm("Start a new course profile? This device will permanently lose access to the old saved course. The saved work will remain protected, but you will not be able to reopen it. This cannot be undone.");
+    if (!confirmed) return;
+    setDeleting(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/learners", { method: "DELETE" });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error || "The profile could not be reset.");
+      onReset();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The profile could not be reset.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+  return (
+    <main className="profile-mismatch">
+      <a className="course-brand" href="/"><span>K</span><b>KidyCode</b></a>
+      <section>
+        <p className="kicker">YOUR SAVED COURSE</p>
+        <h1>This profile belongs to a different learning path.</h1>
+        <p>{learner.nickname}&apos;s saved work is kept in another KidyCode path. Open that course to continue exactly where you stopped.</p>
+        <div className="mismatch-actions">
+          <a className="primary-button" href={courseRoutes[learnerCourseId]}>Open my saved course</a>
+          <button className="outline-button" type="button" disabled={deleting} onClick={() => void resetProfile()}>{deleting ? "Resetting..." : `Start ${requestedCourse.courseFacts.ageRange} instead`}</button>
+        </div>
+        {message && <p className="form-message is-error" role="alert">{message}</p>}
+      </section>
+    </main>
+  );
+}
+
+function Onboarding({ course, onCreated }: { course: CourseBundle; onCreated: (session: Session) => void }) {
+  const { courseFacts, projectChoices } = course;
   const [nickname, setNickname] = useState("");
-  const [age, setAge] = useState(10);
-  const [project, setProject] = useState<ProjectId>("interest");
+  const [age, setAge] = useState(courseFacts.ages[0]);
+  const [project, setProject] = useState<ProjectId>(projectChoices[0].id);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const preview = useMemo(() => buildPreview(fillProjectTokens({
     html: "<header><h1>{{TITLE}}</h1></header><main><p>{{INTRO}}</p><section class=\"cards\"><article class=\"card\">{{ITEM1}}</article><article class=\"card\">{{ITEM2}}</article><article class=\"card\">{{ITEM3}}</article></section></main>",
     css: "body { margin: 0; padding: 1.5rem; background: #f7f3ea; color: #111936; } h1 { color: #4b1f63; } .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; } .card { padding: .8rem; border: 2px solid #111936; } @media (max-width: 650px) { .cards { grid-template-columns: 1fr; } }",
     javascript: "document.querySelector(\"h1\").addEventListener(\"click\", function () { this.textContent = \"You ran JavaScript\"; });",
-  }, project)), [project]);
-  async function createLearner(event: React.FormEvent) {
-    event.preventDefault(); setSaving(true); setMessage("");
-    try { const response = await fetch("/api/learners", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nickname, age, theme: project }) }); const data = await response.json() as Session & { error?: string }; if (!response.ok) throw new Error(data.error || "The learner profile could not be created."); onCreated(data); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "The learner profile could not be created."); }
-    finally { setSaving(false); }
+  }, project, projectChoices)), [project, projectChoices]);
+
+  async function createLearner(event: FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/learners", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ nickname, age, theme: project, courseId: courseFacts.id }),
+      });
+      const data = await response.json() as Session & { error?: string };
+      if (!response.ok || !data.learner) throw new Error(data.error || "The learner profile could not be created.");
+      onCreated(data);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The learner profile could not be created.");
+    } finally {
+      setSaving(false);
+    }
   }
-  return <main className="onboarding-page coding-onboarding"><a className="course-brand" href="/"><span>K</span><b>KidyCode</b></a><section className="onboarding-copy"><p className="kicker">FIRST GROUP · AGES 10 TO 12</p><h1>Write real code from the first lesson.</h1><p>Learn HTML, CSS and JavaScript in a real editor. Every lesson gives you an explanation, an example, a coding task and automatic checks.</p><div className="course-facts"><span><b>{courseFacts.stageCount}</b> modules</span><span><b>{courseFacts.lessonCount}</b> lessons</span><span><b>1</b> complete website</span></div><div className="website-preview"><div><small>WHAT YOU WILL BUILD</small><h2>{projectChoices.find((choice) => choice.id === project)?.title}</h2><p>Click the heading inside the preview to test its JavaScript.</p></div><iframe title="Finished website example" sandbox="allow-scripts" srcDoc={preview} /></div></section><form className="onboarding-form" onSubmit={createLearner}><div><p className="kicker">START WITH HTML</p><h2>Set up your course.</h2><p>Use a nickname. Do not enter a full name, school or location.</p></div><label>Nickname<input value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={20} required placeholder="SkyCoder" /></label><fieldset><legend>Age</legend><div className="age-options">{[10, 11, 12].map((value) => <label key={value}><input type="radio" name="age" checked={age === value} onChange={() => setAge(value)} /><span>{value}</span></label>)}</div></fieldset><fieldset className="theme-options"><legend>Choose the website you will build</legend>{projectChoices.map((option) => <label key={option.id}><input type="radio" name="project" checked={project === option.id} onChange={() => setProject(option.id)} /><span><b>{option.title}</b><small>{option.pitch}</small></span></label>)}</fieldset>{message && <p className="form-message is-error" role="alert">{message}</p>}<button className="primary-button" type="submit" disabled={saving}>{saving ? "Preparing the editor..." : "Start the first HTML lesson"}</button><p className="privacy-note">The profile stores only a nickname, age and project choice.</p></form></main>;
+
+  return (
+    <main className="onboarding-page coding-onboarding">
+      <a className="course-brand" href="/"><span>K</span><b>KidyCode</b></a>
+      <section className="onboarding-copy">
+        <p className="kicker">{courseFacts.ageRange.toUpperCase()}</p>
+        <h1>Write real code from the first lesson.</h1>
+        <p>Learn HTML, CSS and JavaScript in a real editor. Every lesson gives you clear notes, a worked example, a coding task and automatic checks.</p>
+        <div className="course-facts"><span><b>{courseFacts.stageCount}</b> modules</span><span><b>{courseFacts.lessonCount}</b> activities</span><span><b>1</b> complete website</span></div>
+        <div className="website-preview"><div><small>WHAT YOU WILL BUILD</small><h2>{projectChoices.find((choice) => choice.id === project)?.title}</h2><p>Click the heading inside the preview to test its JavaScript.</p></div><iframe title="Finished website example" sandbox="allow-scripts" srcDoc={preview} /></div>
+      </section>
+      <form className="onboarding-form" onSubmit={createLearner}>
+        <div><p className="kicker">START WITH HTML</p><h2>Set up your course.</h2><p>Use a nickname. Do not enter a full name, school or location.</p></div>
+        <label>Nickname<input value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={20} required placeholder="SkyCoder" /></label>
+        {courseFacts.ages.length > 1 && <fieldset><legend>Age</legend><div className="age-options">{courseFacts.ages.map((value) => <label key={value}><input type="radio" name="age" checked={age === value} onChange={() => setAge(value)} /><span>{value}</span></label>)}</div></fieldset>}
+        <fieldset className="theme-options"><legend>Choose the website you will build</legend>{projectChoices.map((option) => <label key={option.id}><input type="radio" name="project" checked={project === option.id} onChange={() => setProject(option.id)} /><span><b>{option.title}</b><small>{option.pitch}</small></span></label>)}</fieldset>
+        {message && <p className="form-message is-error" role="alert">{message}</p>}
+        <button className="primary-button" type="submit" disabled={saving}>{saving ? "Preparing the editor..." : "Start the first HTML lesson"}</button>
+        <p className="privacy-note">The profile stores only a nickname, age group, course path and project choice.</p>
+      </form>
+    </main>
+  );
 }
