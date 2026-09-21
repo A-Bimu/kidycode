@@ -53,6 +53,14 @@ A weak concept is also remembered beyond its own lesson. Before new material, th
 | `POST /api/tutor` | `nudge`, `check`, `quickcheck` or `quiz`, all graded on the server |
 | `GET /api/review` | Concepts this learner should come back to |
 | `POST /api/review` | Record a recall outcome for one concept |
+| `GET /api/summary` | The learner's own progress summary, derived from existing records |
+
+"My progress" in the learner navigation turns that evidence into counts and plain
+labels: activities completed, checks passed, mastery per module, concepts to come
+back to, concepts already strengthened, project versions saved, the final
+assessment status, the most recent activity and one specific next action. Nothing
+is stored twice: every figure is computed from records that already exist. There
+is no school grade and no percentage.
 
 ## Technology
 

@@ -22,7 +22,12 @@ let base = "";
 const passed = [];
 const failed = [];
 
+/* Records a passing test. Use step() when there is a body to run: a name only
+ * call is deliberate, because a body passed here would never execute. */
 function check(name) {
+  if (typeof name !== "string") {
+    throw new TypeError("check() only records a result. Use step() to run a test body.");
+  }
   passed.push(name);
   console.log(`  ok   ${name}`);
 }
@@ -68,6 +73,11 @@ async function api(path, options = {}) {
     body = null;
   }
   return { status: response.status, body };
+}
+
+async function readSummary(query = "") {
+  const result = await api(`/api/summary${query}`);
+  return result;
 }
 
 async function createLearner(nickname, courseId, age) {
@@ -139,6 +149,40 @@ await step("a new learner starts with no evidence", async () => {
   const result = await api("/api/tutor");
   assert.equal(result.status, 200, `Expected 200, received ${result.status}`);
   assert.deepEqual(result.body.evidence, [], "A new learner must have no tutoring evidence.");
+});
+
+await step("a new learner sees a helpful, complete empty state", async () => {
+  const result = await readSummary();
+  assert.equal(result.status, 200, `Expected 200, received ${result.status}`);
+  const summary = result.body.summary;
+  assert(summary, "The summary must be returned.");
+  assert.equal(summary.course.id, "ages-10-12", "The summary must describe the learner course.");
+  assert.equal(summary.courseProgress.lessonsCompleted, 0);
+  assert.equal(summary.courseProgress.lessonsTotal, course.lessons.length);
+  assert.equal(summary.courseProgress.checksPassed, 0);
+  assert.equal(summary.courseProgress.status, "not-started");
+  assert.equal(summary.courseProgress.completionLabel, "Just started");
+  assert.equal(summary.courseProgress.masteryLabel, "Just started");
+  assert.equal(summary.recentActivityAt, null, "A new learner has no activity date.");
+  assert.deepEqual(summary.needsReview, []);
+  assert.deepEqual(summary.strengthened, []);
+  assert.equal(summary.independentCorrections, 0);
+  assert.equal(summary.project.checkpointsSaved, 0);
+  assert.equal(summary.finalAssessment.status, "not-started");
+  assert.equal(summary.modules.length, course.stages.length);
+  assert.equal(summary.modules.every((module) => module.status === "not-started"), true);
+  assert.equal(summary.nextAction.kind, "lesson");
+  assert.equal(summary.nextAction.lessonId, course.lessons[0].id, "A new learner is pointed at the first activity.");
+});
+
+await step("the summary refuses to describe another learner", async () => {
+  const result = await readSummary("?learnerId=00000000-0000-0000-0000-000000000000");
+  assert.equal(result.status, 403, `A request for another learner must be refused, received ${result.status}`);
+});
+
+await step("summary inputs are bounded", async () => {
+  const long = await readSummary(`?learnerId=${"a".repeat(200)}`);
+  assert.equal(long.status, 400, `An oversized learner id must be refused, received ${long.status}`);
 });
 
 await step("the lesson belongs to the learner course", async () => {
@@ -308,7 +352,7 @@ await step("progress survives a reload", async () => {
 /* 6. Cross lesson review keeps a weak concept beyond its own lesson. */
 const failedConcept = gradeRequirements(lessonOne, brokenCode).find((result) => !result.passed).concept;
 
-await check("a missed requirement enters the review list", async () => {
+await step("a missed requirement enters the review list", async () => {
   const result = await api("/api/review");
   assert.equal(result.status, 200, `Expected 200, received ${result.status}`);
   assert(result.body.totalDue >= 1, "The missed requirement must be queued for review.");
@@ -320,14 +364,14 @@ await check("a missed requirement enters the review list", async () => {
   assert.equal(typeof item.timesFailed, "number", "A review item needs a recorded failure count.");
 });
 
-await check("passing the requirement in its own lesson does not retire it", async () => {
+await step("passing the requirement in its own lesson does not retire it", async () => {
   const result = await api("/api/review");
   const item = result.body.items.find((candidate) => candidate.concept === failedConcept);
   assert(item, "The concept must still be due after the learner passed it in the lesson.");
   assert(item.timesRecovered >= 1, "The in lesson recovery must be recorded.");
 });
 
-await check("one successful recall keeps the concept queued", async () => {
+await step("one successful recall keeps the concept queued", async () => {
   const result = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: failedConcept, recalled: true }) });
   assert.equal(result.status, 200, `Expected 200, received ${result.status}`);
   assert.equal(result.body.retired, false, "One recall must not retire a concept.");
@@ -335,15 +379,27 @@ await check("one successful recall keeps the concept queued", async () => {
   assert(result.body.totalDue >= 1, "The concept must still be due.");
 });
 
-await check("a second successful recall retires the concept", async () => {
+await step("a concept recalled once is still shown as needing another look", async () => {
+  const summary = (await readSummary()).body.summary;
+  const strengthened = summary.strengthened.find((entry) => entry.concept === failedConcept);
+  assert(strengthened, `A recalled concept must appear as strengthened: ${JSON.stringify(summary.strengthened)}`);
+  assert.equal(strengthened.reviewStreak, 1, "The strengthened entry must carry the recall it recorded.");
+  assert(summary.needsReview.some((entry) => entry.concept === failedConcept),
+    "One recall must not clear a concept from the weak list.");
+});
+
+await step("a second successful recall retires the concept", async () => {
   const result = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: failedConcept, recalled: true }) });
   assert.equal(result.body.retired, true, "Two recalls must retire the concept.");
   const after = await api("/api/review");
-  assert.equal(after.body.totalDue, 0, `Expected nothing due, received ${after.body.totalDue}`);
-  assert.equal(after.body.items.length, 0, "A retired concept must stop appearing.");
+  /* Other concepts may legitimately still be waiting, so the check is about this
+   * concept leaving the queue rather than the queue being empty. */
+  assert.equal(after.body.items.some((item) => item.concept === failedConcept), false,
+    `A retired concept must stop appearing: ${JSON.stringify(after.body.items.map((item) => item.concept))}`);
+  assert(after.body.maxItems <= 3, "The queue must stay small.");
 });
 
-await check("a missed recall puts the concept back and raises its count", async () => {
+await step("a missed recall puts the concept back and raises its count", async () => {
   const failedLessonTwo = await api("/api/tutor", { method: "POST", body: JSON.stringify({ lessonId: lessonTwo.id, action: "check", workspace: brokenCode }) });
   assert.equal(failedLessonTwo.body.passed, false, "The second lesson workspace must fail.");
   const concept = failedLessonTwo.body.nudge.concept;
@@ -357,18 +413,67 @@ await check("a missed recall puts the concept back and raises its count", async 
   assert(missed.body.totalDue >= 1, "The concept must stay queued.");
 });
 
-await check("a review answer for an unknown concept is refused", async () => {
+await step("a review answer for an unknown concept is refused", async () => {
   const result = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: "not-a-real-concept", recalled: true }) });
   assert.equal(result.status, 403, `Expected 403, received ${result.status}`);
 });
 
-await check("the review list is validated", async () => {
+await step("the review list is validated", async () => {
   const bad = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: "", recalled: true }) });
   assert.equal(bad.status, 400, `An empty concept must be refused, received ${bad.status}`);
   const long = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: "c".repeat(200), recalled: true }) });
   assert.equal(long.status, 400, `An oversized concept must be refused, received ${long.status}`);
   const wrongType = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: "main-heading", recalled: "yes" }) });
   assert.equal(wrongType.status, 400, `A non boolean outcome must be refused, received ${wrongType.status}`);
+});
+
+await step("partial progress reports correct totals and no double counting", async () => {
+  const first = await readSummary();
+  const summary = first.body.summary;
+  assert.equal(summary.courseProgress.lessonsCompleted, 1, `Expected one completed activity, received ${summary.courseProgress.lessonsCompleted}`);
+  assert.equal(summary.courseProgress.checksPassed, 2, `Expected two passed checks, received ${summary.courseProgress.checksPassed}`);
+  assert.equal(summary.modules[0].lessonsCompleted, 1, "The first module must show one completed activity.");
+  assert.equal(summary.modules[0].checksPassed, 2, "The first module must show the checks it passed.");
+  assert.equal(summary.modules[0].status, "in-progress");
+  assert.equal(summary.modules[1].status, "not-started");
+  assert.equal(summary.courseProgress.status, "in-progress");
+  /* Two corrections in this journey: the code repair after a nudge, and the
+   * quick check answered correctly after a wrong attempt. */
+  assert.equal(summary.independentCorrections, 2, `Expected two independent corrections, received ${summary.independentCorrections}`);
+  assert(summary.recentActivityAt, "A learner who has worked must have an activity date.");
+  assert.equal(summary.nextAction.kind, "lesson");
+  assert.equal(summary.nextAction.lessonId, course.lessons[1].id, "The next step must move on with the learner.");
+
+  /* Completing the same activity again must not move any total. */
+  await api("/api/progress", {
+    method: "POST",
+    body: JSON.stringify({ lessonId: lessonOne.id, status: "completed", questionAnswer: lessonOne.question.answer, quizAnswers: [], reflection: "", workspace: lessonOneCode }),
+  });
+  const after = (await readSummary()).body.summary;
+  assert.equal(after.courseProgress.lessonsCompleted, summary.courseProgress.lessonsCompleted, "A repeat completion must not be counted twice.");
+  assert.equal(after.courseProgress.checksPassed, summary.courseProgress.checksPassed, "A repeat completion must not add checks.");
+  assert.equal(after.modules[0].lessonsCompleted, 1, "A repeat completion must not inflate the module total.");
+});
+
+await step("a retired concept is strengthened and a due one needs another look", async () => {
+  const summary = (await readSummary()).body.summary;
+  const settled = summary.strengthened.find((entry) => entry.concept === failedConcept);
+  assert(settled, `A retired concept must appear as strengthened: ${JSON.stringify(summary.strengthened)}`);
+  assert.equal(settled.reviewStreak, 2, "A retired concept must record both recalls.");
+  assert.equal(summary.needsReview.some((entry) => entry.concept === failedConcept), false,
+    "A retired concept must never be shown as weak.");
+  const waiting = summary.needsReview.find((entry) => entry.concept !== failedConcept);
+  assert(waiting, `The concept missed later must need another look: ${JSON.stringify(summary.needsReview)}`);
+  assert(waiting.focus.length > 0 && waiting.label.length > 0, "A weak concept must carry a readable focus and requirement.");
+  assert(summary.needsReview.every((entry) => entry.focus.length > 0), "Every weak concept needs a readable focus.");
+});
+
+await step("the summary never leaks code, answers or identifiers", async () => {
+  const body = JSON.stringify((await readSummary()).body);
+  for (const probe of ["<h1>", "<p>", "My First Website", "querySelector", "workspace", "practical", "answers", "kidycode_session"]) {
+    assert.equal(body.includes(probe), false, `The summary must not contain ${probe}.`);
+  }
+  assert.equal(body.includes(firstLearner.id), false, "The summary must not return the learner identifier.");
 });
 
 /* 7. A second learner cannot see or change the first learner records. */
@@ -382,6 +487,11 @@ await step("one learner cannot see another learner records", async () => {
   const reviews = await api("/api/review");
   assert.deepEqual(reviews.body.items, [], "A second learner must not see the first learner review list.");
   assert.equal(reviews.body.totalDue, 0, "A second learner must have nothing due.");
+  const foreign = await readSummary(`?learnerId=${firstLearner.id}`);
+  assert.equal(foreign.status, 403, `Reading the first learner summary must be refused, received ${foreign.status}`);
+  const ownSummary = await readSummary(`?learnerId=${other.id}`);
+  assert.equal(ownSummary.status, 200, "A learner may read their own summary by identifier.");
+  assert.equal(ownSummary.body.summary.courseProgress.lessonsCompleted, 0, "The second learner has their own totals.");
   const own = await api("/api/tutor", { method: "POST", body: JSON.stringify({ lessonId: lessonOne.id, action: "nudge", workspace: brokenCode }) });
   assert.equal(own.body.evidence.lessonId, lessonOne.id);
   assert.equal(own.body.evidence.hintsRequested, 1, "The second learner must start from zero hints.");
@@ -395,6 +505,22 @@ await step("the first learner records were not changed by the second learner", a
   assert.deepEqual((await api("/api/tutor")).body.evidence, [], "A new profile must start with no evidence.");
   assert.deepEqual((await api("/api/review")).body.items, [], "A new profile must start with no review items.");
 });
+
+/* 8. Every learning path produces a summary of its own. */
+for (const [courseId, bundle] of Object.entries(courses)) {
+  await step(`the summary works for ${courseId}`, async () => {
+    await createLearner("PathCheck", courseId, bundle.courseFacts.ages[0]);
+    const result = await readSummary();
+    assert.equal(result.status, 200, `Expected 200, received ${result.status}`);
+    const summary = result.body.summary;
+    assert.equal(summary.course.id, courseId, `Expected ${courseId}, received ${summary.course.id}`);
+    assert.equal(summary.courseProgress.lessonsTotal, bundle.lessons.length);
+    assert.equal(summary.modules.length, bundle.stages.length);
+    assert.equal(summary.courseProgress.lessonsCompleted, 0);
+    const lessonIds = new Set(bundle.lessons.map((lesson) => lesson.id));
+    assert(lessonIds.has(summary.nextAction.lessonId), "The next step must belong to this course.");
+  });
+}
 
 console.log(`\n${passed.length} checks passed, ${failed.length} failed.`);
 if (failed.length > 0) {

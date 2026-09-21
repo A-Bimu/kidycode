@@ -13,6 +13,7 @@ import {
   type SetStateAction,
 } from "react";
 import { ExamPanel } from "@/components/ExamPanel";
+import { ProgressPage } from "@/components/ProgressPage";
 import {
   languageGuidance,
   termDefinitions,
@@ -26,6 +27,7 @@ import {
   type Stage,
   type WorkspaceFiles,
 } from "@/lib/course";
+import type { Summary } from "@/lib/summary";
 
 type Learner = {
   id: string;
@@ -265,7 +267,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
-  const [view, setView] = useState<"course" | "project" | "exam">("course");
+  const [view, setView] = useState<"course" | "project" | "exam" | "progress">("course");
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [pendingCheckpoint, setPendingCheckpoint] = useState<string | null>(null);
   const [evidence, setEvidence] = useState<Record<string, TutorEvidence>>({});
@@ -278,6 +280,9 @@ export function LearningApp({ course }: { course: CourseBundle }) {
   const [reviewBusy, setReviewBusy] = useState(false);
   const [reviewHintShown, setReviewHintShown] = useState(false);
   const [reviewStatus, setReviewStatus] = useState("");
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [summaryError, setSummaryError] = useState("");
+  const [summaryReload, setSummaryReload] = useState(0);
   const checkpointLock = useRef(new Set<string>());
 
   const currentActivity = lessons[currentIndex] || lessons[0];
@@ -458,6 +463,43 @@ export function LearningApp({ course }: { course: CourseBundle }) {
       controller.abort();
     };
   }, [activityDone, currentActivity.activityType, currentActivity.id, currentDraft, practiceAnswer, reflection, session]);
+
+  /* Progress is derived on the server every time it is opened, so it never goes
+   * stale and never needs a second copy of the totals. The loading state is
+   * derived from what is known, so nothing is set before the request settles. */
+  useEffect(() => {
+    if (view !== "progress" || !session) return;
+    let active = true;
+    const controller = new AbortController();
+    async function loadSummary() {
+      try {
+        const response = await fetch("/api/summary", { cache: "no-store", signal: controller.signal });
+        const data = await response.json() as { summary?: Summary; error?: string };
+        if (!active) return;
+        if (!response.ok || !data.summary) throw new Error(data.error || "Your progress could not be read right now.");
+        setSummary(data.summary);
+        setSummaryError("");
+      } catch (error) {
+        if (!active) return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setSummaryError(error instanceof Error ? error.message : "Your progress could not be read right now.");
+      }
+    }
+    void loadSummary();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [view, session, summaryReload]);
+
+  function openActivityById(lessonId: string) {
+    const index = lessons.findIndex((activity) => activity.id === lessonId);
+    if (index < 0) {
+      setView("course");
+      return;
+    }
+    chooseActivity(index);
+  }
 
   function chooseActivity(index: number) {
     const unlockedThrough = firstIncomplete === -1 ? lessons.length - 1 : firstIncomplete;
@@ -810,12 +852,23 @@ export function LearningApp({ course }: { course: CourseBundle }) {
         <nav aria-label="Course views">
           <button className={view === "course" ? "is-active" : ""} type="button" onClick={() => setView("course")}>Learn</button>
           <button className={view === "project" ? "is-active" : ""} type="button" onClick={() => setView("project")}>My website</button>
+          <button className={view === "progress" ? "is-active" : ""} type="button" onClick={() => setView("progress")}>My progress</button>
           <button type="button" disabled={!allComplete} onClick={() => setView("exam")}>Final check</button>
         </nav>
         <div className={`learner-name${courseFacts.id === "adults" ? " is-adult" : ""}`}><span>{courseFacts.id === "adults" ? "Adult" : session.learner.age}</span>{session.learner.nickname}</div>
       </header>
 
-      {view === "project" ? (
+      {view === "progress" ? (
+        <ProgressPage
+          course={course}
+          summary={summary}
+          loading={view === "progress" && summary === null && summaryError === ""}
+          error={summaryError}
+          onRetry={() => { setSummary(null); setSummaryError(""); setSummaryReload((count) => count + 1); }}
+          onBack={() => setView("course")}
+          onOpenNext={openActivityById}
+        />
+      ) : view === "project" ? (
         <ProjectPage course={course} saved={saved} workspaces={workspaces} projectId={projectId} checkpoints={checkpoints} onContinue={() => setView("course")} />
       ) : (
         <main className="fcc-course-layout">

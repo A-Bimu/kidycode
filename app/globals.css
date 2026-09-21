@@ -265,6 +265,42 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .review-card + .review-status { margin-top: -.4rem; }
 .review-status.is-standalone { padding: .7rem 1rem; background: var(--amber-pale); border-left: 4px solid var(--amber); }
 
+/* Progress page: one calm reading surface. Counts and plain labels, no grade,
+ * no percentage, and no decorative card around every measurement. */
+.progress-page { min-height: 60vh; display: grid; align-content: start; gap: clamp(1.6rem, 4vw, 2.6rem); padding: clamp(1.2rem, 4vw, 3rem) clamp(1rem, 4vw, 3.5rem) 5rem; background: var(--paper); color: var(--navy); }
+.progress-head { display: grid; gap: .6rem; max-width: 46rem; }
+.progress-head h1 { margin: 0; font: 500 clamp(2.1rem, 5vw, 3.2rem)/1.05 Georgia, serif; letter-spacing: -.03em; }
+.progress-lede { margin: 0; color: var(--ink-soft); font-size: 1.05rem; line-height: 1.6; }
+.progress-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem; }
+.progress-empty { max-width: 46rem; padding: 1.2rem 1.3rem; background: var(--white); border-left: 5px solid var(--amber); }
+.progress-empty p { margin: 0; color: var(--ink-soft); line-height: 1.6; }
+.progress-empty h2, .progress-course h2, .progress-modules h2, .progress-review h2, .progress-project h2, .progress-next h2 { margin: 0 0 .9rem; font: 500 clamp(1.35rem, 3vw, 1.75rem)/1.2 Georgia, serif; }
+.progress-course, .progress-modules, .progress-project { max-width: 62rem; border-top: 3px solid var(--purple); padding-top: 1.2rem; }
+.progress-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem 2rem; margin: 0; }
+.progress-figures > div { display: grid; gap: .25rem; padding-bottom: .7rem; border-bottom: 1px solid var(--line); }
+.progress-figures dt { color: var(--ink-soft); font-size: .78rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.progress-figures dd { margin: 0; font-size: 1.05rem; font-weight: 750; }
+.progress-state { display: inline-block; padding: .15rem .55rem; background: var(--purple); color: var(--white); font-size: .8rem; font-weight: 900; }
+.progress-modules ul { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.progress-modules li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .4rem 1.5rem; padding: .85rem 0; border-bottom: 1px solid var(--line); }
+.module-copy { display: grid; gap: .2rem; max-width: 42rem; }
+.module-copy b { font-size: 1rem; }
+.module-copy small, .module-state small { color: var(--ink-soft); font-size: .85rem; }
+.module-state { display: grid; gap: .25rem; justify-items: end; text-align: right; }
+.progress-review { max-width: 72rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.6rem 2.5rem; align-items: start; }
+.review-column { border-top: 3px solid var(--purple); padding-top: 1.2rem; }
+.review-column ul { display: grid; gap: .8rem; margin: 0; padding: 0; list-style: none; }
+.review-column li { display: grid; gap: .2rem; padding-left: .9rem; border-left: 3px solid var(--amber); }
+.review-column b { font-size: .98rem; }
+.review-column small { color: var(--ink-soft); font-size: .85rem; line-height: 1.45; }
+.progress-quiet { margin: 0; color: var(--ink-soft); line-height: 1.55; }
+.progress-project p { margin: 0; color: var(--ink-soft); line-height: 1.6; }
+.progress-project b { color: var(--navy); }
+.progress-next { max-width: 46rem; display: grid; gap: .7rem; justify-items: start; padding: clamp(1.1rem, 3vw, 1.6rem); background: var(--navy); color: var(--paper); border-left: 6px solid var(--amber); }
+.progress-next h2 { margin-bottom: .2rem; color: var(--paper); }
+.progress-next .next-title { margin: 0; font: 500 clamp(1.3rem, 3vw, 1.7rem)/1.2 Georgia, serif; }
+.progress-next .progress-quiet { color: var(--amber-pale); }
+
 .check-screen { min-height: 50vh; padding: clamp(1.2rem, 4vw, 3.5rem) clamp(1rem, 4vw, 4rem) 5rem; background: var(--paper); }
 .check-card { width: min(50rem, 100%); margin: 0 auto; padding: clamp(1.2rem, 3vw, 2rem); background: var(--white); border-top: 5px solid var(--purple); box-shadow: var(--shadow); }
 .check-card > header { max-width: 42rem; margin-bottom: 1.5rem; }
@@ -427,6 +463,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .coding-instructions { border-right: 0; border-bottom: 1px solid var(--line); }
   .practice-help { grid-template-columns: 1fr; }
   .review-card { grid-template-columns: 1fr; }
+  .progress-review { grid-template-columns: 1fr; }
   .language-guide { grid-template-columns: 6.5rem minmax(0, 1fr); }
   .project-code-summary { grid-template-columns: 1fr; }
   .checkpoint-history { grid-template-columns: repeat(2, 1fr); }
@@ -477,6 +514,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .review-card { padding: .9rem; gap: .75rem; }
   .review-copy h2 { font-size: 1.3rem; }
   .review-actions .primary-button, .review-actions .outline-button { flex: 1 1 100%; }
+  .progress-page { padding: .9rem .8rem 4rem; gap: 1.4rem; }
+  .progress-head h1 { font-size: 2.1rem; }
+  .progress-figures { grid-template-columns: 1fr; }
+  .module-state { justify-items: start; text-align: left; }
+  .progress-next { padding: 1rem; }
+  .progress-next .primary-button { width: 100%; }
   .check-tally { font-size: .76rem; }
   .coding-instructions > h1 { font-size: 2.7rem; }
   .coding-studio { padding: .7rem; }
