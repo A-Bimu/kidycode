@@ -66,3 +66,55 @@ export const examAttempts = sqliteTable(
   },
   (table) => [index("exam_attempts_learner_created_idx").on(table.learnerId, table.createdAt)],
 );
+
+/* Adaptive tutor evidence. One row per learner and lesson, holding only counts,
+ * requirement labels and timestamps. Learner code is never stored here. */
+export const lessonEvidence = sqliteTable(
+  "lesson_evidence",
+  {
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    lessonId: text("lesson_id").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    successfulChecks: integer("successful_checks").notNull().default(0),
+    hintsRequested: integer("hints_requested").notNull().default(0),
+    mastery: integer("mastery").notNull().default(0),
+    struggleJson: text("struggle_json").notNull().default("[]"),
+    independentCorrections: integer("independent_corrections").notNull().default(0),
+    lastInterventionLevel: integer("last_intervention_level").notNull().default(0),
+    interventionPending: integer("intervention_pending", { mode: "boolean" }).notNull().default(false),
+    codePassedAt: text("code_passed_at"),
+    quickCheckPassedAt: text("quick_check_passed_at"),
+    bestQuizScore: integer("best_quiz_score").notNull().default(0),
+    completedAt: text("completed_at"),
+    createdAt: text("created_at").notNull(),
+    lastActivityAt: text("last_activity_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.learnerId, table.lessonId] }),
+    index("lesson_evidence_learner_activity_idx").on(table.learnerId, table.lastActivityAt),
+  ],
+);
+
+/* One row per piece of support given, so a learner's independence can be judged
+ * from real evidence. Requirement labels are stored, never learner code. */
+export const tutorInterventions = sqliteTable(
+  "tutor_interventions",
+  {
+    id: text("id").primaryKey(),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    lessonId: text("lesson_id").notNull(),
+    level: integer("level").notNull(),
+    focus: text("focus").notNull(),
+    requirementJson: text("requirement_json").notNull().default("[]"),
+    source: text("source").notNull().default("check"),
+    resolvedIndependently: integer("resolved_independently", { mode: "boolean" }).notNull().default(false),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("tutor_interventions_learner_lesson_idx").on(table.learnerId, table.lessonId, table.createdAt),
+  ],
+);

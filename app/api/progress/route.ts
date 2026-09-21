@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { courses } from "@/lib/course-catalog";
 import type { Lesson, WorkspaceFiles } from "@/lib/course";
+import { loadLessonEvidence, upsertLessonEvidence } from "@/lib/evidence";
+import { checkCount, gradeRequirements, masteryFrom, mergeStruggles } from "@/lib/tutor";
 import { authenticateLearner, databaseError, getDatabase, unauthorized } from "@/lib/server-database";
 
 const workspaceSchema = z.object({
@@ -136,6 +138,52 @@ export async function POST(request: Request) {
         now,
       )
       .run();
+
+    /* Completing an activity also records the evidence a tutor needs. Attempts
+     * are not counted here, because drafts autosave repeatedly. The completion
+     * timestamp is written through a COALESCE guard, so a second completion
+     * never overwrites the first one. */
+    if (data.status === "completed") {
+      const current = await loadLessonEvidence(getDatabase(), learner.id, data.lessonId);
+      const quizTotal = lesson.activityType === "quiz" ? (lesson.questions || []).length : 0;
+      const bestQuizScore = quizTotal > 0 && score !== null
+        ? Math.max(current?.bestQuizScore || 0, score)
+        : current?.bestQuizScore || 0;
+      const evidenceCodePassed = lesson.tests.length > 0 ? codePassed : (current?.codePassed || false);
+      const quickCheckPassed = lesson.question ? knowledgePassed : (current?.quickCheckPassed || false);
+      const struggles = mergeStruggles(current?.struggles || [], gradeRequirements(lesson, data.workspace));
+      await upsertLessonEvidence(getDatabase(), learner.id, data.lessonId, {
+        attemptIncrement: 0,
+        hintIncrement: 0,
+        independentCorrectionIncrement: 0,
+        successfulChecks: checkCount({
+          codePassed: evidenceCodePassed,
+          quickCheckPassed,
+          bestQuizScore,
+          quizTotal,
+          quickCheckOffered: Boolean(lesson.question),
+          quizOffered: quizTotal > 0,
+        }),
+        mastery: masteryFrom({
+          requirementsPassed: evidenceCodePassed,
+          quickCheckPassed,
+          bestQuizScore,
+          quizTotal,
+          alreadyPassedCode: current?.codePassed || false,
+          alreadyPassedQuickCheck: current?.quickCheckPassed || false,
+          codeOffered: lesson.tests.length > 0,
+          quickCheckOffered: Boolean(lesson.question),
+        }),
+        bestQuizScore,
+        lastInterventionLevel: current?.lastInterventionLevel || 0,
+        struggleJson: JSON.stringify(struggles),
+        interventionPending: current?.interventionPending || false,
+        codePassedAt: lesson.tests.length > 0 && !current?.codePassed ? now : null,
+        quickCheckPassedAt: lesson.question && !current?.quickCheckPassed ? now : null,
+        completedAt: now,
+      }, now);
+    }
+
     return Response.json({ saved: true, updatedAt: now, result: { codePassed, knowledgePassed, reflectionPassed, score } });
   } catch (error) {
     return databaseError(error);

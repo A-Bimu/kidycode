@@ -32,6 +32,24 @@ Each course closes with a ten-question knowledge check and a practical code repa
 
 The interface is designed for phones, tablets and laptops. Draft work, completed activities, project checkpoints and final attempts are stored in Cloudflare D1. The learner session uses an HttpOnly cookie.
 
+## Adaptive tutor
+
+Each lesson carries an evidence based tutor. It reads the learner's own attempts, code checks, quick checks, module checks and nudge requests, then answers with the smallest useful support:
+
+1. Name the exact requirement that failed.
+2. Give the smallest useful hint.
+3. Give a clearer explanation if the same requirement fails again.
+4. Show a small related example only after repeated failure.
+5. Acknowledge the specific concept once it is demonstrated.
+6. Stop explaining once mastery is shown.
+
+Support is driven by recorded evidence, never by a fixed label such as a learning style. Per lesson the server stores attempts, completed checks, hints requested, mastery, the concepts being struggled with, the support given, whether the learner corrected the problem independently, and the date of the most recent activity. Requirement labels and counts are stored, never the learner's code.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/tutor` | The signed in learner's own evidence for their course |
+| `POST /api/tutor` | `nudge`, `check`, `quickcheck` or `quiz`, all graded on the server |
+
 ## Technology
 
 - Next.js App Router compiled for Cloudflare Workers with Vinext
@@ -47,6 +65,20 @@ npm run install:ci
 npm run check
 npm run build
 ```
+
+To exercise the tutor end to end against a running server:
+
+```bash
+node_modules/.bin/vinext dev
+node --import tsx scripts/e2e-tutor.mjs
+```
+
+On Windows, run the dev server through Git Bash as
+`node_modules/.bin/vinext dev`, because the `dev` and `start` scripts set an
+environment variable using Unix shell syntax. A local D1 store is created on the
+first run. Apply the schema in `drizzle/` to that store once with a project level
+Wrangler configuration, and the end to end script can then create a learner and
+record real evidence.
 
 Run the supported Sites build from a configured environment with:
 

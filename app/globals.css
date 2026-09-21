@@ -218,6 +218,33 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .practice-next { display: grid; align-content: center; justify-items: start; gap: .8rem; padding: 1rem; background: var(--white); color: var(--navy); }
 .practice-next p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
 
+/* Adaptive tutor panel: a quiet helper beside the editor, never a chat window */
+.tutor-panel { display: grid; align-content: start; gap: .85rem; padding: 1rem; background: var(--white); color: var(--navy); border-left: 5px solid var(--amber); }
+.tutor-heading { display: grid; gap: .3rem; }
+.tutor-label { color: var(--purple); font-size: .72rem; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.tutor-heading b { font: 500 1.15rem/1.3 Georgia, serif; }
+.check-tally { color: var(--ink-soft); font-size: .8rem; font-weight: 800; }
+.tutor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.tutor-nudge { flex: 1 1 10rem; }
+.tutor-actions .text-button { font-size: .82rem; }
+.tutor-advice { display: grid; gap: .7rem; }
+.tutor-advice p { margin: 0; line-height: 1.55; }
+.tutor-message { padding: .85rem 1rem; background: var(--amber-pale); border-left: 4px solid var(--amber); animation: tutor-rise .24s ease-out; }
+.tutor-advice .is-quiet { color: var(--ink-soft); font-size: .9rem; }
+.tutor-requirement { display: grid; gap: .2rem; padding: .7rem .9rem; background: var(--paper); border-left: 4px solid var(--coral); font-size: .92rem; }
+.tutor-requirement b { color: var(--coral); font-size: .7rem; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.tutor-example { margin: 0; padding: .8rem 1rem; overflow-x: auto; background: var(--navy); color: var(--paper); font-size: .82rem; }
+.tutor-lesson-hint { padding: .8rem 1rem; background: var(--paper); border-left: 4px solid var(--line); font-size: .92rem; }
+.tutor-lesson-hint b { display: block; margin-bottom: .25rem; color: var(--purple); font-size: .74rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.quiz-focus { margin: 1rem 0 0; padding: .8rem 1rem; background: var(--white); border-left: 4px solid var(--purple); color: var(--navy); }
+.quiz-focus b { color: var(--purple); }
+.tutor-quiz-tally { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: .8rem; color: var(--ink-soft); font-size: .82rem; font-weight: 800; }
+
+@keyframes tutor-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
 .check-screen { min-height: 50vh; padding: clamp(1.2rem, 4vw, 3.5rem) clamp(1rem, 4vw, 4rem) 5rem; background: var(--paper); }
 .check-card { width: min(50rem, 100%); margin: 0 auto; padding: clamp(1.2rem, 3vw, 2rem); background: var(--white); border-top: 5px solid var(--purple); box-shadow: var(--shadow); }
 .check-card > header { max-width: 42rem; margin-bottom: 1.5rem; }
@@ -419,6 +446,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .lesson-next button, .practice-brief .text-button { width: 100%; }
   .practice-screen { padding: .7rem; }
   .practice-brief { margin-bottom: .7rem; padding: 1rem; }
+  .tutor-panel { padding: .85rem; border-left-width: 4px; }
+  .tutor-heading b { font-size: 1.05rem; }
+  .tutor-actions { gap: .5rem; }
+  .tutor-nudge { flex: 1 1 100%; }
+  .tutor-actions .text-button { width: 100%; text-align: left; }
+  .tutor-example { font-size: .78rem; }
+  .tutor-message, .tutor-lesson-hint, .tutor-requirement { padding: .7rem .8rem; }
+  .check-tally { font-size: .76rem; }
   .coding-instructions > h1 { font-size: 2.7rem; }
   .coding-studio { padding: .7rem; }
   .editor-panel textarea, .preview-panel iframe, .practice-screen .editor-panel textarea, .practice-screen .preview-panel iframe { min-height: 22rem; }
