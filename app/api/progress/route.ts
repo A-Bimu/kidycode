@@ -2,6 +2,7 @@ import { z } from "zod";
 import { courses } from "@/lib/course-catalog";
 import type { Lesson, WorkspaceFiles } from "@/lib/course";
 import { loadLessonEvidence, upsertLessonEvidence } from "@/lib/evidence";
+import { recordConceptRecoveries } from "@/lib/review";
 import { checkCount, gradeRequirements, masteryFrom, mergeStruggles } from "@/lib/tutor";
 import { authenticateLearner, databaseError, getDatabase, unauthorized } from "@/lib/server-database";
 
@@ -151,7 +152,13 @@ export async function POST(request: Request) {
         : current?.bestQuizScore || 0;
       const evidenceCodePassed = lesson.tests.length > 0 ? codePassed : (current?.codePassed || false);
       const quickCheckPassed = lesson.question ? knowledgePassed : (current?.quickCheckPassed || false);
-      const struggles = mergeStruggles(current?.struggles || [], gradeRequirements(lesson, data.workspace));
+      const gradedRequirements = gradeRequirements(lesson, data.workspace);
+      const struggles = mergeStruggles(current?.struggles || [], gradedRequirements);
+      await recordConceptRecoveries(
+        getDatabase(),
+        learner.id,
+        gradedRequirements.filter((result) => result.passed).map((result) => result.concept),
+      );
       await upsertLessonEvidence(getDatabase(), learner.id, data.lessonId, {
         attemptIncrement: 0,
         hintIncrement: 0,

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { courses } from "../lib/course-catalog.ts";
+import { MAX_DUE_ITEMS, RETIRE_STREAK } from "../lib/review.ts";
 import { pathwayConceptRules } from "../lib/tutor-concepts.ts";
 import {
   MASTERY_WEIGHTS,
@@ -243,4 +244,44 @@ for (const banned of ["—", "green"]) {
 }
 assert(!/\bgreen\b/i.test(interfaceSource), "The learner interface contains the banned colour name.");
 
-console.log(`Validated the tutor engine across ${allTests.length} requirements, graduated support, mastery limits, evidence privacy and server-side gating.`);
+/* 11. Cross lesson review keeps a weak concept beyond its own lesson, and only
+ *     retires it after two recorded recalls. */
+const reviewMigration = read("drizzle/0004_light_solo.sql");
+const reviewLib = read("lib/review.ts");
+const reviewRoute = read("app/api/review/route.ts");
+const reviewSource = [schema, reviewLib, reviewRoute, reviewMigration].join("\n");
+
+assert(reviewMigration.includes("CREATE TABLE \`concept_review\`"), "The review migration is missing the table.");
+assert(schema.includes('"concept_review"'), "The Drizzle schema is missing concept_review.");
+assert(reviewMigration.includes("PRIMARY KEY(\`learner_id\`, \`concept\`)"), "A concept must be recorded once per learner.");
+assert(reviewMigration.includes("ON DELETE cascade"), "Reviews must be removed with their learner profile.");
+const reviewTable = reviewMigration.slice(reviewMigration.indexOf("CREATE TABLE \`concept_review\`"));
+for (const banned of ["html", "css", "javascript", "workspace", "source_code", "learner_code"]) {
+  assert(!new RegExp(`\`${banned}`, "i").test(reviewTable), `Review history must not store ${banned}.`);
+}
+assert(reviewTable.includes("`label`"), "A review must keep the requirement label, not the submission.");
+assert.equal(RETIRE_STREAK, 2, "A concept must be retired only after two successful recalls.");
+assert(MAX_DUE_ITEMS <= 3, "The review list must stay small so it cannot crowd a lesson.");
+assert(reviewLib.includes("CASE WHEN review_streak + 1 >= ${RETIRE_STREAK} THEN 0 ELSE 1 END"),
+  "Retirement must depend on the recorded streak.");
+assert(reviewLib.includes("review_streak = 0"), "A missed recall must reset the streak.");
+assert(reviewLib.includes("MIN(concept_review.times_failed + 1, ${MAX_FAILURES})"), "Failure counts must rise but stay bounded.");
+assert(reviewLib.includes("WHERE learner_id = ? AND concept = ?"), "Review writes must be scoped to one learner.");
+assert(reviewLib.includes("WHERE learner_id = ? AND due = 1"), "Review reads must be scoped to one learner.");
+assert(reviewRoute.includes("authenticateLearner(request)"), "The review endpoint must authenticate the learner.");
+assert(/if \(!learner\) return unauthorized\(\)/.test(reviewRoute), "The review endpoint must refuse an unauthenticated request.");
+assert(reviewRoute.includes("lessonsById.has(row.lessonId)"), "Reviews must be filtered to the learner's own course.");
+assert(reviewRoute.includes('z.string().min(1).max(60)') && reviewRoute.includes("z.boolean()"),
+  "Review fields must be validated and bounded.");
+assert(!/body\.recalled|data\.recalled\s*===/.test(reviewRoute) || reviewRoute.includes("parsed.data.recalled"),
+  "The review outcome must come from the validated request body.");
+assert(read("app/api/tutor/route.ts").includes("recordConceptFailures"), "The tutor must feed failures into the review queue.");
+assert(read("app/api/tutor/route.ts").includes("recordConceptRecoveries"), "The tutor must record in lesson recoveries.");
+assert(read("app/api/progress/route.ts").includes("recordConceptRecoveries"), "Completion must record recoveries.");
+assert(read("components/LearningApp.tsx").includes("Come back to this"), "The learner must see the review card.");
+
+for (const banned of ["—", "green"]) {
+  assert(!reviewSource.includes(banned), `Review backend source contains ${banned}.`);
+}
+
+console.log(`Validated the tutor engine across ${allTests.length} requirements, graduated support, mastery limits, cross lesson review, evidence privacy and server-side gating.`);

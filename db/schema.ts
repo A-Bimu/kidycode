@@ -97,6 +97,32 @@ export const lessonEvidence = sqliteTable(
   ],
 );
 
+/* A durable record of weak concepts that outlives the lesson where they were
+ * first missed, so the tutor can come back to them later. Only requirement
+ * labels, concept keys and counts are stored, never learner code. */
+export const conceptReview = sqliteTable(
+  "concept_review",
+  {
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    concept: text("concept").notNull(),
+    label: text("label").notNull(),
+    lessonId: text("lesson_id").notNull(),
+    timesFailed: integer("times_failed").notNull().default(1),
+    timesRecovered: integer("times_recovered").notNull().default(0),
+    reviewStreak: integer("review_streak").notNull().default(0),
+    due: integer("due", { mode: "boolean" }).notNull().default(true),
+    firstFailedAt: text("first_failed_at").notNull(),
+    lastFailedAt: text("last_failed_at").notNull(),
+    lastReviewedAt: text("last_reviewed_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.learnerId, table.concept] }),
+    index("concept_review_due_idx").on(table.learnerId, table.due, table.lastFailedAt),
+  ],
+);
+
 /* One row per piece of support given, so a learner's independence can be judged
  * from real evidence. Requirement labels are stored, never learner code. */
 export const tutorInterventions = sqliteTable(

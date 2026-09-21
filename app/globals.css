@@ -245,6 +245,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   to { opacity: 1; transform: none; }
 }
 
+/* Recall card: one previously weak concept, before new material */
+.review-card { width: min(76rem, 100%); display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, .8fr); gap: 1rem; margin: 0 auto 1rem; padding: clamp(1rem, 3vw, 1.4rem); background: var(--navy); color: var(--paper); border-left: 5px solid var(--amber); animation: tutor-rise .24s ease-out; }
+.review-card .section-label { color: var(--amber); }
+.review-copy h2 { margin: .2rem 0 .35rem; font: 500 clamp(1.4rem, 3vw, 1.9rem)/1.15 Georgia, serif; }
+.review-source { margin: 0; color: var(--amber-pale); font-size: .85rem; }
+.review-ask { display: grid; align-content: start; gap: .7rem; }
+.review-ask > p { margin: 0; line-height: 1.5; }
+.review-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.review-actions .primary-button { flex: 1 1 9rem; }
+.review-actions .outline-button { flex: 1 1 9rem; background: transparent; color: var(--paper); border-color: var(--paper); }
+.review-actions .outline-button:hover { background: rgba(247, 243, 234, .14); }
+.review-count { color: var(--amber-pale); font-size: .8rem; font-weight: 800; }
+.review-hint { grid-column: 1 / -1; display: grid; gap: .5rem; padding: .9rem 1rem; background: rgba(247, 243, 234, .1); border-left: 4px solid var(--amber); }
+.review-hint p { margin: 0; line-height: 1.55; }
+.review-hint-more { color: var(--amber-pale); font-size: .9rem; }
+.review-status { width: min(76rem, 100%); margin: 0 auto; color: var(--navy); font-size: .9rem; font-weight: 750; }
+.review-status:empty { display: none; }
+.review-card + .review-status { margin-top: -.4rem; }
+.review-status.is-standalone { padding: .7rem 1rem; background: var(--amber-pale); border-left: 4px solid var(--amber); }
+
 .check-screen { min-height: 50vh; padding: clamp(1.2rem, 4vw, 3.5rem) clamp(1rem, 4vw, 4rem) 5rem; background: var(--paper); }
 .check-card { width: min(50rem, 100%); margin: 0 auto; padding: clamp(1.2rem, 3vw, 2rem); background: var(--white); border-top: 5px solid var(--purple); box-shadow: var(--shadow); }
 .check-card > header { max-width: 42rem; margin-bottom: 1.5rem; }
@@ -406,6 +426,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .coding-workbench { grid-template-columns: 1fr; }
   .coding-instructions { border-right: 0; border-bottom: 1px solid var(--line); }
   .practice-help { grid-template-columns: 1fr; }
+  .review-card { grid-template-columns: 1fr; }
   .language-guide { grid-template-columns: 6.5rem minmax(0, 1fr); }
   .project-code-summary { grid-template-columns: 1fr; }
   .checkpoint-history { grid-template-columns: repeat(2, 1fr); }
@@ -453,6 +474,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .tutor-actions .text-button { width: 100%; text-align: left; }
   .tutor-example { font-size: .78rem; }
   .tutor-message, .tutor-lesson-hint, .tutor-requirement { padding: .7rem .8rem; }
+  .review-card { padding: .9rem; gap: .75rem; }
+  .review-copy h2 { font-size: 1.3rem; }
+  .review-actions .primary-button, .review-actions .outline-button { flex: 1 1 100%; }
   .check-tally { font-size: .76rem; }
   .coding-instructions > h1 { font-size: 2.7rem; }
   .coding-studio { padding: .7rem; }

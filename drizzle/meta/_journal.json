@@ -29,6 +29,13 @@
       "when": 1789985671829,
       "tag": "0003_closed_winter_soldier",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789991990674,
+      "tag": "0004_light_solo",
+      "breakpoints": true
     }
   ]
 }

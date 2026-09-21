@@ -45,10 +45,14 @@ Each lesson carries an evidence based tutor. It reads the learner's own attempts
 
 Support is driven by recorded evidence, never by a fixed label such as a learning style. Per lesson the server stores attempts, completed checks, hints requested, mastery, the concepts being struggled with, the support given, whether the learner corrected the problem independently, and the date of the most recent activity. Requirement labels and counts are stored, never the learner's code.
 
+A weak concept is also remembered beyond its own lesson. Before new material, the learner may see one short recall card for a concept they missed earlier, with the smallest hint available and an honest two answer outcome. A concept is retired only after two recorded recalls, and a missed recall puts it straight back.
+
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/tutor` | The signed in learner's own evidence for their course |
 | `POST /api/tutor` | `nudge`, `check`, `quickcheck` or `quiz`, all graded on the server |
+| `GET /api/review` | Concepts this learner should come back to |
+| `POST /api/review` | Record a recall outcome for one concept |
 
 ## Technology
 

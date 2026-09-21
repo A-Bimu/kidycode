@@ -305,7 +305,73 @@ await step("progress survives a reload", async () => {
   assert.equal(evidence.completedAt, completionStamp, "The completion date must survive a reload.");
 });
 
-/* 6. A second learner cannot see or change the first learner records. */
+/* 6. Cross lesson review keeps a weak concept beyond its own lesson. */
+const failedConcept = gradeRequirements(lessonOne, brokenCode).find((result) => !result.passed).concept;
+
+await check("a missed requirement enters the review list", async () => {
+  const result = await api("/api/review");
+  assert.equal(result.status, 200, `Expected 200, received ${result.status}`);
+  assert(result.body.totalDue >= 1, "The missed requirement must be queued for review.");
+  assert(result.body.items.length <= 3, `The review list must stay small, received ${result.body.items.length}`);
+  const item = result.body.items.find((candidate) => candidate.concept === failedConcept);
+  assert(item, `Expected a review item for ${failedConcept}: ${JSON.stringify(result.body.items)}`);
+  assert.equal(item.lessonId, lessonOne.id, "The review item must remember where it came from.");
+  assert(item.focus.length > 0 && item.hint.length > 0, "A review item needs a focus and a hint.");
+  assert.equal(typeof item.timesFailed, "number", "A review item needs a recorded failure count.");
+});
+
+await check("passing the requirement in its own lesson does not retire it", async () => {
+  const result = await api("/api/review");
+  const item = result.body.items.find((candidate) => candidate.concept === failedConcept);
+  assert(item, "The concept must still be due after the learner passed it in the lesson.");
+  assert(item.timesRecovered >= 1, "The in lesson recovery must be recorded.");
+});
+
+await check("one successful recall keeps the concept queued", async () => {
+  const result = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: failedConcept, recalled: true }) });
+  assert.equal(result.status, 200, `Expected 200, received ${result.status}`);
+  assert.equal(result.body.retired, false, "One recall must not retire a concept.");
+  assert.equal(result.body.item.reviewStreak, 1, `Expected a streak of one, received ${result.body.item.reviewStreak}`);
+  assert(result.body.totalDue >= 1, "The concept must still be due.");
+});
+
+await check("a second successful recall retires the concept", async () => {
+  const result = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: failedConcept, recalled: true }) });
+  assert.equal(result.body.retired, true, "Two recalls must retire the concept.");
+  const after = await api("/api/review");
+  assert.equal(after.body.totalDue, 0, `Expected nothing due, received ${after.body.totalDue}`);
+  assert.equal(after.body.items.length, 0, "A retired concept must stop appearing.");
+});
+
+await check("a missed recall puts the concept back and raises its count", async () => {
+  const failedLessonTwo = await api("/api/tutor", { method: "POST", body: JSON.stringify({ lessonId: lessonTwo.id, action: "check", workspace: brokenCode }) });
+  assert.equal(failedLessonTwo.body.passed, false, "The second lesson workspace must fail.");
+  const concept = failedLessonTwo.body.nudge.concept;
+  const before = await api("/api/review");
+  const item = before.body.items.find((candidate) => candidate.concept === concept);
+  assert(item, `Expected ${concept} to be queued: ${JSON.stringify(before.body.items)}`);
+  const missed = await api("/api/review", { method: "POST", body: JSON.stringify({ concept, recalled: false }) });
+  assert.equal(missed.body.retired, false, "A missed recall must not retire anything.");
+  assert.equal(missed.body.item.reviewStreak, 0, "A missed recall must reset the streak.");
+  assert(missed.body.item.timesFailed > item.timesFailed, "A missed recall must raise the failure count.");
+  assert(missed.body.totalDue >= 1, "The concept must stay queued.");
+});
+
+await check("a review answer for an unknown concept is refused", async () => {
+  const result = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: "not-a-real-concept", recalled: true }) });
+  assert.equal(result.status, 403, `Expected 403, received ${result.status}`);
+});
+
+await check("the review list is validated", async () => {
+  const bad = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: "", recalled: true }) });
+  assert.equal(bad.status, 400, `An empty concept must be refused, received ${bad.status}`);
+  const long = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: "c".repeat(200), recalled: true }) });
+  assert.equal(long.status, 400, `An oversized concept must be refused, received ${long.status}`);
+  const wrongType = await api("/api/review", { method: "POST", body: JSON.stringify({ concept: "main-heading", recalled: "yes" }) });
+  assert.equal(wrongType.status, 400, `A non boolean outcome must be refused, received ${wrongType.status}`);
+});
+
+/* 7. A second learner cannot see or change the first learner records. */
 await step("one learner cannot see another learner records", async () => {
   const other = await createLearner("OtherCoder", "ages-10-12", 12);
   assert.notEqual(other.id, firstLearner.id, "The second learner must have a different identity.");
@@ -313,6 +379,9 @@ await step("one learner cannot see another learner records", async () => {
   assert.deepEqual(isolated.body.evidence, [], "A second learner must not see the first learner evidence.");
   const progress = await api("/api/progress");
   assert.deepEqual(progress.body.progress, [], "A second learner must not see the first learner progress.");
+  const reviews = await api("/api/review");
+  assert.deepEqual(reviews.body.items, [], "A second learner must not see the first learner review list.");
+  assert.equal(reviews.body.totalDue, 0, "A second learner must have nothing due.");
   const own = await api("/api/tutor", { method: "POST", body: JSON.stringify({ lessonId: lessonOne.id, action: "nudge", workspace: brokenCode }) });
   assert.equal(own.body.evidence.lessonId, lessonOne.id);
   assert.equal(own.body.evidence.hintsRequested, 1, "The second learner must start from zero hints.");
@@ -324,6 +393,7 @@ await step("the first learner records were not changed by the second learner", a
   const fresh = await createLearner("TutorCheck", "ages-10-12", 11);
   assert(fresh.id !== firstLearner.id, "A reset must create a new profile.");
   assert.deepEqual((await api("/api/tutor")).body.evidence, [], "A new profile must start with no evidence.");
+  assert.deepEqual((await api("/api/review")).body.items, [], "A new profile must start with no review items.");
 });
 
 console.log(`\n${passed.length} checks passed, ${failed.length} failed.`);

@@ -88,6 +88,42 @@ type TutorReply = {
   error?: string;
 };
 
+export type ReviewItem = {
+  concept: string;
+  label: string;
+  focus: string;
+  hint: string;
+  explanation: string;
+  lessonId: string;
+  lessonTitle: string;
+  moduleNumber: number;
+  timesFailed: number;
+  timesRecovered: number;
+  reviewStreak: number;
+  firstFailedAt: string;
+  lastFailedAt: string;
+};
+
+type ReviewReply = { recalled: boolean; retired: boolean; item: ReviewItem | null; totalDue: number };
+
+/* Review is also an enhancement. A failing request returns null so notes and the
+ * rest of the lesson carry on without it. */
+async function requestReview(concept?: string, recalled?: boolean): Promise<{ items: ReviewItem[]; totalDue: number } | ReviewReply | null> {
+  try {
+    const response = typeof concept === "string"
+      ? await fetch("/api/review", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ concept, recalled: Boolean(recalled) }),
+        })
+      : await fetch("/api/review", { cache: "no-store" });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 /* The tutor is an enhancement, never a gate. Every call returns null on any
  * failure so the lesson keeps working from the lesson's own content. */
 async function requestTutor(body: Record<string, unknown>, signal?: AbortSignal): Promise<TutorReply | null> {
@@ -237,6 +273,11 @@ export function LearningApp({ course }: { course: CourseBundle }) {
   const [nudge, setNudge] = useState<TutorNudge | null>(null);
   const [tutorMessage, setTutorMessage] = useState("");
   const [tutorOffline, setTutorOffline] = useState(false);
+  const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
+  const [reviewTotalDue, setReviewTotalDue] = useState(0);
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewHintShown, setReviewHintShown] = useState(false);
+  const [reviewStatus, setReviewStatus] = useState("");
   const checkpointLock = useRef(new Set<string>());
 
   const currentActivity = lessons[currentIndex] || lessons[0];
@@ -302,6 +343,8 @@ export function LearningApp({ course }: { course: CourseBundle }) {
     setHintIndex(-1);
     setNudge(null);
     setTutorMessage("");
+    setReviewHintShown(false);
+    setReviewStatus("");
     setMessage("");
     setAutosaveStatus("idle");
   }, [lessons]);
@@ -311,10 +354,18 @@ export function LearningApp({ course }: { course: CourseBundle }) {
     async function loadProgress() {
       setLoadError("");
       try {
-        const [response, tutorResponse] = await Promise.all([
+        const [response, tutorResponse, reviewResponse] = await Promise.all([
           fetch("/api/progress", { cache: "no-store" }),
           fetch("/api/tutor", { cache: "no-store" }).catch(() => null),
+          fetch("/api/review", { cache: "no-store" }).catch(() => null),
         ]);
+        if (reviewResponse?.ok) {
+          const reviewData = await reviewResponse.json() as { items?: ReviewItem[]; totalDue?: number };
+          if (active && Array.isArray(reviewData.items)) {
+            setReviewItems(reviewData.items);
+            setReviewTotalDue(reviewData.totalDue ?? reviewData.items.length);
+          }
+        }
         const data = await response.json() as {
           learner?: Learner;
           progress?: Array<SavedProgress & { lessonId: string }>;
@@ -472,6 +523,16 @@ export function LearningApp({ course }: { course: CourseBundle }) {
     setMessage(reply.passed
       ? "Code checks passed. Continue to the quick check."
       : "Read the failed check, make one repair and test again.");
+    if (!reply.passed) await refreshReview();
+  }
+
+  /* A new failure can add an item to the review queue, so the queue is refreshed
+   * rather than waiting for a page reload. */
+  async function refreshReview() {
+    const result = await requestReview() as { items?: ReviewItem[]; totalDue?: number } | null;
+    if (!result || !Array.isArray(result.items)) return;
+    setReviewItems(result.items);
+    setReviewTotalDue(result.totalDue ?? result.items.length);
   }
 
   /* The nudge button asks for the same support a check gives, and counts as a
@@ -504,6 +565,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
     setNudge(reply.nudge);
     setTutorMessage(reply.nudge ? reply.nudge.message : reply.acknowledgement || reply.feedback);
     if (reply.nudge) setHintIndex(Math.min(priorHints, currentActivity.hints.length - 1));
+    if (reply.nudge) await refreshReview();
   }
 
   /* The quick check is graded on the server, and its message names the idea
@@ -528,6 +590,30 @@ export function LearningApp({ course }: { course: CourseBundle }) {
     setEvidence((current) => ({ ...current, [reply.evidence.lessonId]: reply.evidence }));
     setNudge(reply.nudge);
     setTutorMessage(reply.quickCheck ? reply.quickCheck.message : reply.feedback);
+  }
+
+  /* One recall at a time. The answer is recorded against the learner, and the
+   * item leaves the local list either way so the card never repeats itself in
+   * one sitting. */
+  async function answerReview(recalled: boolean) {
+    const item = reviewItems[0];
+    if (!item) return;
+    setReviewBusy(true);
+    setReviewStatus("");
+    const result = await requestReview(item.concept, recalled) as ReviewReply | null;
+    setReviewBusy(false);
+    if (!result || typeof result.retired !== "boolean") {
+      setReviewStatus("That answer was not saved. Your notes and lesson still work as usual.");
+      return;
+    }
+    setReviewItems((current) => current.slice(1));
+    setReviewTotalDue(result.totalDue);
+    setReviewHintShown(false);
+    setReviewStatus(recalled
+      ? result.retired
+        ? `${item.focus} is settled, so it will not come back.`
+        : `Good. ${item.focus} will come back once more to be sure.`
+      : `Not yet. ${item.focus} stays on your list for next time.`);
   }
 
   /* Module checks are graded on the server and recorded as evidence. */
@@ -803,6 +889,13 @@ export function LearningApp({ course }: { course: CourseBundle }) {
                 tutorOffline={tutorOffline}
                 requestNudge={requestNudge}
                 submitQuickCheck={submitQuickCheck}
+                reviewItem={reviewItems[0] || null}
+                reviewTotal={Math.max(reviewTotalDue, reviewItems.length)}
+                reviewBusy={reviewBusy}
+                reviewHintShown={reviewHintShown}
+                reviewStatus={reviewStatus}
+                onRevealReview={() => setReviewHintShown(true)}
+                onAnswerReview={(recalled) => void answerReview(recalled)}
               />
             )}
             <footer className="activity-footer">
@@ -814,6 +907,58 @@ export function LearningApp({ course }: { course: CourseBundle }) {
         </main>
       )}
     </div>
+  );
+}
+
+/* A small recall card shown before new material. It is one item at a time so it
+ * never crowds a lesson, and it disappears completely when nothing is due. */
+function ReviewCard({
+  item,
+  position,
+  total,
+  busy,
+  hintShown,
+  onReveal,
+  onAnswer,
+}: {
+  item: ReviewItem;
+  position: number;
+  total: number;
+  busy: boolean;
+  hintShown: boolean;
+  onReveal: () => void;
+  onAnswer: (recalled: boolean) => void;
+}) {
+  const missed = item.timesFailed === 1 ? "once so far" : `${item.timesFailed} times so far`;
+  return (
+    <section className="review-card" aria-labelledby="review-heading">
+      <div className="review-copy">
+        <p className="section-label">Come back to this</p>
+        <h2 id="review-heading">{item.focus}</h2>
+        <p className="review-source">From {item.lessonTitle}. Missed {missed}.</p>
+      </div>
+      <div className="review-ask">
+        <p>{hintShown ? "Read the hint, then answer honestly." : "Can you do this now without help?"}</p>
+        <div className="review-actions">
+          <button className="primary-button" type="button" disabled={busy} onClick={() => onAnswer(true)}>
+            {busy ? "Saving..." : "I can do this"}
+          </button>
+          {!hintShown && (
+            <button className="outline-button" type="button" disabled={busy} onClick={onReveal}>Show me again</button>
+          )}
+          {hintShown && (
+            <button className="outline-button" type="button" disabled={busy} onClick={() => onAnswer(false)}>Not yet</button>
+          )}
+        </div>
+        <p className="review-count">{position} of {total} to revisit</p>
+      </div>
+      {hintShown && (
+        <div className="review-hint">
+          <p>{item.hint}</p>
+          <p className="review-hint-more">{item.explanation}</p>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -914,6 +1059,13 @@ function CodingActivity({
   tutorOffline,
   requestNudge,
   submitQuickCheck,
+  reviewItem,
+  reviewTotal,
+  reviewBusy,
+  reviewHintShown,
+  reviewStatus,
+  onRevealReview,
+  onAnswerReview,
 }: {
   activity: Lesson;
   stage: Stage;
@@ -945,6 +1097,13 @@ function CodingActivity({
   tutorOffline: boolean;
   requestNudge: () => void;
   submitQuickCheck: (answer: number) => void;
+  reviewItem: ReviewItem | null;
+  reviewTotal: number;
+  reviewBusy: boolean;
+  reviewHintShown: boolean;
+  reviewStatus: string;
+  onRevealReview: () => void;
+  onAnswerReview: (recalled: boolean) => void;
 }) {
   const [activeFile, setActiveFile] = useState<CodeFile>(activity.editableFiles[0] || "html");
   const [preview, setPreview] = useState(() => buildPreview(workspace));
@@ -1036,6 +1195,18 @@ function CodingActivity({
 
       {lessonStep === "notes" && (
         <section className="lesson-screen notes-screen">
+          {reviewItem && (
+            <ReviewCard
+              item={reviewItem}
+              position={1}
+              total={reviewTotal}
+              busy={reviewBusy}
+              hintShown={reviewHintShown}
+              onReveal={onRevealReview}
+              onAnswer={onAnswerReview}
+            />
+          )}
+          <p className={`review-status${reviewItem ? "" : " is-standalone"}`} aria-live="polite">{reviewStatus}</p>
           <section className="notes-sheet">
             <div className="notes-section">
               <p className="section-label">FIRST, UNDERSTAND THE IDEA</p>

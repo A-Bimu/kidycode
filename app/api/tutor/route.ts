@@ -30,6 +30,7 @@ import {
   type StruggleEntry,
   type TutorNudge,
 } from "@/lib/tutor";
+import { recordConceptFailures, recordConceptRecoveries } from "@/lib/review";
 import { authenticateLearner, databaseError, getDatabase, unauthorized } from "@/lib/server-database";
 
 const emptyWorkspace: WorkspaceFiles = { html: "", css: "", javascript: "" };
@@ -207,14 +208,29 @@ export async function POST(request: Request) {
           await markLatestInterventionIndependent(database, learner.id, lesson.id);
         }
         interventionPending = false;
-        /* A requirement that now passes is no longer something to work on. */
+        /* A requirement that now passes is no longer something to work on in
+         * this lesson, but it stays on the review list until a later recall. */
         struggles = mergeStruggles(current.struggles, results);
+        await recordConceptRecoveries(
+          database,
+          learner.id,
+          results.filter((result) => result.passed).map((result) => result.concept),
+        );
         const demonstrated = results.find((result) => result.passed);
         acknowledgement = demonstrated ? acknowledgementFor(demonstrated) : "";
         feedback = "Every requirement passed. Your code does what the task asked.";
       } else if (primary) {
         nudge = nudgeFor(primary, failsFor(current.struggles, primary.concept));
         struggles = mergeStruggles(current.struggles, results);
+        /* The concept is remembered beyond this lesson so the tutor can return
+         * to it later, even after the learner passes it here. */
+        await recordConceptFailures(
+          database,
+          learner.id,
+          lesson.id,
+          results.filter((result) => !result.passed).map((result) => ({ concept: result.concept, label: result.label })),
+          now,
+        );
         lastInterventionLevel = nudge.level;
         interventionPending = true;
         hintIncrement = data.action === "nudge" ? 1 : 0;
@@ -252,6 +268,7 @@ export async function POST(request: Request) {
         nudge = questionNudge(lesson, question.prompt, question.explanation, current.struggles);
         const pseudo: RequirementResult = { label: question.prompt, file: "html", concept: nudge.concept, passed: false };
         struggles = mergeStruggles(current.struggles, [pseudo]);
+        await recordConceptFailures(database, learner.id, lesson.id, [{ concept: pseudo.concept, label: pseudo.label }], now);
         lastInterventionLevel = nudge.level;
         interventionPending = true;
         await insertIntervention(database, learner.id, lesson.id, {

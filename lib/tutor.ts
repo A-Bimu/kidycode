@@ -407,6 +407,16 @@ export function acknowledgementFor(requirement: RequirementResult): string {
   return conceptFor(requirement.label).acknowledgement;
 }
 
+/* The smallest hint for a requirement, used when a concept comes back later for
+ * review rather than during the lesson that introduced it. */
+export function smallestHintFor(label: string): string {
+  return conceptFor(label).hint;
+}
+
+export function clearerExplanationFor(label: string): string {
+  return conceptFor(label).explanation;
+}
+
 /* The first failed requirement is the one worth talking about: fixing it is the
  * smallest useful next step, so support stays focused instead of overwhelming. */
 export function firstFailure(results: RequirementResult[]): RequirementResult | null {
