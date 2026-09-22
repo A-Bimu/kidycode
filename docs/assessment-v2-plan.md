@@ -274,6 +274,26 @@ test rather than by inspection alone. Reported corrections made during that revi
    is met by an absent page. This is now a stated rule with a validator behind it: no form may
    carry enough absence requirements for empty code to reach the practical floor.
 
-#### Courses 2 to 4
+#### Course 2: ages 13 to 15
+
+Bank: `lib/assessment/bank/ages-13-15.ts`. 24 forms, 120 questions, 120 marked requirements,
+21 of them mandatory.
+
+Gate, all executed: `npm run check` exit 0 (bank validator clean for both courses, satisfiability
+193 checks passed), `npm run lint` exit 0 with zero warnings, `npm run build` exit 0, and the API
+suite 13 of 13.
+
+Defects found and fixed during this course:
+
+1. The practical fixture generator did not know how to satisfy a requirement that names accepted
+   attribute values, so the input type and release notes requirements looked unachievable. The
+   generator was wrong, not the content.
+2. A generated submission for a form module contained an unlabelled control, which correctly
+   broke the labelled-control requirement. The generator now produces a labelled control.
+3. Pathway course identifiers repeated the course id (`ages-13-15-ages-13-15-forms-form-B`). The
+   factory now normalises the prefix, which left the already shipped ages 10 to 12 identifiers
+   unchanged.
+
+#### Courses 3 and 4
 
 Pending.
