@@ -7,6 +7,7 @@ import { ages13to15Final } from "@/lib/assessment/bank/ages-13-15-final";
 import { ages16to18Assessment } from "@/lib/assessment/bank/ages-16-18";
 import { ages16to18Final } from "@/lib/assessment/bank/ages-16-18-final";
 import { adultsAssessment } from "@/lib/assessment/bank/adults";
+import { adultsFinal } from "@/lib/assessment/bank/adults-final";
 import type { CourseId } from "@/lib/course";
 
 export {
@@ -17,6 +18,7 @@ export {
   ages16to18Assessment,
   ages16to18Final,
   adultsAssessment,
+  adultsFinal,
 };
 
 /*
@@ -39,7 +41,7 @@ export const assessmentContent: Record<CourseId, CourseAssessment> = {
   "ages-10-12": mergeAssessment(ages10to12Assessment, ages10to12Final),
   "ages-13-15": mergeAssessment(ages13to15Assessment, ages13to15Final),
   "ages-16-18": mergeAssessment(ages16to18Assessment, ages16to18Final),
-  adults: mergeAssessment(adultsAssessment),
+  adults: mergeAssessment(adultsAssessment, adultsFinal),
 };
 
 /* A bank with nothing reviewed in it must serve no assessment at all. Exported so the

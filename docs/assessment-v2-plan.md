@@ -126,7 +126,7 @@ validator and the browser sweep both assert these.
 | 0 | Audit, contract, safe scaffolding | Type check, lint, production build, all pre-existing tests | in progress |
 | 1 | Engine, additive migration, secure persistence, server selection, idempotency | Schema and pure scoring tests, API authorisation and tamper tests, concurrency, deletion cascade, type check, lint, build | pending |
 | 2 | Three equivalent module forms for all 32 modules, course by course | Content validation, answer verification, coverage report, assessment tests (one commit and push per course) | pending |
-| 3 | Three equivalent final forms and three build briefs per course, safe grading, mandatory checks | Content validation, grading fixtures, cross-form equivalence, no answer leakage (one commit and push per course) | pending |
+| 3 | Three equivalent final forms and three build briefs per course, safe grading, mandatory checks | Content validation, grading fixtures, cross-form equivalence, no answer leakage (one commit and push per course) | in progress |
 | 4 | Learner assessment interface: overview, reference, question, editor, review, submit, resume | Browser tests at 320/768/1440 for all four courses, keyboard, semantics, overflow, brand rules | pending |
 | 5 | Results, revision packs, readiness, retakes | Failing and passing journeys per course, weak-topic mapping, form rotation, no immediate repeat, history privacy, mobile browser tests | pending |
 | 6 | Independent-understanding check | Copied-output simulation, genuine change pass, failed change becomes Needs verification, no detector, no unsafe execution, privacy and browser tests | pending |
@@ -295,5 +295,35 @@ Defects found and fixed during this course:
    unchanged.
 
 #### Courses 3 and 4
+
+Course 3 (ages 16 to 18): bank `lib/assessment/bank/ages-16-18.ts`, 24 forms, 120 questions, 120
+requirements, 12 mandatory. Course 4 (adults): bank `lib/assessment/bank/adults.ts`, same totals.
+Both passed the same gate as courses 1 and 2, and every question in both banks was printed with its
+marked answer and read against the lesson it assesses before acceptance.
+
+### Phase 3
+
+Finals and independent builds, one course at a time. Each final form is marked out of 100: ten
+knowledge questions of two marks, three debugging tasks of five two mark requirements, and one
+unseen build of ten five mark requirements. Every build carries a mandatory accessibility
+requirement and a mandatory privacy or safety requirement, so a high total can never override them.
+
+| Course | File | Knowledge | Debugging tasks | Build requirements |
+| --- | --- | --- | --- | --- |
+| ages 10 to 12 | `lib/assessment/bank/ages-10-12-final.ts` | 30 | 9 | 30 |
+| ages 13 to 15 | `lib/assessment/bank/ages-13-15-final.ts` | 30 | 9 | 30 |
+| ages 16 to 18 | `lib/assessment/bank/ages-16-18-final.ts` | 30 | 9 | 30 |
+| adults | `lib/assessment/bank/adults-final.ts` | 30 | 9 | 30 |
+
+The debugging tasks are proved to be repairs: every starter code file scores below full marks
+against its own rubric, and the scores are recorded in the phase report. The validator also refuses
+a final question that repeats module-bank wording, which caught twenty questions in the first draft
+of the ages 10 to 12 bank; all twenty were rewritten.
+
+Deviations recorded honestly: courses 2 and 3 of this phase landed in one commit, because the
+manifest that merges a module bank with its final bank is a single shared change and splitting it
+would have left one commit whose bank was not wired in.
+
+### Phase 4
 
 Pending.
