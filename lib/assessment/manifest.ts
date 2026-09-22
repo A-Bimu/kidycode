@@ -3,11 +3,21 @@ import { type CourseAssessment } from "@/lib/assessment/types";
 import { ages10to12Assessment } from "@/lib/assessment/bank/ages-10-12";
 import { ages10to12Final } from "@/lib/assessment/bank/ages-10-12-final";
 import { ages13to15Assessment } from "@/lib/assessment/bank/ages-13-15";
+import { ages13to15Final } from "@/lib/assessment/bank/ages-13-15-final";
 import { ages16to18Assessment } from "@/lib/assessment/bank/ages-16-18";
+import { ages16to18Final } from "@/lib/assessment/bank/ages-16-18-final";
 import { adultsAssessment } from "@/lib/assessment/bank/adults";
 import type { CourseId } from "@/lib/course";
 
-export { ages10to12Assessment, ages10to12Final, ages13to15Assessment, ages16to18Assessment, adultsAssessment };
+export {
+  ages10to12Assessment,
+  ages10to12Final,
+  ages13to15Assessment,
+  ages13to15Final,
+  ages16to18Assessment,
+  ages16to18Final,
+  adultsAssessment,
+};
 
 /*
  * One course, one content object: the module bank and the final bank are authored in
@@ -27,8 +37,8 @@ function mergeAssessment(moduleBank: CourseAssessment, finalBank?: CourseAssessm
 
 export const assessmentContent: Record<CourseId, CourseAssessment> = {
   "ages-10-12": mergeAssessment(ages10to12Assessment, ages10to12Final),
-  "ages-13-15": mergeAssessment(ages13to15Assessment),
-  "ages-16-18": mergeAssessment(ages16to18Assessment),
+  "ages-13-15": mergeAssessment(ages13to15Assessment, ages13to15Final),
+  "ages-16-18": mergeAssessment(ages16to18Assessment, ages16to18Final),
   adults: mergeAssessment(adultsAssessment),
 };
 

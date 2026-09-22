@@ -13,7 +13,13 @@ import { bankProblems, blueprintFor, REQUIRED_COURSES } from "../lib/assessment/
 import { assessmentContent } from "../lib/assessment/manifest.ts";
 import { contentFor } from "../lib/assessment/manifest.ts";
 
-const scope = process.env.ASSESSMENT_SCOPE === "complete" ? "complete" : "modules";
+/* A course with a final bank is judged at the complete contract; a course whose final
+ * bank is still being reviewed is judged on its module bank, so progress is visible
+ * without pretending the missing part exists. */
+const forced = process.env.ASSESSMENT_SCOPE;
+const scopeFor = (content) => (forced === "modules" || forced === "complete"
+  ? forced
+  : content.finalForms.length > 0 ? "complete" : "modules");
 let total = 0;
 const failures = [];
 
@@ -36,6 +42,7 @@ for (const courseId of REQUIRED_COURSES) {
   }
   coursesWithContent += 1;
   sweep(`${courseId} bank`, () => {
+    const scope = scopeFor(content);
     const problems = bankProblems(content, { scope });
     assert.deepEqual(problems, [], `\n    - ${problems.join("\n    - ")}`);
     const blueprint = blueprintFor(courseId);
@@ -44,7 +51,8 @@ for (const courseId of REQUIRED_COURSES) {
     const knowledge = content.moduleForms.flatMap((form) => form.knowledge);
     const requirements = content.moduleForms.flatMap((form) => form.practical.requirements);
     const mandatory = requirements.filter((requirement) => requirement.mandatory);
-    console.log(`  ok   ${courseId}: ${content.moduleForms.length} forms, ${knowledge.length} questions, ${requirements.length} marked requirements, ${mandatory.length} mandatory`);
+    const finals = content.finalForms.length;
+    console.log(`  ok   ${courseId}: ${content.moduleForms.length} module forms, ${knowledge.length} questions, ${requirements.length} marked requirements, ${mandatory.length} mandatory, ${finals} final forms, scope ${scope}`);
     total += 1;
   });
 }
