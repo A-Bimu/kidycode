@@ -97,6 +97,72 @@ export const lessonEvidence = sqliteTable(
   ],
 );
 
+/* A guardian is identified by the platform identity headers, never by anything
+ * the browser sends in a body. Only the fields needed to recognise a guardian
+ * again are kept here. */
+export const guardianAccounts = sqliteTable(
+  "guardian_accounts",
+  {
+    id: text("id").primaryKey(),
+    platformUserId: text("platform_user_id").notNull(),
+    email: text("email").notNull(),
+    displayName: text("display_name"),
+    createdAt: text("created_at").notNull(),
+    lastSignInAt: text("last_sign_in_at").notNull(),
+    failedClaimAttempts: integer("failed_claim_attempts").notNull().default(0),
+    lastClaimAttemptAt: text("last_claim_attempt_at"),
+  },
+  (table) => [uniqueIndex("guardian_accounts_platform_user_unique").on(table.platformUserId)],
+);
+
+/* One row per guardian and learner pair, including revoked pairs, so a revoke
+ * keeps its history and a later reconnect updates the same row. */
+export const guardianLinks = sqliteTable(
+  "guardian_links",
+  {
+    id: text("id").primaryKey(),
+    linkRef: text("link_ref").notNull(),
+    guardianId: text("guardian_id")
+      .notNull()
+      .references(() => guardianAccounts.id, { onDelete: "cascade" }),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("active"),
+    initiatedBy: text("initiated_by").notNull().default("learner"),
+    connectedAt: text("connected_at").notNull(),
+    revokedAt: text("revoked_at"),
+  },
+  (table) => [
+    uniqueIndex("guardian_links_pair_unique").on(table.guardianId, table.learnerId),
+    uniqueIndex("guardian_links_ref_unique").on(table.linkRef),
+    index("guardian_links_learner_idx").on(table.learnerId, table.status),
+  ],
+);
+
+/* A one-time code a learner shows to a grown-up. Only the digest is stored, and
+ * the row is removed with the learner it belongs to. */
+export const guardianConnectCodes = sqliteTable(
+  "guardian_connect_codes",
+  {
+    id: text("id").primaryKey(),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    codeDigest: text("code_digest").notNull(),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    usedAt: text("used_at"),
+    usedByGuardianId: text("used_by_guardian_id").references(() => guardianAccounts.id, { onDelete: "set null" }),
+    invalidatedAt: text("invalidated_at"),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("guardian_connect_codes_digest_unique").on(table.codeDigest),
+    index("guardian_connect_codes_learner_idx").on(table.learnerId, table.expiresAt),
+  ],
+);
+
 /* A durable record of weak concepts that outlives the lesson where they were
  * first missed, so the tutor can come back to them later. Only requirement
  * labels, concept keys and counts are stored, never learner code. */

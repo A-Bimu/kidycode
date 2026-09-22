@@ -54,6 +54,13 @@ A weak concept is also remembered beyond its own lesson. Before new material, th
 | `GET /api/review` | Concepts this learner should come back to |
 | `POST /api/review` | Record a recall outcome for one concept |
 | `GET /api/summary` | The learner's own progress summary, derived from existing records |
+| `GET /api/guardian/connections` | The learner's own connected grown-ups |
+| `POST /api/guardian/connections` | Create a one-time connection code |
+| `DELETE /api/guardian/connections` | End a grown-up's access |
+| `GET /api/guardian/session` | A signed in grown-up's own account and learners |
+| `POST /api/guardian/links` | Connect using a one-time code |
+| `DELETE /api/guardian/links` | Disconnect from a learner |
+| `GET /api/guardian/summary` | A read only progress view for one connected learner |
 
 "My progress" in the learner navigation turns that evidence into counts and plain
 labels: activities completed, checks passed, mastery per module, concepts to come
@@ -61,6 +68,20 @@ back to, concepts already strengthened, project versions saved, the final
 assessment status, the most recent activity and one specific next action. Nothing
 is stored twice: every figure is computed from records that already exist. There
 is no school grade and no percentage.
+
+## Grown-up access
+
+A learner on the three younger paths can open "Grown-up access" on their progress
+page and create a one-time code. Only the digest of that code is stored. It works
+once, expires after ten minutes, and creating a new one cancels the previous
+unused code. A grown-up signs in with ChatGPT at `/guardian`, enters the code, and
+can then follow that learner's progress read only. Either side can end the
+connection at any time.
+
+Guardian identity comes from the platform identity headers alone. There is no
+password system, nothing a page can claim about itself, and no way to reach a
+learner from an identifier. Adult learners keep their progress private and are
+never offered grown-up controls.
 
 ## Technology
 

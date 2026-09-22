@@ -1,5 +1,6 @@
 "use client";
 
+import { GrownUpAccess } from "@/components/GrownUpAccess";
 import type { CourseBundle } from "@/lib/course";
 import type { Summary } from "@/lib/summary";
 
@@ -209,6 +210,10 @@ export function ProgressPage({
           </button>
         )}
       </section>
+
+      {/* Kept last and deliberately small, so it never competes with the next
+          action. Adult learners keep their progress to themselves. */}
+      <GrownUpAccess enabled={course.courseFacts.id !== "adults"} />
     </main>
   );
 }

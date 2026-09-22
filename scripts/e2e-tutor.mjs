@@ -522,6 +522,281 @@ for (const [courseId, bundle] of Object.entries(courses)) {
   });
 }
 
+/* 9. Grown-up access: platform identity, one-time codes, linking and
+ *    authorisation. The identity headers stand in for the platform edge, which
+ *    forwards them after a ChatGPT sign-in. */
+const CODE_PATTERN = /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/;
+
+async function guardianApi(path, options = {}, identity = null) {
+  const headers = { "content-type": "application/json" };
+  if (identity) {
+    headers["oai-authenticated-user-id"] = identity.id;
+    headers["oai-authenticated-user-email"] = identity.email;
+    if (identity.name) headers["oai-authenticated-user-full-name"] = identity.name;
+  }
+  const response = await fetch(`${base}${path}`, { ...options, headers, signal: AbortSignal.timeout(30000) });
+  let body = null;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+  return { status: response.status, body };
+}
+
+async function learnerApi(path, options = {}) {
+  const headers = { "content-type": "application/json", cookie };
+  const response = await fetch(`${base}${path}`, { ...options, headers, signal: AbortSignal.timeout(30000) });
+  return { status: response.status, body: await response.json().catch(() => null) };
+}
+
+/* Guardian identities are unique per run, because a guardian account is real
+ * and durable: reusing one would carry links from an earlier run into this one. */
+const guardianRunTag = crypto.randomUUID().slice(0, 8);
+const guardianIdentity = (name) => ({ id: `guardian-${name}-${guardianRunTag}`, email: `${name}-${guardianRunTag}@example.test` });
+const alpha = { ...guardianIdentity("alpha"), name: "Ana Alpha" };
+const beta = guardianIdentity("beta");
+const gamma = guardianIdentity("gamma");
+const delta = guardianIdentity("delta");
+const omega = guardianIdentity("omega");
+
+await step("guardian endpoints refuse a caller with no platform identity", async () => {
+  for (const [path, method] of [["/api/guardian/session", "GET"], ["/api/guardian/links", "POST"], ["/api/guardian/summary?link=abc", "GET"]]) {
+    const result = await guardianApi(path, { method, body: method === "POST" ? JSON.stringify({ code: "AAAA-BBBB-CCCC-DDDD" }) : undefined });
+    assert.equal(result.status, 401, `${method} ${path} must answer 401 without an identity, received ${result.status}`);
+    assert.equal(result.body.signInPath, "/signin-with-chatgpt", "A 401 must point at the platform sign in.");
+  }
+});
+
+await step("a browser cannot claim an identity through the body", async () => {
+  const result = await guardianApi("/api/guardian/links", {
+    method: "POST",
+    body: JSON.stringify({ code: "AAAA-BBBB-CCCC-DDDD", platformUserId: alpha.id, email: alpha.email }),
+  });
+  assert.equal(result.status, 401, `A body supplied identity must be ignored, received ${result.status}`);
+});
+
+let learnerACookie = "";
+let learnerAId = "";
+let learnerAFirstCode = "";
+
+await step("a learner can create a connection code", async () => {
+  const learner = await createLearner("GuardianChild", "ages-10-12", 11);
+  learnerAId = learner.id;
+  learnerACookie = cookie;
+  const result = await learnerApi("/api/guardian/connections", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.equal(result.status, 200, `Expected 200, received ${result.status}`);
+  assert.match(result.body.issuedCode, CODE_PATTERN, `A code must be readable and grouped: ${result.body.issuedCode}`);
+  assert(result.body.pendingCode?.expiresAt, "A code must come with an expiry.");
+  assert.equal(result.body.connections.length, 0, "A new learner starts with nobody connected.");
+  learnerAFirstCode = result.body.issuedCode;
+});
+
+await step("the code is not returned again after it is created", async () => {
+  const result = await learnerApi("/api/guardian/connections");
+  assert.equal(result.body.pendingCode?.expiresAt ? true : false, true, "The waiting code must still be reported as pending.");
+  assert.equal(JSON.stringify(result.body).includes(learnerAFirstCode.replace(/-/g, "")), false, "The plain code must not be readable again.");
+  assert.equal(result.body.issuedCode, undefined, "Only the moment of creation returns a plain code.");
+});
+
+await step("a wrong code is rejected and attempts are bounded", async () => {
+  const wrong = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: "ZZZZ-ZZZZ-ZZZZ-ZZZZ" }) }, gamma);
+  assert.equal(wrong.status, 404, `A code that does not exist must be refused, received ${wrong.status}`);
+  const malformed = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: "not-a-code" }) }, gamma);
+  assert.equal(malformed.status, 404, `A malformed code must be refused, received ${malformed.status}`);
+  let limited = 0;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const result = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: `AAAA-BBBB-CCCC-DDD${attempt}` }) }, gamma);
+    if (result.status === 429) { limited += 1; break; }
+  }
+  assert.equal(limited, 1, "Repeated attempts from one guardian must eventually be limited.");
+  const stillLimited = await guardianApi("/api/guardian/session", {}, gamma);
+  assert.equal(stillLimited.status, 200, "A limited guardian can still read their own account.");
+});
+
+await step("a guardian connects with a valid code", async () => {
+  const result = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: learnerAFirstCode }) }, alpha);
+  assert.equal(result.status, 200, `Expected 200, received ${result.status}: ${JSON.stringify(result.body)}`);
+  assert.equal(result.body.connected, true);
+  assert.equal(result.body.learner.firstName, "GuardianChild");
+  assert(result.body.learner.linkRef, "A connection must return an opaque handle.");
+  assert.equal(result.body.learner.linkRef.includes(learnerAId), false, "A handle must not contain the learner identifier.");
+  assert.equal(result.body.learners.length, 1, "The guardian's list must show the learner.");
+});
+
+await step("a used code cannot be used again", async () => {
+  const result = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: learnerAFirstCode }) }, delta);
+  assert.equal(result.status, 410, `A spent code must be refused, received ${result.status}`);
+});
+
+await step("a new code invalidates the previous unused one", async () => {
+  const first = await learnerApi("/api/guardian/connections", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  const superseded = first.body.issuedCode;
+  const second = await learnerApi("/api/guardian/connections", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.notEqual(first.body.issuedCode, second.body.issuedCode, "A replacement code must differ.");
+  const old = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: superseded }) }, omega);
+  assert.equal(old.status, 410, `A replaced code must stop working, received ${old.status}`);
+  const current = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: second.body.issuedCode }) }, omega);
+  assert.equal(current.status, 200, `The newest code must work, received ${current.status}`);
+});
+
+await step("two guardians racing on one code cannot both link", async () => {
+  const created = await learnerApi("/api/guardian/connections", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  const code = created.body.issuedCode;
+  const [left, right] = await Promise.all([
+    guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code }) }, beta),
+    guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code }) }, delta),
+  ]);
+  const winners = [left, right].filter((result) => result.status === 200);
+  const losers = [left, right].filter((result) => result.status !== 200);
+  assert.equal(winners.length, 1, `Exactly one claim may win, received ${left.status} and ${right.status}`);
+  assert.equal(losers.length, 1, "The other claim must be refused.");
+  const winner = winners[0];
+  assert.equal(winner.body.learners.length, 1, "The winner must hold exactly one link, not two.");
+  const loserSession = losers[0] === left
+    ? await guardianApi("/api/guardian/session", {}, beta)
+    : await guardianApi("/api/guardian/session", {}, delta);
+  assert.equal(loserSession.body.learners.length, 0, "The losing guardian must have no link.");
+});
+
+await step("one child can have two grown-ups who were separately approved", async () => {
+  cookie = learnerACookie;
+  const connections = await learnerApi("/api/guardian/connections");
+  /* More than one grown-up can be connected at once, each one approved
+   * separately with their own code. */
+  assert(connections.body.connections.length >= 2,
+    `Expected at least two connected grown-ups, received ${connections.body.connections.length}`);
+  const first = connections.body.connections[0];
+  assert(first.guardianName.length > 0, "A connection needs a name the learner can recognise.");
+  assert(first.guardianEmailMasked.includes("*"), "A child must not be shown a full address.");
+  assert.equal(first.guardianEmailMasked.includes("alpha@example.test"), false, "A full address must never reach the learner page.");
+});
+
+await step("one guardian can follow more than one learner", async () => {
+  await createLearner("GuardianChildTwo", "ages-13-15", 14);
+  const secondCookie = cookie;
+  const created = await learnerApi("/api/guardian/connections", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  const claimed = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: created.body.issuedCode }) }, alpha);
+  assert.equal(claimed.status, 200, `Expected 200, received ${claimed.status}`);
+  assert.equal(claimed.body.learners.length, 2, `Expected two learners, received ${claimed.body.learners.length}`);
+  const courseGroups = claimed.body.learners.map((learner) => learner.courseGroup).sort();
+  assert.equal(courseGroups.length, 2, "Both learners must be listed.");
+  assert(courseGroups.every((group) => group.startsWith("Ages") || group === "Adults"), `Unexpected course group: ${courseGroups}`);
+  void secondCookie;
+});
+
+await step("the guardian summary is complete and allow listed", async () => {
+  cookie = learnerACookie;
+  const session = await guardianApi("/api/guardian/session", {}, alpha);
+  const link = session.body.learners.find((learner) => learner.firstName === "GuardianChild");
+  assert(link, "The learner must be listed for the guardian.");
+  const result = await guardianApi(`/api/guardian/summary?link=${encodeURIComponent(link.linkRef)}`, {}, alpha);
+  assert.equal(result.status, 200, `Expected 200, received ${result.status}: ${JSON.stringify(result.body)}`);
+  const summary = result.body.summary;
+  const allowed = new Set([
+    "summary", "learner", "activities", "modules", "needsReview", "strengthened", "project",
+    "finalAssessment", "lastActivityAt", "nextLesson", "firstName", "courseGroup", "completed", "total",
+    "label", "number", "title", "masteryLabel", "focus", "moduleNumber", "saved", "status", "bestScore",
+  ]);
+  const seen = new Set();
+  (function walk(value) {
+    if (Array.isArray(value)) { value.forEach(walk); return; }
+    if (value && typeof value === "object") {
+      for (const [key, entry] of Object.entries(value)) { seen.add(key); walk(entry); }
+    }
+  }(result.body));
+  for (const key of seen) {
+    assert(allowed.has(key), `The guardian summary exposes ${key}, which is outside the allow list.`);
+  }
+  assert.equal(summary.learner.firstName, "GuardianChild");
+  assert.equal(summary.learner.courseGroup, "Ages 10 to 12");
+  assert.equal(summary.modules.length, course.stages.length);
+  assert(summary.activities.total === course.lessons.length, "The totals must match the course.");
+  assert(summary.nextLesson.title.length > 0, "A next lesson must be recommended.");
+});
+
+await step("the guardian summary leaks nothing it must not", async () => {
+  cookie = learnerACookie;
+  const session = await guardianApi("/api/guardian/session", {}, alpha);
+  const link = session.body.learners.find((learner) => learner.firstName === "GuardianChild");
+  const body = JSON.stringify((await guardianApi(`/api/guardian/summary?link=${encodeURIComponent(link.linkRef)}`, {}, alpha)).body);
+  for (const probe of ["<h1>", "<p>", "My First Website", "querySelector", "workspace", "answers", "practical", "kidycode_session", "concept", "timesFailed", "reviewStreak", "independentCorrections", "checksPassed"]) {
+    assert.equal(body.includes(probe), false, `The guardian summary must not contain ${probe}.`);
+  }
+  assert.equal(body.includes(learnerAId), false, "The guardian summary must not contain the learner identifier.");
+  assert.equal(body.includes(learnerAFirstCode.replace(/-/g, "")), false, "The guardian summary must not contain a code.");
+  assert.equal(body.includes(alpha.id), false, "The guardian summary must not contain the platform identity.");
+});
+
+await step("an unrelated guardian is refused", async () => {
+  cookie = learnerACookie;
+  const session = await guardianApi("/api/guardian/session", {}, alpha);
+  const link = session.body.learners.find((learner) => learner.firstName === "GuardianChild");
+  const result = await guardianApi(`/api/guardian/summary?link=${encodeURIComponent(link.linkRef)}`, {}, omega);
+  assert.equal(result.status, 403, `A guardian with no link must be refused, received ${result.status}`);
+});
+
+await step("knowing a learner identifier gives a guardian nothing", async () => {
+  const byLearnerId = await guardianApi(`/api/guardian/summary?link=${learnerAId}`, {}, omega);
+  assert.equal(byLearnerId.status, 403, `A guessed learner identifier must fail, received ${byLearnerId.status}`);
+  const asQuery = await guardianApi(`/api/guardian/summary?learnerId=${learnerAId}`, {}, omega);
+  assert.equal(asQuery.status, 400, `An unknown parameter must not be accepted, received ${asQuery.status}`);
+  const asLinkRef = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ learnerId: learnerAId }) }, omega);
+  assert.equal(asLinkRef.status, 400, `A link must never be created from a learner identifier, received ${asLinkRef.status}`);
+});
+
+await step("a guardian cannot change a learner's work", async () => {
+  const progress = await guardianApi("/api/progress", {
+    method: "POST",
+    body: JSON.stringify({ lessonId: lessonOne.id, status: "completed", questionAnswer: 0, quizAnswers: [], reflection: "", workspace: brokenCode }),
+  });
+  assert.equal(progress.status, 401, `A guardian is not a learner session, received ${progress.status}`);
+  const tutor = await guardianApi("/api/tutor", { method: "POST", body: JSON.stringify({ lessonId: lessonOne.id, action: "nudge", workspace: brokenCode }) }, alpha);
+  assert.equal(tutor.status, 401, `A guardian identity is not a learner session, received ${tutor.status}`);
+  const write = await guardianApi("/api/guardian/summary", { method: "POST", body: JSON.stringify({ link: "x" }) }, alpha);
+  assert(write.status >= 400, `The guardian summary must be read only, received ${write.status}`);
+});
+
+await step("revoking a connection stops the guardian immediately", async () => {
+  cookie = learnerACookie;
+  const before = await learnerApi("/api/guardian/connections");
+  const countBefore = before.body.connections.length;
+  const session = await guardianApi("/api/guardian/session", {}, omega);
+  const link = session.body.learners[0];
+  assert(link, "The guardian approved earlier must still be listed.");
+  const revoked = await learnerApi("/api/guardian/connections", { method: "DELETE", body: JSON.stringify({ action: "revoke", linkRef: link.linkRef }) });
+  assert.equal(revoked.status, 200, `Expected 200, received ${revoked.status}`);
+  assert.equal(revoked.body.connections.length, countBefore - 1,
+    `Revoking must remove exactly one connection: was ${countBefore}, now ${revoked.body.connections.length}`);
+  assert.equal(revoked.body.connections.some((row) => row.linkRef === link.linkRef), false,
+    "The revoked grown-up must leave the learner's list.");
+  const blocked = await guardianApi(`/api/guardian/summary?link=${encodeURIComponent(link.linkRef)}`, {}, omega);
+  assert.equal(blocked.status, 403, `A revoked link must stop working at once, received ${blocked.status}`);
+  const after = await guardianApi("/api/guardian/session", {}, omega);
+  assert.equal(after.body.learners.length, 0, "A revoked learner must leave the guardian's list.");
+});
+
+await step("a guardian can disconnect themselves", async () => {
+  cookie = learnerACookie;
+  const session = await guardianApi("/api/guardian/session", {}, alpha);
+  const link = session.body.learners.find((learner) => learner.firstName === "GuardianChild");
+  const result = await guardianApi("/api/guardian/links", { method: "DELETE", body: JSON.stringify({ linkRef: link.linkRef }) }, alpha);
+  assert.equal(result.status, 200, `Expected 200, received ${result.status}`);
+  assert.equal(result.body.learners.some((learner) => learner.firstName === "GuardianChild"), false, "The learner must leave the list.");
+  const connections = await learnerApi("/api/guardian/connections");
+  assert.equal(connections.body.connections.some((row) => row.linkRef === link.linkRef), false, "The learner's list must lose that grown-up.");
+});
+
+await step("grown-up access is not part of the adult path", async () => {
+  await createLearner("AdultLearner", "adults", 19);
+  const read = await learnerApi("/api/guardian/connections");
+  assert.equal(read.status, 409, `An adult must not reach grown-up access, received ${read.status}`);
+  const create = await learnerApi("/api/guardian/connections", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.equal(create.status, 409, `An adult must not create a code, received ${create.status}`);
+  const revoke = await learnerApi("/api/guardian/connections", { method: "DELETE", body: JSON.stringify({ action: "revoke", linkRef: "x" }) });
+  assert.equal(revoke.status, 409, `An adult must not revoke anything, received ${revoke.status}`);
+});
+
 console.log(`\n${passed.length} checks passed, ${failed.length} failed.`);
 if (failed.length > 0) {
   console.log("Failures:");

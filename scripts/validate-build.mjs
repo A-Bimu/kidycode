@@ -12,6 +12,11 @@ const requiredFiles = [
   "dist/.openai/drizzle/0000_breezy_psylocke.sql",
   "dist/.openai/drizzle/0001_regular_shotgun.sql",
   "dist/.openai/drizzle/0002_good_master_mold.sql",
+  /* Every migration must reach the deployment artifact, or a published site
+   * would run against a schema it does not have. */
+  "dist/.openai/drizzle/0003_closed_winter_soldier.sql",
+  "dist/.openai/drizzle/0004_light_solo.sql",
+  "dist/.openai/drizzle/0005_slimy_xorn.sql",
 ];
 
 for (const relativePath of requiredFiles) {

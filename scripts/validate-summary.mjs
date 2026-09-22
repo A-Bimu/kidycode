@@ -235,10 +235,18 @@ assert(route.includes("Response.json({ summary })"), "The response must carry th
 assert(route.includes("passed: Boolean(row.passed), createdAt: row.createdAt }))"),
   "Only the score and outcome of an attempt may reach the summary.");
 
-/* No migration was added, because no new durable data is required. */
+/* Phase 3 added no migration of its own, because no new durable data is
+ * required. The summary is built from tables that already existed, so the
+ * concept_review table must be created once, by the phase that introduced it. */
 const journal = JSON.parse(read("drizzle/meta/_journal.json"));
-const latestMigration = journal.entries[journal.entries.length - 1].tag;
-assert.equal(latestMigration, "0004_light_solo", "Phase 3 must not add a migration.");
+const tags = journal.entries.map((entry) => entry.tag);
+assert(tags.includes("0004_light_solo"), "The review migration must remain in the journal.");
+assert.equal(tags.filter((tag) => tag.startsWith("0003")).length, 1, "Phase 1 must own exactly one migration.");
+assert.equal(tags.filter((tag) => tag.startsWith("0004")).length, 1, "Phase 2 must own exactly one migration.");
+assert.equal(read("drizzle/0004_light_solo.sql").includes("CREATE TABLE `concept_review`"), true,
+  "The review table must be created by the review migration.");
+assert.equal(read("drizzle/0003_closed_winter_soldier.sql").includes("concept_review"), false,
+  "The review table must not be created twice.");
 
 const pageSource = read("components/ProgressPage.tsx");
 const summarySource = [read("lib/summary.ts"), route, pageSource].join("\n");

@@ -36,6 +36,13 @@
       "when": 1789991990674,
       "tag": "0004_light_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790025993966,
+      "tag": "0005_slimy_xorn",
+      "breakpoints": true
     }
   ]
 }
