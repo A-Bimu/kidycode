@@ -36,16 +36,60 @@ assert(!first.includes("203.0.113.9"), "A source address must never be stored as
 assert(first.length >= 16, "A scope needs enough length to avoid easy collisions.");
 assert.equal(MAX_CLAIM_ATTEMPTS_PER_WINDOW > 0 && MAX_CODE_FAILED_ATTEMPTS > 0, true, "Attempts must be bounded.");
 
-/* The claim is conditional, and the rotation is gated on the winner. */
+/* The claim is conditional, and every later mutation is gated on the winner. */
 assert(/used_at IS NULL AND invalidated_at IS NULL AND expires_at > \?/.test(transferModule),
   "The claim must be a single conditional update.");
 assert(transferModule.includes("used_by_device = ?"), "The claim must record which device won.");
-assert(/UPDATE learner_profiles SET access_hash = \?[\s\S]*WHERE id = \(SELECT learner_id FROM learner_transfer_codes WHERE id = \? AND used_by_device = \?\)/.test(transferModule),
-  "The rotation must only match the device that won the claim.");
-assert(transferModule.includes("database.batch(["), "The claim and rotation must run in one transaction.");
-assert(transferModule.includes("invalidated_at = ?\n        WHERE learner_id = ? AND id <> ?"), "A claim must invalidate the learner's other codes.");
-assert(transferModule.includes('if (claimed !== 1) return { status: "raced" };'), "Losing the race must be reported, not ignored.");
-assert(transferModule.includes('if (rotated !== 1) return { status: "raced" };'), "A claim without a rotation must not be treated as success.");
+
+const claimBody = transferModule.slice(transferModule.indexOf("export async function claimTransferCode"));
+const createBody = transferModule.slice(
+  transferModule.indexOf("export async function createTransferCode"),
+  transferModule.indexOf("export async function cancelTransferCode"),
+);
+
+/* Defect 1: the sibling invalidation must not run on the learner identifier alone.
+ * A stale request whose claim matched no row used to be able to destroy the
+ * learner's newer code, so the statement now requires the claimed row to carry the
+ * winning device token. */
+assert(claimBody.includes("AND EXISTS (SELECT 1 FROM learner_transfer_codes AS winner WHERE winner.id = ? AND winner.used_by_device = ?)"),
+  "The sibling invalidation must be gated on the winning device token.");
+assert(!/UPDATE learner_transfer_codes SET invalidated_at = \?\s*\n\s*WHERE learner_id = \? AND id <> \? AND used_at IS NULL AND invalidated_at IS NULL`/.test(claimBody),
+  "The sibling invalidation must never run on the learner identifier alone.");
+assert(/UPDATE learner_transfer_codes SET invalidated_at = \?\s*\n\s*WHERE learner_id = \? AND id <> \? AND used_at IS NULL AND invalidated_at IS NULL\s*\n\s*AND EXISTS \(SELECT 1 FROM learner_transfer_codes AS winner/.test(claimBody),
+  "The learner filter and the token gate must both be present, in that order.");
+
+const claimBatchStart = claimBody.indexOf("database.batch([");
+const claimBatchEnd = claimBody.indexOf("]);", claimBatchStart);
+assert(claimBatchStart > 0 && claimBatchEnd > claimBatchStart, "The claim must run inside one transaction.");
+const claimBatch = claimBody.slice(claimBatchStart, claimBatchEnd);
+
+/* Every statement after the claim itself carries the winning token, so a request
+ * that did not win changes no access key, no sibling code, no applied state and no
+ * attempt counter. */
+assert.equal((claimBatch.match(/used_by_device = \?/g) || []).length, 5,
+  "All five statements must carry the winning token: the claim, the sibling invalidation, the rotation, the applied mark and the attempt cleanup.");
+assert(claimBatch.includes("UPDATE learner_transfer_codes SET used_at = ?"), "The transaction must contain the claim.");
+assert(claimBatch.includes("DELETE FROM transfer_claim_limits WHERE scope = ?"), "The attempt cleanup belongs in the same transaction.");
+assert(claimBatch.includes("SET applied_at = ? WHERE id = ? AND used_by_device = ?"), "The applied mark must be gated on the winner.");
+
+/* Defect 3: nothing may be awaited after the rotation, so a failure cannot strand
+ * a learner with a dead cookie and no replacement. */
+const learnerRead = claimBody.indexOf("SELECT id, nickname, course_id AS courseId");
+assert(learnerRead > 0 && learnerRead < claimBatchStart, "The learner must be read before the access key changes.");
+const afterRotation = claimBody.slice(claimBatchEnd);
+assert(!afterRotation.includes("await database"), "No database work may follow the rotation.");
+assert(!afterRotation.includes("clearAttempts"), "The attempt cleanup must not be a separate awaited step.");
+assert(claimBody.includes('if (claimed !== 1 || rotated !== 1) return { status: "raced" };'),
+  "Losing the race, or a rotation that did not land, must be reported rather than ignored.");
+
+/* Defect 2: replacement is one transaction, so two requests cannot both leave an
+ * active code behind. */
+assert(createBody.includes("database.batch(["), "Replacement must run in one transaction.");
+assert(!createBody.includes(".run()"), "Replacement must not write outside its transaction.");
+assert(createBody.indexOf("const code = generateConnectCode();") < createBody.indexOf("database.batch(["),
+  "The code, its digest and its id must exist before the transaction starts.");
+assert(createBody.indexOf("const id = crypto.randomUUID();") < createBody.indexOf("database.batch(["),
+  "The row id must be generated before the transaction starts.");
 
 /* The session cookie keeps every protection the platform already relied on. */
 const accessModule = read("lib/access-keys.ts");

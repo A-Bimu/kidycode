@@ -101,6 +101,17 @@ Starting a new learning path clears this device's access, so that step now expla
 what would be lost, says whether a transfer code or a connected grown-up exists, and
 offers to create a code before anything is cleared.
 
+## Testing the races
+
+Transfer codes are the one part of KidyCode where a single request contains a race.
+`scripts/e2e-transfer-races.mjs` runs the real transfer library against a real
+migrated SQLite database wrapped in a D1 compatible adapter, and uses its hooks to
+place a competing request at an exact instant: between a claim's code lookup and its
+transaction, and between the writes of a generation. It proves that a stale claim
+cannot destroy a newer code, that a losing claim changes nothing at all, that
+concurrent generation leaves exactly one active code, and that a failed transaction
+rolls back with the original session still working.
+
 ## Technology
 
 - Next.js App Router compiled for Cloudflare Workers with Vinext

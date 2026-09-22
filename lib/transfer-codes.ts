@@ -13,20 +13,25 @@ import {
 /*
  * Learner transfer codes.
  *
- * Moving a profile to another device has to rotate the learner's access key, and
- * that rotation must happen exactly once and only for the request that actually
- * won the code. Everything below is arranged around that single fact:
+ * Moving a profile to another device rotates the learner's access key, and that
+ * rotation must happen exactly once, only for the request that won the code, and
+ * only for a learner we already know how to return to. Everything here is
+ * arranged around those three facts:
  *
- *   1. The claim is a conditional update, so only one caller can move a code from
- *      unused to used.
- *   2. The rotation, the invalidation of other codes and the applied mark run in
- *      one transaction (a D1 batch), each gated on the device token that won the
- *      claim. A caller that lost the race cannot rotate anything, because no row
- *      carries its token.
+ *   1. The claim is one conditional update, so only one caller can move a code
+ *      from unused to used.
+ *   2. Every other mutation in that transaction is gated on the device token that
+ *      won the claim. A caller whose claim matched no row therefore changes no
+ *      access key, no sibling code, no applied state and no attempt counter. This
+ *      is what stops a stale request from destroying the learner's newer code
+ *      during a claim versus replacement race.
+ *   3. The learner is read before the key changes, and nothing is awaited after
+ *      the rotation. A failure can therefore never leave the previous device
+ *      signed out with no new cookie to hand back.
  *
- * If the process were to stop between the claim and the rotation, the code is
- * spent and the access key is unchanged. That is the safe direction: nobody gains
- * access and the learner simply creates another code.
+ * Replacement is a single transaction too: the code, its digest and its row id
+ * are all generated first, so invalidation and insertion cannot be separated by a
+ * competing request.
  */
 
 export const TRANSFER_TTL_MINUTES = 10;
@@ -81,34 +86,37 @@ async function noteAttempt(database: D1Database, scope: string, now: string): Pr
     .run();
 }
 
-async function clearAttempts(database: D1Database, scope: string): Promise<void> {
-  await database.prepare("DELETE FROM transfer_claim_limits WHERE scope = ?").bind(scope).run();
-}
-
 /* A new code cancels any unused code this learner already had, so only the newest
  * code can ever be claimed. `createdBy` records whether the learner made it or a
- * linked grown-up made it on their behalf. */
+ * linked grown-up made it on their behalf.
+ *
+ * The code, its digest and its id are generated before the transaction, so the
+ * transaction is a single pair of writes. Two requests arriving at the same moment
+ * cannot both leave an active code behind: the second transaction runs after the
+ * first has committed, and its invalidation catches the code the first inserted. */
 export async function createTransferCode(
   database: D1Database,
   learnerId: string,
   createdBy: "learner" | "guardian",
   now: string,
 ): Promise<{ code: string; expiresAt: string }> {
-  await database
-    .prepare(`UPDATE learner_transfer_codes SET invalidated_at = ?
-      WHERE learner_id = ? AND used_at IS NULL AND invalidated_at IS NULL`)
-    .bind(now, learnerId)
-    .run();
-
   const code = generateConnectCode();
   const digest = await hashConnectCode(code);
+  const id = crypto.randomUUID();
   const expiresAt = new Date(new Date(now).getTime() + TRANSFER_TTL_MINUTES * 60_000).toISOString();
-  await database
-    .prepare(`INSERT INTO learner_transfer_codes
-      (id, learner_id, code_digest, created_by, created_at, expires_at, used_at, used_by_device, applied_at, invalidated_at, failed_attempts)
-      VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, 0)`)
-    .bind(crypto.randomUUID(), learnerId, digest, createdBy, now, expiresAt)
-    .run();
+
+  await database.batch([
+    database
+      .prepare(`UPDATE learner_transfer_codes SET invalidated_at = ?
+        WHERE learner_id = ? AND used_at IS NULL AND invalidated_at IS NULL`)
+      .bind(now, learnerId),
+    database
+      .prepare(`INSERT INTO learner_transfer_codes
+        (id, learner_id, code_digest, created_by, created_at, expires_at, used_at, used_by_device, applied_at, invalidated_at, failed_attempts)
+        VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, 0)`)
+      .bind(id, learnerId, digest, createdBy, now, expiresAt),
+  ]);
+
   return { code: groupConnectCode(code), expiresAt };
 }
 
@@ -193,13 +201,26 @@ export async function claimTransferCode(
     return { status: "expired" };
   }
 
+  /* The learner is read before anything changes. There is deliberately no query
+   * after this point, so a failure can never strand a learner between a spent code
+   * and a rotated key. */
+  const learner = await database
+    .prepare("SELECT id, nickname, course_id AS courseId FROM learner_profiles WHERE id = ?")
+    .bind(code.learnerId)
+    .first<{ id: string; nickname: string; courseId: string }>();
+  if (!learner) {
+    await noteAttempt(database, scope, now);
+    return { status: "not-found" };
+  }
+
   const device = crypto.randomUUID();
   const newAccessKey = makeAccessKey();
   const newAccessHash = await hashAccessKey(newAccessKey);
 
-  /* One transaction: win the code, spend every other unused code, and rotate the
-   * access key. The rotation only matches when this device token won the claim,
-   * so a loser in a race cannot reach it. */
+  /* One transaction. The first statement is the claim itself. Every statement
+   * after it carries the winning device token, either as a condition on the row it
+   * writes or as a requirement that the claimed row carries that token, so a
+   * request whose claim matched no row changes nothing at all. */
   const results = await database.batch([
     database
       .prepare(`UPDATE learner_transfer_codes SET used_at = ?, used_by_device = ?
@@ -207,8 +228,9 @@ export async function claimTransferCode(
       .bind(now, device, code.id, now),
     database
       .prepare(`UPDATE learner_transfer_codes SET invalidated_at = ?
-        WHERE learner_id = ? AND id <> ? AND used_at IS NULL AND invalidated_at IS NULL`)
-      .bind(now, code.learnerId, code.id),
+        WHERE learner_id = ? AND id <> ? AND used_at IS NULL AND invalidated_at IS NULL
+        AND EXISTS (SELECT 1 FROM learner_transfer_codes AS winner WHERE winner.id = ? AND winner.used_by_device = ?)`)
+      .bind(now, code.learnerId, code.id, code.id, device),
     database
       .prepare(`UPDATE learner_profiles SET access_hash = ?
         WHERE id = (SELECT learner_id FROM learner_transfer_codes WHERE id = ? AND used_by_device = ?)`)
@@ -216,19 +238,15 @@ export async function claimTransferCode(
     database
       .prepare("UPDATE learner_transfer_codes SET applied_at = ? WHERE id = ? AND used_by_device = ?")
       .bind(now, code.id, device),
+    database
+      .prepare(`DELETE FROM transfer_claim_limits WHERE scope = ?
+        AND EXISTS (SELECT 1 FROM learner_transfer_codes WHERE id = ? AND used_by_device = ?)`)
+      .bind(scope, code.id, device),
   ]);
 
   const claimed = changedRows(results?.[0]);
   const rotated = changedRows(results?.[2]);
-  if (claimed !== 1) return { status: "raced" };
-  if (rotated !== 1) return { status: "raced" };
+  if (claimed !== 1 || rotated !== 1) return { status: "raced" };
 
-  const learner = await database
-    .prepare("SELECT id, nickname, course_id AS courseId FROM learner_profiles WHERE id = ?")
-    .bind(code.learnerId)
-    .first<{ id: string; nickname: string; courseId: string }>();
-  if (!learner) return { status: "not-found" };
-
-  await clearAttempts(database, scope);
   return { status: "transferred", learnerId: learner.id, courseId: learner.courseId, nickname: learner.nickname, newAccessKey };
 }

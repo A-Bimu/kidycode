@@ -17,6 +17,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 
 const root = resolve(import.meta.dirname, "..");
@@ -260,6 +261,45 @@ await step("deleting a learner removes their transfer codes", async () => {
   assert.equal(stranded.status, 401, "The deleted learner's device must stop working.");
   const orphans = database.prepare("SELECT COUNT(*) AS total FROM learner_transfer_codes").get().total;
   assert.equal(typeof orphans, "number", "The transfer table must still be readable.");
+});
+
+/* 5. A real transfer through the API rotates the stored access hash. */
+await step("a real transfer rotates the access hash and stops the old session", async () => {
+  const learner = await newLearner("DbRotate", "ages-10-12", 11);
+  const oldSession = cookie;
+  const hashBefore = database.prepare("SELECT access_hash AS hash FROM learner_profiles WHERE id = ?").get(learner.id).hash;
+
+  const created = await learnerApi("/api/transfer/codes", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.equal(created.status, 201, `a transfer code must be creatable: ${JSON.stringify(created.body)}`);
+
+  const claim = await fetch(`${base}/api/transfer/claim`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.240" },
+    body: JSON.stringify({ code: created.body.transfer.code }),
+    signal: AbortSignal.timeout(30000),
+  });
+  assert.equal(claim.status, 200, `the transfer must be accepted, received ${claim.status}`);
+  const issued = (claim.headers.getSetCookie?.() || []).find((value) => value.startsWith("kidycode_session="));
+  assert(issued, "the transfer must issue a session cookie");
+  for (const attribute of ["HttpOnly", "Secure", "SameSite=Lax", "Path=/"]) {
+    assert(issued.includes(attribute), `the issued cookie must keep ${attribute}`);
+  }
+
+  const key = decodeURIComponent(issued.split(";")[0].slice("kidycode_session=".length)).split(".")[1];
+  const hashAfter = database.prepare("SELECT access_hash AS hash FROM learner_profiles WHERE id = ?").get(learner.id).hash;
+  assert.notEqual(hashAfter, hashBefore, "the transfer must replace the stored access hash");
+  assert.equal(hashAfter, createHash("sha256").update(key).digest("hex"),
+    "the stored hash must be the hash of the key that travelled in the cookie");
+
+  const stale = await fetch(`${base}/api/summary`, { headers: { cookie: oldSession }, signal: AbortSignal.timeout(30000) });
+  assert.equal(stale.status, 401, "the previous device must stop working immediately");
+  const fresh = await fetch(`${base}/api/summary`, { headers: { cookie: issued.split(";")[0] }, signal: AbortSignal.timeout(30000) });
+  assert.equal(fresh.status, 200, "the new device must be signed in");
+
+  const body = await claim.json();
+  for (const leak of ["accessKey", "accessHash", "learnerId", "kidycode_session"]) {
+    assert.equal(JSON.stringify(body).includes(leak), false, `the transfer response must not carry ${leak}`);
+  }
 });
 
 database.close();
