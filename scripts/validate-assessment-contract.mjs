@@ -22,7 +22,8 @@ import {
   MODULE_TOTAL,
   ASSESSMENT_RULES,
 } from "../lib/assessment/engine.ts";
-import { contentFor } from "../lib/assessment/manifest.ts";
+import { contentFor, servesAssessment, assessmentContent } from "../lib/assessment/manifest.ts";
+import { CONTENT_VERSION } from "../lib/assessment/types.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const read = (path) => readFileSync(resolve(root, path), "utf8");
@@ -169,16 +170,39 @@ for (const table of [
 
 /* ------------------------------------------------------------- fail closed ---- */
 
-assert.equal(contentFor("ages-10-12") === null, true, "a course with no reviewed content must serve no assessment.");
+/* The rule is asserted as an intent, not pinned to whichever course happens to have no
+ * content yet: a bank with nothing reviewed in it must serve no assessment at all. */
+assert.equal(
+  servesAssessment({ courseId: "ages-10-12", contentVersion: CONTENT_VERSION, moduleForms: [], finalForms: [], defence: [] }),
+  false,
+  "an empty bank must serve no assessment.",
+);
+assert.equal(servesAssessment(null), false, "a missing bank must serve no assessment.");
+assert.equal(servesAssessment(undefined), false, "an undefined bank must serve no assessment.");
+assert.equal(
+  contentFor("ages-10-12") === null,
+  assessmentContent["ages-10-12"].moduleForms.length === 0,
+  "the content lookup must follow the bank itself.",
+);
 assert(routes.includes("notReady()"), "a route must answer 503 rather than inventing an assessment.");
 assert(read("app/api/assessment/submit/route.ts").includes('attempt.courseId !== learner.courseId'), "a submission must belong to the learner's own course.");
 
 /* ---------------------------------------------------------------- brand rules -- */
 
-const assessmentSources = [
-  ...readdirSync(resolve(root, "lib/assessment")).map((name) => read(`lib/assessment/${name}`)),
-  ...routeFiles.map(read),
-].join("\n");
+/* Every assessment source file, bank included, read as one string for the brand rules. */
+function readTree(relative) {
+  const full = resolve(root, relative);
+  const entries = readdirSync(full, { withFileTypes: true });
+  const parts = [];
+  for (const entry of entries) {
+    const child = `${relative}/${entry.name}`;
+    if (entry.isDirectory()) parts.push(readTree(child));
+    else if (entry.name.endsWith(".ts")) parts.push(read(child));
+  }
+  return parts.join("\n");
+}
+
+const assessmentSources = [readTree("lib/assessment"), ...routeFiles.map(read)].join("\n");
 assert(!assessmentSources.includes("\u2014"), "assessment source contains an em dash.");
 /* The colour rule is decided from the words a learner can read, and the plan document
  * is a developer note that names the rule itself. */

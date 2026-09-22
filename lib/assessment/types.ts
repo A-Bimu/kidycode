@@ -103,12 +103,14 @@ export type CssValueClass =
   | "padding"
   | "margin"
   | "border"
+  | "colour"
   | "custom-property";
 
 export type JsFact =
   | "conditional"
   | "ternary"
   | "return"
+  | "declaration"
   | "try-catch"
   | "finally"
   | "await"
@@ -116,6 +118,8 @@ export type JsFact =
   | "strict-equality"
   | "array-literal"
   | "object-literal"
+  | "string-literal"
+  | "number-literal"
   | "event-listener"
   | "prevent-default"
   | "create-element"

@@ -59,6 +59,8 @@ export type JsFacts = {
   append: number;
   storage: Array<{ method: string; key: string | null }>;
   literals: string[];
+  stringLiterals: number;
+  numberLiterals: number;
   propertyAssignments: string[];
   updateExpressions: number;
 };
@@ -321,6 +323,8 @@ export function scanJs(source: string): JsFacts {
     append: 0,
     storage: [],
     literals: [],
+    stringLiterals: 0,
+    numberLiterals: 0,
     propertyAssignments: [],
     updateExpressions: 0,
   };
@@ -333,6 +337,8 @@ export function scanJs(source: string): JsFacts {
     }
 
     if (token.type === "string" || token.type === "number") facts.literals.push(token.value);
+    if (token.type === "string") facts.stringLiterals += 1;
+    if (token.type === "number") facts.numberLiterals += 1;
 
     if (token.type === "punct" && token.value === "?") facts.ternary += 1;
 

@@ -125,7 +125,12 @@ function kidName(prefix) {
 /* The first module of the ages 10 to 12 course, taken from the real catalogue rather
  * than written out, so the fixture cannot drift from the course. */
 import { courses } from "../lib/course-catalog.ts";
+import { contentFor, servesAssessment } from "../lib/assessment/manifest.ts";
 const moduleId = courses["ages-10-12"].stages[0].id;
+
+/* A course whose bank is still being reviewed, found rather than assumed, so this suite
+ * keeps proving the fail-closed path as the banks land one course at a time. */
+const unreadyCourse = ["ages-10-12", "ages-13-15", "ages-16-18", "adults"].find((id) => contentFor(id) === null) || null;
 
 /* ------------------------------------------------------------- unauthenticated -- */
 
@@ -194,10 +199,22 @@ await step("a request never becomes a server error", async () => {
 /* ------------------------------------------------------------- fail closed ----- */
 
 await step("a course whose content is still being reviewed serves no assessment", async () => {
-  const response = await api("/api/assessment/start", { method: "POST", body: JSON.stringify({ kind: "module", moduleId }) });
+  if (!unreadyCourse) {
+    /* Every bank is reviewed now, so the fail-closed rule is proved where it lives. */
+    const emptyBank = { courseId: "ages-10-12", contentVersion: "assessment-v2.1", moduleForms: [], finalForms: [], defence: [] };
+    assert.equal(servesAssessment(emptyBank), false, "an empty bank must serve no assessment");
+    assert.equal(servesAssessment(null), false, "a missing bank must serve no assessment");
+    console.log("  ..   every course now has reviewed content, so the fail-closed rule was proved at the content lookup");
+    return;
+  }
+  const savedCookie = cookie;
+  const ageFor = { "ages-10-12": 11, "ages-13-15": 14, "ages-16-18": 17, adults: 19 };
+  await newLearner(kidName("Unready"), unreadyCourse, ageFor[unreadyCourse]);
+  const response = await api("/api/assessment/start", { method: "POST", body: JSON.stringify({ kind: "final" }) });
   assert.equal(response.status, 503, `expected 503 while content is unreviewed, received ${response.status}`);
   assert.deepEqual(Object.keys(response.body), ["error"], "only an explanation may be returned");
   assert.ok(!/answer|explanation|option/i.test(JSON.stringify(response.body)), "no assessment material may leak");
+  cookie = savedCookie;
 });
 
 /* --------------------------------------------------------------- ownership ----- */
@@ -215,7 +232,12 @@ database.prepare(`INSERT INTO assessment_attempts
 await step("a learner reaches their own attempt and a second learner cannot", async () => {
   cookie = ownerCookie;
   const mine = await api(`/api/assessment/state?attempt=${attemptId}`);
-  assert.equal(mine.status, 503, `the owner should reach the content gate, received ${mine.status}`);
+  /* The owner either reaches the content gate or, once their course bank is reviewed,
+   * receives their own attempt back. Either way they are past the ownership check. */
+  assert.ok([200, 503].includes(mine.status), `the owner answered ${mine.status}`);
+  if (mine.status === 200) {
+    assert.equal(mine.body.attempt.attemptId, attemptId, "the owner must receive their own attempt");
+  }
 
   cookie = otherCookie;
   const foreign = await api(`/api/assessment/state?attempt=${attemptId}`);
@@ -227,9 +249,9 @@ await step("a learner reaches their own attempt and a second learner cannot", as
   const signals = await api("/api/assessment/signals", { method: "POST", body: JSON.stringify({ attemptId, pasteEvents: 5 }) });
   assert.equal(signals.status, 404, `another learner could write signals (${signals.status})`);
   const start = await api("/api/assessment/start", { method: "POST", body: JSON.stringify({ kind: "module", moduleId }) });
-  /* With content still under review the content gate answers first, so fail-closed comes
-   * before the per-module completion gate. */
-  assert.equal(start.status, 503, `an unreviewed course must fail closed first (${start.status})`);
+  /* An unreviewed course fails closed before any gate; a reviewed course moves on to the
+   * per-module completion gate. */
+  assert.ok([503, 409].includes(start.status), `the start gate answered ${start.status}`);
 });
 
 await step("a refused write leaves no cross-learner row behind", async () => {

@@ -197,6 +197,11 @@ export function valueMatchesClass(value: string, valueClass: CssValueClass): boo
       return /\d/.test(compact) || /(solid|dashed|dotted|double)/.test(compact);
     case "custom-property":
       return /var\(\s*--/.test(compact);
+    case "colour":
+      return /#[0-9a-f]{3,8}/i.test(compact)
+        || /rgba?\(/.test(compact)
+        || /hsla?\(/.test(compact)
+        || /^(red|blue|black|white|navy|purple|orange|brown|grey|gray|pink|teal|maroon|gold|amber|silver)$/.test(compact);
     default:
       return false;
   }

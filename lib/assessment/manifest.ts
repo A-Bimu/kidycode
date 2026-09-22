@@ -1,17 +1,12 @@
 import { courses } from "@/lib/course-catalog";
 import { CONTENT_VERSION, type CourseAssessment } from "@/lib/assessment/types";
+import { ages10to12Assessment } from "@/lib/assessment/bank/ages-10-12";
 import type { CourseId } from "@/lib/course";
 
-/* Filled by the module-bank phase of Assessment V2. Until a course has content the
- * start route answers 503 rather than inventing an assessment. */
-export const ages10to12Assessment: CourseAssessment = {
-  courseId: "ages-10-12",
-  contentVersion: CONTENT_VERSION,
-  moduleForms: [],
-  finalForms: [],
-  defence: [],
-};
+export { ages10to12Assessment };
 
+/* The remaining three courses are filled by their own bank phase. Until then they serve
+ * no assessment rather than an unreviewed one. */
 export const ages13to15Assessment: CourseAssessment = {
   courseId: "ages-13-15",
   contentVersion: CONTENT_VERSION,
@@ -43,10 +38,15 @@ export const assessmentContent: Record<CourseId, CourseAssessment> = {
   adults: adultsAssessment,
 };
 
+/* A bank with nothing reviewed in it must serve no assessment at all. Exported so the
+ * release suite can prove the rule directly once every course has real content. */
+export function servesAssessment(content: CourseAssessment | null | undefined): boolean {
+  return Boolean(content && (content.moduleForms.length > 0 || content.finalForms.length > 0));
+}
+
 export function contentFor(courseId: CourseId): CourseAssessment | null {
   const content = assessmentContent[courseId];
-  if (!content) return null;
-  if (content.moduleForms.length === 0 && content.finalForms.length === 0) return null;
+  if (!servesAssessment(content)) return null;
   return content;
 }
 

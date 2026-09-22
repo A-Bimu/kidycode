@@ -224,4 +224,56 @@ reading:
 
 ### Phase 2
 
+One bank per course, in order: ages 10 to 12, ages 13 to 15, ages 16 to 18, adults. Each course is
+its own commit and its own gate.
+
+Content rules applied to every bank:
+
+- Five questions and five marked practical requirements per form, one for each idea the module
+  teaches, so all three forms of a module assess the same objectives at the same difficulty.
+- Every assessed objective and every revision link is a real lesson of that module, resolved from
+  the course catalogue, so nothing is ever tested before it is taught and nothing is required from
+  a file the module has not touched.
+- The practical task always starts from the module's own project code, taken from the catalogue,
+  so the learner meets familiar material.
+- Marks are integers, one per requirement, with partial credit awarded requirement by requirement.
+- A question never repeats across the forms of a module or anywhere else in the course, and the
+  correct option never sits in a predictable position.
+- Where a course teaches safety, privacy or accessibility, at least one module requirement is
+  mandatory, and mandatory failures override a high total.
+- An "absence" requirement (no personal detail on the page) is satisfied by an empty page, so no
+  form may carry enough of them for empty code to reach the practical floor of three.
+
+#### Course 1: ages 10 to 12
+
+Bank: `lib/assessment/bank/ages-10-12.ts`, built by `lib/assessment/bank/factory.ts`.
+24 forms (8 modules times 3), 120 questions, 120 marked requirements, 16 of them mandatory.
+
+Gate, all executed:
+
+| Command | Result |
+| --- | --- |
+| `npm run check` | exit 0. Includes `validate-assessment-bank` (14 checks: the course bank plus 13 failure proofs), the engine suite (27), the grading suite (65) and the satisfiability suite (97). |
+| `npm run lint` | exit 0, zero warnings. |
+| `npm run build` | exit 0. |
+| `KIDYCODE_E2E_URL=http://localhost:3001 node --import tsx --no-warnings scripts/e2e-assessment-api.mjs` | 13 checks passed, 0 failed. |
+
+Answer verification. Every one of the 120 questions was printed with its marked answer and read
+against the lesson it assesses, and every marked requirement was proved achievable by an executed
+test rather than by inspection alone. Reported corrections made during that review:
+
+1. `decl("line-height", "readable")` used a value class that does not exist, so two
+   css-foundations requirements could never be met. Caught by the satisfiability suite, fixed to
+   `decl("line-height", "line-height")`.
+2. Three requirements in the ages 10 to 12 quality module were carried by an undecidable or
+   placeholding check. Replaced with a real declaration check and a real heading order check.
+3. The validator's own rule that an option must be at least three characters long rejected correct
+   short answers such as `h2` and `===`. The rule was wrong, not the content, and now rejects only
+   genuinely empty options.
+4. Empty code earned one mark in the aged 10 to 12 quality module, because an absence requirement
+   is met by an absent page. This is now a stated rule with a validator behind it: no form may
+   carry enough absence requirements for empty code to reach the practical floor.
+
+#### Courses 2 to 4
+
 Pending.
