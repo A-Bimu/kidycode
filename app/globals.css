@@ -777,3 +777,108 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .account-section, .trust-actions, .trust-page .course-brand { display: none !important; }
 }
 
+
+/* ------------------------------------------------------------------- assessment --
+ * The learner's assessment flow. Mobile first: one column at 320px, wider groupings from
+ * 768px, a comfortable reading measure from 1440px. Every status carries words as well as
+ * colour, focus is always visible, and motion is reduced when the system asks for it.
+ */
+
+.assessment-page {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 4rem;
+  display: grid;
+  gap: 1rem;
+  color: var(--navy);
+}
+
+.assessment-page h1 {
+  font-size: clamp(1.4rem, 1.1rem + 1.6vw, 2rem);
+  line-height: 1.25;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.assessment-page h2 { font-size: 1.15rem; line-height: 1.3; margin: 0; }
+.assessment-page p { margin: 0; line-height: 1.6; }
+.assessment-lede { color: var(--navy-soft); }
+.assessment-brief { background: var(--paper-deep); border-left: 4px solid var(--purple); padding: 0.75rem; border-radius: 0.5rem; }
+.assessment-rule { font-size: 0.95rem; }
+
+.assessment-page button {
+  font: inherit;
+  border-radius: 0.6rem;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  border: 2px solid var(--navy);
+  justify-self: start;
+  max-width: 100%;
+}
+
+.assessment-page .primary-button { background: var(--navy); color: var(--white); }
+.assessment-page .primary-button[disabled] { background: var(--paper-deep); color: var(--navy-soft); border-color: var(--navy-soft); cursor: not-allowed; }
+.assessment-page .text-button { background: none; border-color: transparent; color: var(--purple-dark); text-decoration: underline; padding-left: 0; }
+
+.assessment-page button:focus-visible,
+.assessment-page textarea:focus-visible,
+.assessment-page input:focus-visible,
+.assessment-page a:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+
+.assessment-choice-list { display: grid; gap: 0.75rem; }
+.assessment-choice { border: 2px solid var(--paper-deep); border-radius: 0.75rem; padding: 0.9rem; display: grid; gap: 0.5rem; }
+
+.assessment-progress { font-weight: 600; color: var(--purple-dark); }
+.assessment-save { font-size: 0.95rem; color: var(--navy-soft); }
+.assessment-question { border: 2px solid var(--paper-deep); border-radius: 0.75rem; padding: 0.9rem; display: grid; gap: 0.6rem; }
+.assessment-question legend { font-weight: 600; padding: 0 0.35rem; }
+.assessment-question label { display: flex; gap: 0.6rem; align-items: flex-start; line-height: 1.5; }
+.assessment-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+.assessment-requirements, .assessment-review, .assessment-breakdown, .assessment-rules { padding-left: 1.1rem; display: grid; gap: 0.4rem; line-height: 1.5; }
+.assessment-requirements b { color: var(--purple-dark); }
+
+.assessment-editor { display: grid; gap: 0.35rem; }
+.assessment-editor label { font-weight: 600; }
+.assessment-editor textarea {
+  width: 100%;
+  max-width: 100%;
+  min-height: 12rem;
+  font-family: ui-monospace, "Cascadia Code", Menlo, monospace;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  padding: 0.7rem;
+  border: 2px solid var(--navy-soft);
+  border-radius: 0.5rem;
+  background: var(--white);
+  color: var(--navy);
+  resize: vertical;
+}
+
+.assessment-outcome { font-weight: 700; border-left: 5px solid var(--navy); padding-left: 0.6rem; }
+.assessment-outcome.is-passed { border-left-color: var(--amber); }
+.assessment-outcome.is-not_passed_yet { border-left-color: var(--coral); }
+.assessment-outcome.is-needs_verification { border-left-color: var(--purple); }
+.assessment-next { font-weight: 600; }
+.assessment-misconception { color: var(--purple-dark); font-size: 0.95rem; }
+.assessment-page article.is-correct { border-left: 4px solid var(--amber); padding-left: 0.6rem; }
+.assessment-page article.is-wrong { border-left: 4px solid var(--coral); padding-left: 0.6rem; }
+
+.reference-sections { display: grid; gap: 0.75rem; }
+.reference-section { border: 2px solid var(--paper-deep); border-radius: 0.75rem; padding: 0.9rem; display: grid; gap: 0.5rem; }
+.reference-section pre { overflow-x: auto; max-width: 100%; background: var(--navy-deep); color: var(--white); padding: 0.7rem; border-radius: 0.5rem; margin: 0; }
+.reference-section code { font-family: ui-monospace, "Cascadia Code", Menlo, monospace; font-size: 0.9rem; line-height: 1.6; }
+
+@media (min-width: 768px) {
+  .assessment-page { padding: 2rem 1.5rem 5rem; }
+  .assessment-choice-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .assessment-editor textarea { min-height: 16rem; }
+}
+
+@media (min-width: 1440px) {
+  .assessment-page { max-width: 52rem; padding-top: 2.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assessment-page *, .reference-section * { transition: none !important; animation: none !important; }
+}

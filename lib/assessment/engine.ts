@@ -35,6 +35,7 @@ export const FINAL_BUILD_MARKS = 50;
 export const FINAL_BUILD_MIN = 30;
 export const DEFENCE_MIN_WORDS = 12;
 
+/* Shown to the learner before an assessment starts, and only there. */
 export const ASSESSMENT_RULES = [
   "This is not timed. You can stop, save and come back to it.",
   "There are no answer-revealing hints and the tutor is switched off while you are being assessed.",

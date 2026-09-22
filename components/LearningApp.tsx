@@ -13,6 +13,7 @@ import {
   type SetStateAction,
 } from "react";
 import { ExamPanel } from "@/components/ExamPanel";
+import AssessmentFlow from "@/components/AssessmentFlow";
 import { ProgressPage } from "@/components/ProgressPage";
 import {
   languageGuidance,
@@ -227,7 +228,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
-  const [view, setView] = useState<"course" | "project" | "exam" | "progress">("course");
+  const [view, setView] = useState<"course" | "project" | "exam" | "progress" | "assessment">("course");
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [pendingCheckpoint, setPendingCheckpoint] = useState<string | null>(null);
   const [evidence, setEvidence] = useState<Record<string, TutorEvidence>>({});
@@ -796,6 +797,9 @@ export function LearningApp({ course }: { course: CourseBundle }) {
     return <CourseMismatch learner={session.learner} requestedCourse={course} onReset={() => setSession(null)} />;
   }
   if (view === "exam") return <ExamPanel course={course} onBack={() => setView("course")} />;
+  if (view === "assessment") {
+    return <AssessmentFlow course={course} completedActivityIds={[...completed]} onExit={() => setView("course")} />;
+  }
 
   return (
     <div className="course-app coding-course">
@@ -813,6 +817,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
           <button className={view === "course" ? "is-active" : ""} type="button" onClick={() => setView("course")}>Learn</button>
           <button className={view === "project" ? "is-active" : ""} type="button" onClick={() => setView("project")}>My website</button>
           <button className={view === "progress" ? "is-active" : ""} type="button" onClick={() => setView("progress")}>My progress</button>
+          <button className={(view as string) === "assessment" ? "is-active" : ""} type="button" onClick={() => setView("assessment")}>Module checks</button>
           <button type="button" disabled={!allComplete} onClick={() => setView("exam")}>Final check</button>
         </nav>
         <div className={`learner-name${courseFacts.id === "adults" ? " is-adult" : ""}`}><span>{courseFacts.id === "adults" ? "Adult" : session.learner.age}</span>{session.learner.nickname}</div>

@@ -21,6 +21,7 @@ import {
   scoreAttempt,
   toClientKnowledge,
   toClientTask,
+  ASSESSMENT_RULES,
   type ClientAssessment,
 } from "@/lib/assessment/engine";
 import { gradeCodeTask, gradeKnowledge } from "@/lib/assessment/engine";
@@ -124,7 +125,7 @@ export function clientView(
       stage: attempt.stage,
       status: attempt.status,
       savedAt: attempt.savedAt,
-      rules: [],
+      rules: [...ASSESSMENT_RULES],
       knowledge: form.knowledge.map(toClientKnowledge),
       practical: toClientTask(form.practical),
       debug: [],
@@ -145,7 +146,7 @@ export function clientView(
     stage: attempt.stage,
     status: attempt.status,
     savedAt: attempt.savedAt,
-    rules: [],
+    rules: [...ASSESSMENT_RULES],
     knowledge: form.knowledge.map(toClientKnowledge),
     practical: null,
     debug: form.debug.map(toClientTask),
