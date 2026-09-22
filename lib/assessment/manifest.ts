@@ -1,19 +1,13 @@
 import { courses } from "@/lib/course-catalog";
 import { CONTENT_VERSION, type CourseAssessment } from "@/lib/assessment/types";
 import { ages10to12Assessment } from "@/lib/assessment/bank/ages-10-12";
+import { ages13to15Assessment } from "@/lib/assessment/bank/ages-13-15";
 import type { CourseId } from "@/lib/course";
 
-export { ages10to12Assessment };
+export { ages10to12Assessment, ages13to15Assessment };
 
-/* The remaining three courses are filled by their own bank phase. Until then they serve
+/* The remaining two courses are filled by their own bank phase. Until then they serve
  * no assessment rather than an unreviewed one. */
-export const ages13to15Assessment: CourseAssessment = {
-  courseId: "ages-13-15",
-  contentVersion: CONTENT_VERSION,
-  moduleForms: [],
-  finalForms: [],
-  defence: [],
-};
 
 export const ages16to18Assessment: CourseAssessment = {
   courseId: "ages-16-18",

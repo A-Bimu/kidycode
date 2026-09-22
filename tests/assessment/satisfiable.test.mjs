@@ -33,8 +33,18 @@ function fragmentFor(requirement) {
       return { html: `<ul>${"<li>Item</li>".repeat(check_.minItems)}</ul>` };
     case "html-landmarks":
       return { html: check_.tags.map((tag) => `<${tag}>Content</${tag}>`).join("") };
-    case "html-attribute":
-      return { html: `<${check_.tag} ${check_.attr}="A useful description of the content"></${check_.tag}>` };
+    case "html-attribute": {
+      /* A requirement that names accepted values (an input type, a section id) is met
+       * with the first accepted value, so the fixture reflects what the task asked for.
+       * A control also gets a label, because a submission with an unlabelled control
+       * would not be a complete submission for a form task. */
+      const value = (check_.values && check_.values[0])
+        || (check_.attr === "type" ? "email" : check_.attr === "id" ? "probe-section" : "A useful description of the content");
+      if (check_.tag === "input") {
+        return { html: `<label for="probe-type">Contact address</label><input id="probe-type" ${check_.attr}="${value}">` };
+      }
+      return { html: `<${check_.tag} ${check_.attr}="${value}">Content</${check_.tag}>` };
+    }
     case "html-image-alt":
       return { html: `<img src="photo.webp" alt="A finished paper crane on a table">` };
     case "html-labelled-control":

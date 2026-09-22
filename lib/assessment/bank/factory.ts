@@ -84,8 +84,14 @@ export function conceptKey(courseId: CourseId, moduleId: string, slug: string): 
   return `${courseId}:${moduleId}:${slug}`;
 }
 
+/* The pathway courses already carry their course id in the module id, so the prefix is
+ * normalised once rather than repeated in every identifier. */
+function idPrefix(courseId: CourseId, moduleId: string): string {
+  return moduleId.startsWith(`${courseId}-`) ? moduleId : `${courseId}-${moduleId}`;
+}
+
 export function itemId(courseId: CourseId, moduleId: string, variant: string, kind: string, index: number): string {
-  return `${courseId}-${moduleId}-${variant}-${kind}${index}`;
+  return `${idPrefix(courseId, moduleId)}-${variant}-${kind}${index}`;
 }
 
 /* The answer position is derived from the question itself, so the correct option is
@@ -219,7 +225,7 @@ export function buildModuleForms(courseId: CourseId, authored: Record<string, Au
         buildQuestion(courseId, moduleId, variant, index + 1, question, entry.ideas, 1));
       const practical = buildPractical(courseId, moduleId, variant, form.practical, entry.ideas);
       forms.push({
-        id: `${courseId}-${moduleId}-form-${variant}`,
+        id: `${idPrefix(courseId, moduleId)}-form-${variant}`,
         courseId,
         moduleId,
         moduleNumber: stage.number,
@@ -237,7 +243,7 @@ export function buildModuleForms(courseId: CourseId, authored: Record<string, Au
 /* ------------------------------------------------------------------- checks ---- */
 
 export const el = (tag: string, min = 1, max?: number): RequirementCheck => ({ kind: "html-element", file: "html", tag, min, ...(max === undefined ? {} : { max }) });
-export const attr = (tag: string, attribute: string, minLength?: number): RequirementCheck => ({ kind: "html-attribute", file: "html", tag, attr: attribute, ...(minLength === undefined ? {} : { minLength }) });
+export const attr = (tag: string, attribute: string, minLength?: number, values?: string[]): RequirementCheck => ({ kind: "html-attribute", file: "html", tag, attr: attribute, ...(minLength === undefined ? {} : { minLength }), ...(values === undefined ? {} : { values }) });
 export const labelledControls = (): RequirementCheck => ({ kind: "html-labelled-control", file: "html" });
 export const fragmentLink = (): RequirementCheck => ({ kind: "html-fragment-link", file: "html" });
 export const headingOrder = (): RequirementCheck => ({ kind: "html-heading-order", file: "html" });
