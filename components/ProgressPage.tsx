@@ -1,6 +1,7 @@
 "use client";
 
 import { GrownUpAccess } from "@/components/GrownUpAccess";
+import AccountControls from "@/components/AccountControls";
 import MoveToAnotherDevice from "@/components/MoveToAnotherDevice";
 import type { CourseBundle } from "@/lib/course";
 import type { Summary } from "@/lib/summary";
@@ -236,6 +237,8 @@ export function ProgressPage({
       {/* Available on every path, including adults, because losing a device
           should never mean losing a course. */}
       <MoveToAnotherDevice />
+
+      <AccountControls />
     </main>
   );
 }

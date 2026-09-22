@@ -23,7 +23,7 @@ const learnerSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const parsed = learnerSchema.safeParse(await request.json());
+    const parsed = learnerSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return Response.json({ error: "Use a nickname, choose the correct learning path and select one website project." }, { status: 400 });
     }
@@ -45,11 +45,22 @@ export async function POST(request: Request) {
   }
 }
 
+/*
+ * Clearing this device.
+ *
+ * This signs the learner out by clearing the session cookie and changes nothing
+ * else: every activity, version, reflection and assessment stays saved, and the
+ * profile can be opened again with a transfer code or by a connected grown-up.
+ * Permanently deleting a profile is a separate operation in /api/learner.
+ */
 export async function DELETE(request: Request) {
   try {
     const learner = await authenticateLearner(request);
     if (!learner) return unauthorized();
-    const response = Response.json({ cleared: true });
+    const response = Response.json({
+      cleared: true,
+      message: "This device is signed out. Your course and saved work are still here.",
+    });
     response.headers.append("set-cookie", clearedSessionCookie);
     return response;
   } catch (error) {

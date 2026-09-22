@@ -1,5 +1,6 @@
 import { buildCompletionRecord, type CompletionRecord } from "@/lib/completion";
 import type { CourseBundle, Lesson, Stage } from "@/lib/course";
+import { buildMilestones, type Milestone } from "@/lib/milestones";
 import { conceptFocusFor } from "@/lib/tutor";
 
 /*
@@ -115,6 +116,8 @@ export type Summary = {
   /* The one completion calculation, shared with the portfolio and the grown-up
    * view so the three can never disagree. */
   completion: CompletionRecord;
+  /* Recent milestones, derived from the same evidence. */
+  milestones: Milestone[];
 };
 
 function lessonChecksAvailable(lesson: Lesson): number {
@@ -238,6 +241,11 @@ export function buildSummary(course: CourseBundle, input: SummaryInput): Summary
     savedModules: savedStageTimes,
     exams: input.exams,
   });
+  const milestones = buildMilestones(course, {
+    savedModules: savedStageTimes,
+    exams: input.exams,
+    completion,
+  });
 
   const bestScore = input.exams.reduce((best, attempt) => Math.max(best, attempt.score), 0);
   const passedExam = input.exams.some((attempt) => attempt.passed);
@@ -293,6 +301,7 @@ export function buildSummary(course: CourseBundle, input: SummaryInput): Summary
     ]),
     nextAction,
     completion,
+    milestones,
   };
 }
 

@@ -1,4 +1,5 @@
 import { toGuardianCompletion, type GuardianCompletionRecord } from "@/lib/completion";
+import { toGuardianMilestones, type GuardianMilestone } from "@/lib/milestones";
 import type { Summary } from "@/lib/summary";
 
 /*
@@ -23,6 +24,8 @@ export type GuardianSummary = {
   /* The completion record, reduced to the facts a grown-up may read. It names no
    * code, no reflection, no answer and no identifier. */
   completion: GuardianCompletionRecord;
+  /* Recent milestones: plain wording and a date, nothing more. */
+  milestones: GuardianMilestone[];
 };
 
 export type GuardianLearnerFacts = {
@@ -66,6 +69,7 @@ export function toGuardianSummary(summary: Summary, learner: GuardianLearnerFact
       moduleNumber: summary.nextAction.moduleNumber,
     },
     completion: toGuardianCompletion(summary.completion),
+    milestones: toGuardianMilestones(summary.milestones),
   };
 }
 
@@ -82,6 +86,7 @@ export const GUARDIAN_SUMMARY_KEYS = [
   "lastActivityAt",
   "nextLesson",
   "completion",
+  "milestones",
 ] as const;
 
 /* Keys that must never appear anywhere in a guardian response, whatever the

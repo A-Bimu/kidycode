@@ -56,6 +56,8 @@ A weak concept is also remembered beyond its own lesson. Before new material, th
 | `GET /api/summary` | The learner's own progress summary, derived from existing records |
 | `GET /api/portfolio` | The learner's own saved module versions and completion record |
 | `GET /api/portfolio?module=<id>` | One saved module version, with its code and reflection |
+| `DELETE /api/learners` | Clear this device: sign out and keep everything saved |
+| `DELETE /api/learner` | Permanently delete the profile and every dependent row |
 | `GET /api/guardian/connections` | The learner's own connected grown-ups |
 | `POST /api/guardian/connections` | Create a one-time connection code |
 | `DELETE /api/guardian/connections` | End a grown-up's access |
@@ -136,6 +138,16 @@ rolls back with the original session still working.
 - Cloudflare D1 with Drizzle schema and versioned SQL migrations
 - Server-side course gating, grading and project checkpoint verification
 - Static marketing pages served with the application
+
+## Leaving, deleting and trust information
+
+My progress carries two clearly separate operations. **Clear this device** signs the
+learner out of that browser and keeps every saved activity, project version and
+assessment; it points at the transfer code route first so a learner can move the
+profile rather than lose sight of it. **Delete my profile permanently** sits behind a
+second step that lists exactly what goes, and removes the profile and every dependent
+row in one transaction, revoking grown-up connections and cancelling codes. Privacy
+and grown-ups explains all of it, in the same words the product uses.
 
 ## Local setup and checks
 

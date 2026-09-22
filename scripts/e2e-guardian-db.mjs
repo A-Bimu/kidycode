@@ -368,6 +368,26 @@ button.addEventListener("click", function () {
   assert.equal(record.finalAssessment.status, "passed", "the final assessment is passed");
   assert.ok(record.completedAt, "a complete record carries the completion date");
 
+  /* Recent milestones: derived, newest first, plain wording and a date. */
+  const milestones = read.body.summary.milestones;
+  assert(Array.isArray(milestones), "the grown-up response must carry recent milestones");
+  assert.equal(milestones.length, 8, `the milestone list must be short, received ${milestones.length}`);
+  const labels = milestones.map((item) => item.label);
+  assert(labels.includes("Completed the course"), `the newest milestone must be the completed course: ${labels.join(" | ")}`);
+  assert(labels.includes("Passed the final assessment"), "the passed final assessment must appear");
+  assert(labels.includes("Saved the Module 8 project version"), "the last module version must appear");
+  for (const milestone of milestones) {
+    assert(typeof milestone.label === "string" && milestone.label.length > 8, `a milestone needs plain wording: ${JSON.stringify(milestone)}`);
+    assert(typeof milestone.at === "string" && milestone.at.length > 0, "a milestone needs a date");
+  }
+  for (let index = 1; index < milestones.length; index += 1) {
+    assert(milestones[index - 1].at >= milestones[index].at, "milestones must be newest first");
+  }
+  const milestoneText = JSON.stringify(milestones);
+  for (const probe of ["<h1", "console.log", "My First Website", "A reflection only the learner may read", "reflection", "answers", "querySelector", "explanation"]) {
+    assert.equal(milestoneText.includes(probe), false, `a milestone must not carry ${probe}`);
+  }
+
   /* Nothing else may cross the boundary. */
   const serialised = JSON.stringify(read.body);
   for (const probe of ["<h1", "console.log", "My First Website", "projectJson", "workspace", "reflection", "A reflection only the learner may read", "answers", "practical", "querySelector", "access_hash", "accessHash", "kidycode_session", "learnerId", "guardianId", "linkId", "explanation", "statement"]) {

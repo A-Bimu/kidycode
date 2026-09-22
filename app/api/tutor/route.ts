@@ -152,7 +152,7 @@ export async function POST(request: Request) {
   try {
     const learner = await authenticateLearner(request);
     if (!learner) return unauthorized();
-    const parsed = tutorSchema.safeParse(await request.json());
+    const parsed = tutorSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return Response.json({ error: "This tutoring request could not be read." }, { status: 400 });
     }

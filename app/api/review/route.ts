@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   try {
     const learner = await authenticateLearner(request);
     if (!learner) return unauthorized();
-    const parsed = reviewSchema.safeParse(await request.json());
+    const parsed = reviewSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return Response.json({ error: "This review answer could not be read." }, { status: 400 });
     }

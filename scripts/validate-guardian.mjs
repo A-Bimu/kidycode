@@ -166,6 +166,8 @@ const allowed = new Set([
   /* The completion record's own leaves. It names the course and the project, the
    * counts and the completion date, and nothing else. */
   "courseTitle", "projectTitle", "required", "completedAt",
+  /* Recent milestones: wording and a date. */
+  "milestones", "at",
 ]);
 for (const key of present) {
   assert(allowed.has(key), `The guardian view exposes something outside the allow list: ${key}`);

@@ -22,6 +22,28 @@ function validateQuestion(question, label) {
 }
 
 assert.deepEqual(Object.keys(courses).sort(), [...expectedIds].sort(), "The catalogue must contain the four approved learner paths.");
+
+/* Every course speaks for itself: it names its own age group and it never borrows
+ * another path's project, so a learner can never read content meant for a different
+ * course. */
+for (const courseId of expectedIds) {
+  const bundle = courses[courseId];
+  const text = JSON.stringify(bundle).toLowerCase();
+  for (const otherId of expectedIds) {
+    if (otherId === courseId) continue;
+    const otherRange = courses[otherId].courseFacts.ageRange.toLowerCase();
+    assert(!text.includes(otherRange), `${courseId} mentions ${otherRange}, which belongs to ${otherId}.`);
+  }
+  const ownProjects = new Set(bundle.projectChoices.map((project) => project.title.toLowerCase()));
+  for (const otherId of expectedIds) {
+    if (otherId === courseId) continue;
+    for (const project of courses[otherId].projectChoices) {
+      const title = project.title.toLowerCase();
+      if (ownProjects.has(title)) continue;
+      assert(!text.includes(`"${title}"`), `${courseId} carries the project title ${project.title} from ${otherId}.`);
+    }
+  }
+}
 const globalIds = new Set();
 const projectIds = new Set();
 const missingTerms = new Set();

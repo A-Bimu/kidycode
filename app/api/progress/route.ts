@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   try {
     const learner = await authenticateLearner(request);
     if (!learner) return unauthorized();
-    const parsed = progressSchema.safeParse(await request.json());
+    const parsed = progressSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return Response.json({ error: "This lesson progress could not be saved." }, { status: 400 });
     }

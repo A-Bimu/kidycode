@@ -700,6 +700,8 @@ await step("the guardian summary is complete and allow listed", async () => {
     /* The completion record: course and project names, the counts, the assessment
      * state and the completion date. Nothing else. */
     "completion", "courseTitle", "projectTitle", "required", "completedAt",
+    /* Recent milestones: wording and a date. */
+    "milestones", "at",
   ]);
   const seen = new Set();
   (function walk(value) {

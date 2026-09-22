@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   try {
     const learner = await authenticateLearner(request);
     if (!learner) return unauthorized();
-    const parsed = checkpointSchema.safeParse(await request.json());
+    const parsed = checkpointSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return Response.json({ error: "Finish the module and write a short reflection before saving." }, { status: 400 });
     }

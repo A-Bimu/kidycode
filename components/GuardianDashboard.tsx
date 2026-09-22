@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { GuardianSummary } from "@/lib/guardian-view";
 
@@ -272,6 +273,9 @@ export function GuardianDashboard() {
       </section>
 
       <p className="guardian-status" aria-live="polite">{status}</p>
+      <p className="guardian-quiet">
+        <Link href="/privacy">Privacy and grown-ups</Link>: what a connected grown-up can see, and what stays private.
+      </p>
       {error && <p className="guardian-error" role="alert">{error}</p>}
 
       {summary && selected && (
@@ -299,6 +303,20 @@ export function GuardianDashboard() {
               ? <div><dt>Completed</dt><dd>{formatWhen(summary.completion.completedAt)}</dd></div>
               : null}
           </dl>
+
+          <h3>Recent milestones</h3>
+          {summary.milestones.length === 0 ? (
+            <p className="guardian-quiet">No module version has been saved yet.</p>
+          ) : (
+            <ul className="guardian-milestones" data-testid="guardian-milestones">
+              {summary.milestones.map((milestone) => (
+                <li key={`${milestone.label}-${milestone.at}`}>
+                  <span>{milestone.label}</span>
+                  <small>{formatWhen(milestone.at)}</small>
+                </li>
+              ))}
+            </ul>
+          )}
 
           <h3>Modules</h3>
           <ul className="guardian-modules">

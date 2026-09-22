@@ -26,7 +26,11 @@ for (const [publicPath, rootPath] of pagePairs) {
     const reference = match[1].split("#")[0].split("?")[0];
     if (!reference || reference.startsWith("http") || reference.startsWith("mailto:") || reference.startsWith("#") || reference.endsWith("/")) continue;
     const target = reference.startsWith("/") ? join(root, "public", reference) : resolve(dirname(file), reference);
-    assert(existsSync(target), `${publicPath} points to missing file ${reference}.`);
+    /* A link may point at a static file or at a route the application serves, such
+     * as /privacy or /guardian. A route counts when its page exists. */
+    const route = reference.replace(/^\//, "").replace(/\/$/, "");
+    const appRoute = route === "" || existsSync(join(root, "app", route, "page.tsx"));
+    assert(existsSync(target) || appRoute, `${publicPath} points to missing file ${reference}.`);
   }
 }
 

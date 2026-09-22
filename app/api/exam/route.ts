@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   try {
     const learner = await authenticateLearner(request);
     if (!learner) return unauthorized();
-    const parsed = examSchema.safeParse(await request.json());
+    const parsed = examSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return Response.json({ error: "Answer all ten questions, repair the code and explain the change." }, { status: 400 });
     }
