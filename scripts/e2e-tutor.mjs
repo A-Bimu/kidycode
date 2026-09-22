@@ -797,6 +797,230 @@ await step("grown-up access is not part of the adult path", async () => {
   assert.equal(revoke.status, 409, `An adult must not revoke anything, received ${revoke.status}`);
 });
 
+
+/* 10. Moving a learner profile to another device. */
+const codeShape = /^[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4}){3}$/;
+const transferTag = Math.random().toString(36).slice(2, 8);
+let sourceCounter = 10;
+
+/* Each run claims from its own source address, so the attempt bound is exercised
+ * without interfering with any other check. */
+function nextSource() {
+  sourceCounter += 1;
+  return `203.0.113.${sourceCounter}`;
+}
+
+async function learnerCall(session, path, options = {}) {
+  const response = await fetch(`${base}${path}`, {
+    ...options,
+    headers: {
+      "content-type": "application/json",
+      ...(session ? { cookie: session } : {}),
+      ...(options.headers || {}),
+    },
+    signal: AbortSignal.timeout(30000),
+  });
+  const setCookie = response.headers.getSetCookie?.() || [];
+  const sessionCookie = setCookie.find((value) => value.startsWith("kidycode_session=")) || "";
+  const text = await response.text();
+  let body = {};
+  try { body = text ? JSON.parse(text) : {}; } catch { body = { raw: text }; }
+  return { status: response.status, body, setCookie, sessionCookie };
+}
+
+async function newLearnerHandle(nickname, courseId, age) {
+  const created = await fetch(`${base}/api/learners`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ nickname, age, theme: "interest", courseId }),
+  });
+  const setCookie = created.headers.getSetCookie?.() || [];
+  const session = setCookie.find((value) => value.startsWith("kidycode_session="))?.split(";")[0] || "";
+  assert.equal(created.status, 201, `A ${courseId} learner must be creatable for the transfer checks.`);
+  return { session, nickname };
+}
+
+async function claim(code, source) {
+  return learnerCall("", "/api/transfer/claim", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+    headers: { "cf-connecting-ip": source },
+  });
+}
+
+await step("transfer needs a learner session to create a code", async () => {
+  const refused = await learnerCall("", "/api/transfer/codes", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.equal(refused.status, 401, "Creating a transfer code without a learner session must be refused.");
+  const listed = await learnerCall("", "/api/transfer/codes");
+  assert.equal(listed.status, 401, "Listing transfer codes without a learner session must be refused.");
+  const cancelled = await learnerCall("", "/api/transfer/codes", { method: "DELETE" });
+  assert.equal(cancelled.status, 401, "Cancelling without a learner session must be refused.");
+  const guess = await claim("ZZZZ-ZZZZ-ZZZZ-ZZZZ", nextSource());
+  assert.equal(guess.status, 404, "An unknown code must be refused without saying whether it existed.");
+  const nonsense = await claim("not a code", nextSource());
+  assert.equal(nonsense.status, 400, "A value that cannot be a code must be refused as malformed.");
+});
+
+const mover = await newLearnerHandle(`Mover${transferTag}`, "ages-10-12", 11);
+
+await step("a learner can create a transfer code", async () => {
+  const created = await learnerCall(mover.session, "/api/transfer/codes", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.equal(created.status, 201, "A learner must be able to create a transfer code.");
+  assert(codeShape.test(created.body.transfer?.code || ""), `A transfer code must be readable: ${created.body.transfer?.code}`);
+  const lifetime = new Date(created.body.transfer?.expiresAt || 0).getTime() - Date.now();
+  assert(lifetime > 8 * 60_000 && lifetime <= 10 * 60_000 + 5000, "A transfer code must expire ten minutes after it is created.");
+  assert.equal(created.body.codeLifetimeMinutes, 10, "The lifetime must be stated as ten minutes.");
+  const listed = await learnerCall(mover.session, "/api/transfer/codes");
+  assert.equal(listed.body.pending?.expiresAt, created.body.transfer?.expiresAt, "The pending code must be reported without its value.");
+  assert(!JSON.stringify(listed.body).includes(created.body.transfer.code), "Listing must never repeat the plain code.");
+  mover.first = created.body.transfer.code;
+});
+
+await step("a replacement invalidates the previous code", async () => {
+  const replaced = await learnerCall(mover.session, "/api/transfer/codes", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.equal(replaced.status, 201, "A replacement code must be creatable.");
+  assert.notEqual(replaced.body.transfer.code, mover.first, "A replacement must be a different code.");
+  const old = await claim(mover.first, nextSource());
+  assert.equal(old.status, 410, "The replaced code must stop working.");
+  mover.code = replaced.body.transfer.code;
+});
+
+await step("an unused code can be cancelled, and then cannot transfer", async () => {
+  const cancelled = await learnerCall(mover.session, "/api/transfer/codes", { method: "DELETE" });
+  assert.equal(cancelled.status, 200, "Cancelling must be accepted.");
+  assert.equal(cancelled.body.cancelled, true, "There was an unused code to cancel.");
+  const attempt = await claim(mover.code, nextSource());
+  assert.equal(attempt.status, 410, "A cancelled code must not transfer a profile.");
+  const again = await learnerCall(mover.session, "/api/transfer/codes", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  mover.code = again.body.transfer.code;
+});
+
+await step("a transfer opens the same profile, on the same course, with a new session", async () => {
+  const before = await learnerCall(mover.session, "/api/summary");
+  assert.equal(before.status, 200, "The learner must have a summary before the transfer.");
+  const beforeProgress = await learnerCall(mover.session, "/api/progress");
+  assert.equal(beforeProgress.status, 200, "The learner must have progress before the transfer.");
+  mover.courseId = before.body.summary?.course?.id;
+  const moved = await claim(mover.code, nextSource());
+  assert.equal(moved.status, 200, "A valid code must transfer the profile.");
+  assert.equal(moved.body.transferred, true, "The transfer must be reported.");
+  assert.equal(moved.body.coursePath, "/learn", "The original course must be opened again.");
+  assert.equal(moved.body.nickname, mover.nickname, "The original profile must be the one that opened.");
+  const cookie = moved.setCookie.find((value) => value.startsWith("kidycode_session=")) || "";
+  for (const attribute of ["HttpOnly", "Secure", "SameSite=Lax", "Path=/"]) {
+    assert(cookie.includes(attribute), `The new cookie must keep ${attribute}.`);
+  }
+  for (const leak of ["accessKey", "accessHash", "learnerId", "id"]) {
+    assert.equal(JSON.stringify(moved.body).includes(`"${leak}"`), false, `A transfer response must not carry ${leak}.`);
+  }
+  const after = await learnerCall(moved.sessionCookie, "/api/summary");
+  assert.equal(after.status, 200, "The new device must be signed in as the learner.");
+  assert.equal(after.body.summary?.course?.id, mover.courseId, "The new session must open the same learner profile on the same course.");
+  const afterProgress = await learnerCall(moved.sessionCookie, "/api/progress");
+  assert.equal(afterProgress.status, 200, "The existing progress must be reachable from the new device.");
+  assert.equal(afterProgress.body.courseId, beforeProgress.body.courseId, "The saved progress must belong to the same course.");
+  assert.equal(JSON.stringify(afterProgress.body.activities || []), JSON.stringify(beforeProgress.body.activities || []),
+    "The saved progress must survive the transfer unchanged.");
+  mover.newSession = moved.sessionCookie;
+});
+
+await step("the previous device stops working immediately", async () => {
+  const old = await learnerCall(mover.session, "/api/summary");
+  assert.equal(old.status, 401, "The old cookie must stop working the moment the transfer succeeds.");
+  const oldProgress = await learnerCall(mover.session, "/api/progress");
+  assert.equal(oldProgress.status, 401, "The old cookie must not reach progress either.");
+  const used = await claim(mover.code, nextSource());
+  assert.equal(used.status, 410, "A used code must not be usable again.");
+  const fresh = await learnerCall(mover.newSession, "/api/summary");
+  assert.equal(fresh.status, 200, "The new device must keep working.");
+});
+
+await step("concurrent claims allow exactly one success", async () => {
+  const racer = await newLearnerHandle(`Racer${transferTag}`, "ages-13-15", 14);
+  const created = await learnerCall(racer.session, "/api/transfer/codes", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  const code = created.body.transfer.code;
+  const [one, two] = await Promise.all([claim(code, nextSource()), claim(code, nextSource())]);
+  const wins = [one, two].filter((result) => result.status === 200);
+  assert.equal(wins.length, 1, `Exactly one claim may win, received ${one.status} and ${two.status}.`);
+  const loser = [one, two].find((result) => result.status !== 200);
+  assert.equal(loser.setCookie.some((value) => value.startsWith("kidycode_session=")), false, "The device that lost the race must not receive a session.");
+  assert.equal(loser.status === 409 || loser.status === 410, true, "Losing the race must be reported clearly.");
+  const winnerSession = wins[0].sessionCookie;
+  const summary = await learnerCall(winnerSession, "/api/summary");
+  assert.equal(summary.status, 200, "The winning device must be signed in.");
+  const stale = await learnerCall(racer.session, "/api/summary");
+  assert.equal(stale.status, 401, "The original device must stop working after a race is won.");
+});
+
+await step("an adult learner can move their own profile", async () => {
+  const adult = await newLearnerHandle(`Adult${transferTag}`, "adults", 19);
+  const created = await learnerCall(adult.session, "/api/transfer/codes", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.equal(created.status, 201, "An adult learner must be able to create a transfer code.");
+  const moved = await claim(created.body.transfer.code, nextSource());
+  assert.equal(moved.status, 200, "An adult learner's code must transfer the profile.");
+  assert.equal(moved.body.coursePath, "/learn/adults", "The adult course must be opened again.");
+  const summary = await learnerCall(moved.sessionCookie, "/api/summary");
+  assert.equal(summary.status, 200, "The adult learner's progress must be reachable after the transfer.");
+});
+
+await step("a connected grown-up can create a transfer code, and a revoked one cannot", async () => {
+  const child = await newLearnerHandle(`Child${transferTag}`, "ages-16-18", 16);
+  const connection = await learnerCall(child.session, "/api/guardian/connections", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  const guardianId = `guardian-transfer-${transferTag}`;
+  const linked = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: connection.body.issuedCode }) }, { id: guardianId, email: `${guardianId}@example.test` });
+  assert.equal(linked.status, 200, "The grown-up must be able to connect first.");
+  const linkRef = linked.body.learner.linkRef;
+
+  const made = await guardianApi("/api/guardian/transfer", { method: "POST", body: JSON.stringify({ link: linkRef }) }, { id: guardianId, email: `${guardianId}@example.test` });
+  assert.equal(made.status, 201, "A connected grown-up must be able to create a transfer code.");
+  assert(codeShape.test(made.body.transfer?.code || ""), "The grown-up's code must be a valid transfer code.");
+  for (const leak of ["accessKey", "accessHash", "cookieValue", "learnerId"]) {
+    assert.equal(JSON.stringify(made.body).includes(leak), false, `A grown-up must never receive a learner ${leak}.`);
+  }
+  /* Creating a code signs nobody in, so no learner session may come back. */
+  assert.equal(JSON.stringify(made.body).includes("kidycode_session"), false, "Creating a transfer code must not hand over a session.");
+
+  /* An unrelated grown-up must not be able to make a code for a learner they do
+   * not hold, even with the right link handle. */
+  const strangerId = `guardian-stranger-${transferTag}`;
+  const stranger = await guardianApi("/api/guardian/transfer", { method: "POST", body: JSON.stringify({ link: linkRef }) }, { id: strangerId, email: `${strangerId}@example.test` });
+  assert.equal(stranger.status, 403, "An unrelated grown-up must be refused.");
+  const anonymous = await fetch(`${base}/api/guardian/transfer`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ link: linkRef }) });
+  assert.equal(anonymous.status, 401, "Creating a transfer code without an identity must be refused.");
+
+  /* The learner's own code from before is gone, because the grown-up's is newer. */
+  const oldCode = connection.body.issuedCode;
+  const afterRevoke = await learnerCall(child.session, "/api/guardian/connections", { method: "GET" });
+  assert.equal(afterRevoke.status, 200, "The learner must still see their connections.");
+  assert.equal(afterRevoke.body.connections.length, 1, "The learner must see the connected grown-up.");
+  const revoked = await learnerCall(child.session, "/api/guardian/connections", {
+    method: "DELETE",
+    body: JSON.stringify({ action: "revoke", linkRef: afterRevoke.body.connections[0].linkRef }),
+  });
+  assert.equal(revoked.status, 200, "The learner must be able to end access.");
+  const refused = await guardianApi("/api/guardian/transfer", { method: "POST", body: JSON.stringify({ link: linkRef }) }, { id: guardianId, email: `${guardianId}@example.test` });
+  assert.equal(refused.status, 403, "A revoked grown-up must not be able to create a transfer code.");
+  assert(oldCode !== made.body.transfer.code, "The grown-up's code must be its own.");
+
+  const moved = await claim(made.body.transfer.code, nextSource());
+  assert.equal(moved.status, 200, "A code created by a grown-up must transfer the learner's profile.");
+  assert.equal(moved.body.coursePath, "/learn/16-18", "The learner's own course must be opened.");
+});
+
+await step("repeated incorrect attempts are bounded", async () => {
+  const source = `198.51.100.${Math.floor(Math.random() * 250) + 1}`;
+  let refused = 0;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const guess = await claim(`QQQQ-${String(attempt).repeat(4)}-QQQQ-QQQQ`, source);
+    if (guess.status === 404) refused += 1;
+  }
+  assert.equal(refused, 8, "Early attempts must be refused without revealing whether a code exists.");
+  const blocked = await claim("QQQQ-QQQQ-QQQQ-QQQQ", source);
+  assert.equal(blocked.status, 429, "Repeated attempts from one source must be bounded.");
+  const otherSource = await claim("QQQQ-QQQQ-QQQQ-QQQQ", nextSource());
+  assert.notEqual(otherSource.status, 429, "One noisy source must not block every other learner.");
+});
+
 console.log(`\n${passed.length} checks passed, ${failed.length} failed.`);
 if (failed.length > 0) {
   console.log("Failures:");

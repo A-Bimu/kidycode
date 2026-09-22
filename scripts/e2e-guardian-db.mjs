@@ -206,6 +206,62 @@ await step("the deleted learner's link handle gives no access", async () => {
   assert.equal(result.status, 403, `A dead handle must be refused, received ${result.status}`);
 });
 
+/* 4. Transfer codes, read straight from the database. */
+let mover = null;
+let transferCode = "";
+await step("a plain transfer code is never stored", async () => {
+  mover = await newLearner("DbMover", "ages-13-15", 14);
+  const created = await learnerApi("/api/transfer/codes", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.equal(created.status, 201, `A transfer code must be creatable: ${JSON.stringify(created.body)}`);
+  transferCode = created.body.transfer.code;
+
+  const rows = database.prepare("SELECT * FROM learner_transfer_codes WHERE learner_id = ?").all(mover.id);
+  assert.equal(rows.length, 1, "Exactly one transfer code must exist for the learner.");
+  const row = rows[0];
+  assert.equal(typeof row.code_digest, "string", "The digest must be stored.");
+  assert.equal(row.code_digest.length, 64, "The digest must be a SHA-256 hexadecimal value.");
+  assert.equal(row.created_by, "learner", "The creator must be recorded.");
+  assert.equal(row.used_at, null, "A new code must be unused.");
+  assert.equal(row.invalidated_at, null, "A new code must be active.");
+
+  const plain = transferCode.replace(/-/g, "");
+  for (const [column, value] of Object.entries(row)) {
+    if (typeof value !== "string") continue;
+    assert(!value.includes(transferCode) && !value.includes(plain), `Column ${column} must not hold the plain code.`);
+  }
+  const everything = JSON.stringify(database.prepare("SELECT * FROM learner_transfer_codes").all());
+  assert(!everything.includes(plain), "No row anywhere in the table may hold the plain code.");
+  assert(!everything.includes(transferCode), "No row anywhere in the table may hold the grouped code.");
+});
+
+await step("an expired transfer code is refused and the device stays signed in", async () => {
+  const past = new Date(Date.now() - 60_000).toISOString();
+  database.prepare("UPDATE learner_transfer_codes SET expires_at = ? WHERE learner_id = ?").run(past, mover.id);
+  const attempt = await fetch(`${base}/api/transfer/claim`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.201" },
+    body: JSON.stringify({ code: transferCode }),
+    signal: AbortSignal.timeout(30000),
+  });
+  assert.equal(attempt.status, 410, `An expired code must be refused, received ${attempt.status}`);
+  const stillIn = await fetch(`${base}/api/summary`, { headers: { cookie }, signal: AbortSignal.timeout(30000) });
+  assert.equal(stillIn.status, 200, "A refused transfer must leave the current device signed in.");
+});
+
+await step("deleting a learner removes their transfer codes", async () => {
+  const created = await learnerApi("/api/transfer/codes", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  assert.equal(created.status, 201, "A replacement code must be creatable.");
+  const before = database.prepare("SELECT COUNT(*) AS total FROM learner_transfer_codes WHERE learner_id = ?").get(mover.id).total;
+  assert(before >= 1, "The learner must have transfer codes before deletion.");
+  database.prepare("DELETE FROM learner_profiles WHERE id = ?").run(mover.id);
+  const after = database.prepare("SELECT COUNT(*) AS total FROM learner_transfer_codes WHERE learner_id = ?").get(mover.id).total;
+  assert.equal(after, 0, "Transfer codes must be removed with the learner.");
+  const stranded = await fetch(`${base}/api/summary`, { headers: { cookie }, signal: AbortSignal.timeout(30000) });
+  assert.equal(stranded.status, 401, "The deleted learner's device must stop working.");
+  const orphans = database.prepare("SELECT COUNT(*) AS total FROM learner_transfer_codes").get().total;
+  assert.equal(typeof orphans, "number", "The transfer table must still be readable.");
+});
+
 database.close();
 console.log(`\n${passed.length} checks passed, ${failed.length} failed.`);
 if (failed.length > 0) {

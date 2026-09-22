@@ -17,6 +17,7 @@ const requiredFiles = [
   "dist/.openai/drizzle/0003_closed_winter_soldier.sql",
   "dist/.openai/drizzle/0004_light_solo.sql",
   "dist/.openai/drizzle/0005_slimy_xorn.sql",
+  "dist/.openai/drizzle/0006_high_tomas.sql",
 ];
 
 for (const relativePath of requiredFiles) {

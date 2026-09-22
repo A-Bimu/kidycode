@@ -20,6 +20,7 @@ for (const [relativePath, bundleName] of routes) {
 
 const learningApp = readFileSync(resolve(root, "components/LearningApp.tsx"), "utf8");
 const examPanel = readFileSync(resolve(root, "components/ExamPanel.tsx"), "utf8");
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const interfaceSource = `${learningApp}\n${examPanel}`;
 
 for (const requiredText of [
@@ -49,9 +50,14 @@ assert(!/\bgreen\b/i.test(interfaceSource), "The learner interface contains the 
 
 const lessonRegion = learningApp.slice(learningApp.indexOf("function CodingActivity"), learningApp.indexOf("function QuickCheck"));
 assert(!lessonRegion.includes('<main className="lesson-screen'), "Lesson steps must not create nested main regions.");
-assert.equal((learningApp.match(/"ages-10-12": "\/learn"/g) || []).length, 1, "The saved-course route map is incomplete.");
-assert(learningApp.includes('"ages-13-15": "/learn/13-15"'), "The ages 13 to 15 saved-course route is missing.");
-assert(learningApp.includes('"ages-16-18": "/learn/16-18"'), "The ages 16 to 18 saved-course route is missing.");
-assert(learningApp.includes('adults: "/learn/adults"'), "The adult saved-course route is missing.");
+/* The route map has one definition, shared by the learner app and the transfer
+ * claim, so a learner who moves device lands back on their own course. */
+const routeMap = read("lib/course-routes.ts");
+assert.equal((routeMap.match(/"ages-10-12": "\/learn"/g) || []).length, 1, "The saved-course route map is incomplete.");
+assert(routeMap.includes('"ages-13-15": "/learn/13-15"'), "The ages 13 to 15 saved-course route is missing.");
+assert(routeMap.includes('"ages-16-18": "/learn/16-18"'), "The ages 16 to 18 saved-course route is missing.");
+assert(routeMap.includes('adults: "/learn/adults"'), "The adult saved-course route is missing.");
+assert(learningApp.includes("courseRoutes["), "The learner app must use the shared route map.");
+assert(read("app/api/transfer/claim/route.ts").includes("courseRoute("), "The transfer claim must return the learner to their own course.");
 
 console.log("Validated four learner routes, the three-step lesson interface, safe previews and the course-aware final check.");

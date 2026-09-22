@@ -581,7 +581,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .guardian-head h1 { font-size: 2rem; }
   .guardian-figures { grid-template-columns: 1fr; }
   .guardian-learners li { align-items: stretch; flex-direction: column; }
-  .guardian-learner-actions .outline-button, .guardian-learner-actions .text-button { flex: 1 1 auto; }
+  .guardian-learner-actions { flex-direction: column; align-items: stretch; }
+  .guardian-learner-actions .outline-button, .guardian-learner-actions .text-button { flex: 1 1 auto; width: 100%; }
   .guardian-connect .primary-button { width: 100%; }
   .check-tally { font-size: .76rem; }
   .coding-instructions > h1 { font-size: 2.7rem; }
@@ -608,3 +609,53 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Moving a learner profile to another device. Learner facing, quiet, and always
+   below the work itself so it never competes with the next activity. */
+.transfer-section { width: min(62rem, 100%); display: grid; gap: 1rem; padding-top: 1.2rem; border-top: 3px solid var(--purple); }
+.transfer-section h2 { margin: 0; font: 500 clamp(1.35rem, 3vw, 1.75rem)/1.2 Georgia, serif; }
+.transfer-section > p { margin: 0; color: var(--ink-soft); line-height: 1.6; max-width: 46rem; }
+.transfer-facts { display: grid; gap: .45rem; margin: 0; padding: 0 0 0 1.1rem; color: var(--ink-soft); line-height: 1.55; }
+.transfer-code { display: grid; gap: .6rem; justify-items: start; max-width: 46rem; padding: 1rem 1.1rem; background: var(--white); border-left: 5px solid var(--amber); }
+.transfer-code-label { margin: 0; color: var(--ink-soft); font-size: .78rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.transfer-code-value { max-width: 100%; margin: 0; padding: .5rem .7rem; background: var(--navy); color: var(--amber-pale); font: 800 1.2rem/1.2 ui-monospace, monospace; letter-spacing: .08em; overflow-wrap: anywhere; }
+.transfer-code-expiry { margin: 0; color: var(--ink-soft); font-size: .88rem; line-height: 1.5; }
+.transfer-actions { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; }
+@media (max-width: 420px) { .transfer-actions .primary-button, .transfer-actions .outline-button { width: 100%; justify-content: center; } }
+.transfer-note { margin: 0; color: var(--ink-soft); font-size: .88rem; }
+.transfer-status { margin: 0; color: var(--navy); font-weight: 750; }
+.transfer-status:empty { display: none; }
+
+/* The new device. Nothing is trusted here until the server answers. */
+.transfer-page { min-height: 70vh; display: grid; align-content: start; gap: clamp(1.4rem, 4vw, 2.2rem); padding: clamp(1.2rem, 4vw, 3rem) clamp(1rem, 4vw, 3.5rem) 5rem; background: var(--paper); color: var(--navy); }
+.transfer-page section { display: grid; gap: 1rem; max-width: 46rem; }
+.transfer-page h1 { margin: 0; font: 500 clamp(2rem, 5vw, 3rem)/1.08 Georgia, serif; letter-spacing: -.03em; }
+.transfer-page h2 { margin: .6rem 0 0; font: 500 clamp(1.2rem, 3vw, 1.5rem)/1.2 Georgia, serif; }
+.transfer-page > section > p { margin: 0; color: var(--ink-soft); line-height: 1.6; }
+.transfer-form { display: grid; gap: .55rem; max-width: 30rem; padding: 1rem 1.1rem; background: var(--white); border-left: 5px solid var(--amber); }
+.transfer-form label { font-size: .8rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+.transfer-form input { min-height: 3rem; padding: .6rem .8rem; background: var(--white); border: 2px solid var(--navy); font: 800 1.05rem/1.2 ui-monospace, monospace; letter-spacing: .08em; }
+.transfer-form .primary-button { justify-self: start; }
+.transfer-help { margin: 0; color: var(--ink-soft); line-height: 1.6; max-width: 42rem; }
+
+/* Clearing this device. The confirmation is part of the page, not a browser
+   prompt, so the warning can say exactly what would be lost. */
+.mismatch-warning { display: grid; gap: .8rem; justify-items: start; max-width: 46rem; margin-top: 1.4rem; padding: 1.1rem 1.2rem; background: var(--white); border-left: 5px solid var(--coral); }
+.mismatch-warning h2 { margin: 0; font: 500 1.25rem/1.25 Georgia, serif; }
+.mismatch-warning p { margin: 0; color: var(--ink-soft); line-height: 1.6; }
+.mismatch-rescue { display: grid; gap: .5rem; justify-items: start; width: 100%; }
+.mismatch-safety { font-weight: 700; color: var(--navy); }
+.mismatch-confirm-actions { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; }
+
+/* A grown-up passing a transfer code to a learner. */
+.guardian-transfer { display: grid; gap: .5rem; justify-items: start; max-width: 46rem; margin-top: 1rem; padding: .8rem 1rem; background: var(--white); border-left: 5px solid var(--amber); }
+
+
+/* These blocks are padded boxes inside flexible parents, so their width must
+   include the padding and they must be allowed to shrink. */
+.transfer-code, .transfer-form, .transfer-section, .mismatch-warning, .guardian-transfer, .transfer-page section {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+.guardian-learners li, .guardian-learner-copy, .guardian-learner-actions { min-width: 0; max-width: 100%; }

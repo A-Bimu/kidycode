@@ -163,6 +163,40 @@ export const guardianConnectCodes = sqliteTable(
   ],
 );
 
+/* A one-time code that moves a learner profile to another device. Only the
+ * digest is stored, and the row is removed with the learner it belongs to. */
+export const learnerTransferCodes = sqliteTable(
+  "learner_transfer_codes",
+  {
+    id: text("id").primaryKey(),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    codeDigest: text("code_digest").notNull(),
+    createdBy: text("created_by").notNull().default("learner"),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    usedAt: text("used_at"),
+    usedByDevice: text("used_by_device"),
+    appliedAt: text("applied_at"),
+    invalidatedAt: text("invalidated_at"),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("learner_transfer_codes_digest_unique").on(table.codeDigest),
+    index("learner_transfer_codes_learner_idx").on(table.learnerId, table.expiresAt),
+  ],
+);
+
+/* A coarse bound on how often one source may try a transfer code. Guesses that
+ * match no digest cannot be attributed to a learner, so they are counted here
+ * instead, keyed by the hashed source address. */
+export const transferClaimLimits = sqliteTable("transfer_claim_limits", {
+  scope: text("scope").primaryKey(),
+  attempts: integer("attempts").notNull().default(0),
+  windowAt: text("window_at"),
+});
+
 /* A durable record of weak concepts that outlives the lesson where they were
  * first missed, so the tutor can come back to them later. Only requirement
  * labels, concept keys and counts are stored, never learner code. */

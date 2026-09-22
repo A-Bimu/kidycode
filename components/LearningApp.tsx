@@ -27,6 +27,7 @@ import {
   type Stage,
   type WorkspaceFiles,
 } from "@/lib/course";
+import { courseRoutes } from "@/lib/course-routes";
 import type { Summary } from "@/lib/summary";
 
 type Learner = {
@@ -148,13 +149,13 @@ async function requestTutor(body: Record<string, unknown>, signal?: AbortSignal)
 const emptyFiles: WorkspaceFiles = { html: "", css: "", javascript: "" };
 const activityNames = { challenge: "Coding lesson", project: "Project checkpoint", quiz: "Module check" };
 const fileNames: Record<CodeFile, string> = { html: "HTML", css: "CSS", javascript: "JavaScript" };
-const courseRoutes: Record<CourseId, string> = {
-  "ages-10-12": "/learn",
-  "ages-13-15": "/learn/13-15",
-  "ages-16-18": "/learn/16-18",
-  adults: "/learn/adults",
-};
+
 const codeShortcuts = ["<", ">", "/", "{", "}", '"', "'", ";", "="];
+
+function minutesLeft(expiresAt: string): number {
+  const remaining = new Date(expiresAt).getTime() - Date.now();
+  return remaining <= 0 ? 0 : Math.max(1, Math.ceil(remaining / 60_000));
+}
 
 function parseWorkspace(value: string): Partial<WorkspaceFiles> {
   try {
@@ -1418,9 +1419,50 @@ function CourseMismatch({ learner, requestedCourse, onReset }: { learner: Learne
   const learnerCourseId = inferredCourseId(learner);
   const [message, setMessage] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [safety, setSafety] = useState<{ hasCode: boolean; guardianConnected: boolean } | null>(null);
+  const [rescue, setRescue] = useState<{ code: string; expiresAt: string } | null>(null);
+  const [rescueBusy, setRescueBusy] = useState(false);
+
+  /* Clearing this device can strand a learner, so before any warning appears the
+   * page finds out whether there is a way back in: an unused transfer code, or a
+   * grown-up who is connected. The warning then says plainly which applies. */
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const response = await fetch("/api/transfer/codes", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = (await response.json()) as { pending: { expiresAt: string } | null; guardianConnected: boolean };
+        if (active) setSafety({ hasCode: Boolean(data.pending), guardianConnected: data.guardianConnected });
+      } catch {
+        /* The warning stands without this detail. */
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  async function createRescueCode() {
+    setRescueBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/transfer/codes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "generate" }),
+      });
+      const data = await response.json() as { transfer?: { code: string; expiresAt: string }; error?: string };
+      if (!response.ok || !data.transfer) throw new Error(data.error || "A transfer code could not be created right now.");
+      setRescue(data.transfer);
+      setSafety({ hasCode: true, guardianConnected: Boolean(safety?.guardianConnected) });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "A transfer code could not be created right now.");
+    } finally {
+      setRescueBusy(false);
+    }
+  }
+
   async function resetProfile() {
-    const confirmed = window.confirm("Start a new course profile? This device will permanently lose access to the old saved course. The saved work will remain protected, but you will not be able to reopen it. This cannot be undone.");
-    if (!confirmed) return;
     setDeleting(true);
     setMessage("");
     try {
@@ -1434,6 +1476,9 @@ function CourseMismatch({ learner, requestedCourse, onReset }: { learner: Learne
       setDeleting(false);
     }
   }
+
+  const canRecover = Boolean(rescue) || Boolean(safety?.hasCode) || Boolean(safety?.guardianConnected);
+
   return (
     <main className="profile-mismatch">
       <a className="course-brand" href="/"><span>K</span><b>KidyCode</b></a>
@@ -1443,8 +1488,45 @@ function CourseMismatch({ learner, requestedCourse, onReset }: { learner: Learne
         <p>{learner.nickname}&apos;s saved work is kept in another KidyCode path. Open that course to continue exactly where you stopped.</p>
         <div className="mismatch-actions">
           <a className="primary-button" href={courseRoutes[learnerCourseId]}>Open my saved course</a>
-          <button className="outline-button" type="button" disabled={deleting} onClick={() => void resetProfile()}>{deleting ? "Resetting..." : `Start ${requestedCourse.courseFacts.ageRange} instead`}</button>
+          <button className="outline-button" type="button" disabled={deleting} onClick={() => setConfirming(true)} data-testid="reset-start">
+            {`Start ${requestedCourse.courseFacts.ageRange} instead`}
+          </button>
         </div>
+
+        {confirming && (
+          <div className="mismatch-warning" role="group" aria-labelledby="mismatch-warning-heading">
+            <h2 id="mismatch-warning-heading">Starting a new path clears this device</h2>
+            <p>
+              This device stops opening {learner.nickname}&apos;s saved course. The saved work stays on KidyCode, but it can
+              only be reopened with a transfer code, or by a grown-up who is connected to it.
+            </p>
+            {rescue ? (
+              <div className="mismatch-rescue">
+                <p className="transfer-code-label">Write this transfer code down first</p>
+                <p className="transfer-code-value" data-testid="mismatch-rescue-code">{rescue.code}</p>
+                <p className="transfer-code-expiry">It expires in about {minutesLeft(rescue.expiresAt)} minutes and works once. Enter it at /transfer on any device.</p>
+              </div>
+            ) : (
+              <p className="mismatch-safety">
+                {canRecover
+                  ? "You can still get back in: there is a way to reopen this course from another device."
+                  : "There is no transfer code and no grown-up connected, so this profile cannot be reopened after you clear it. Create a transfer code first if you want to keep it."}
+              </p>
+            )}
+            {!rescue && (
+              <button className="outline-button" type="button" disabled={rescueBusy} onClick={() => void createRescueCode()} data-testid="reset-create-code">
+                {rescueBusy ? "Creating..." : "Create a transfer code first"}
+              </button>
+            )}
+            <div className="mismatch-confirm-actions">
+              <button className="primary-button" type="button" disabled={deleting} onClick={() => void resetProfile()} data-testid="reset-confirm">
+                {deleting ? "Resetting..." : `Yes, clear this device and start ${requestedCourse.courseFacts.ageRange}`}
+              </button>
+              <button className="text-button" type="button" disabled={deleting} onClick={() => setConfirming(false)}>Keep my saved course</button>
+            </div>
+          </div>
+        )}
+
         {message && <p className="form-message is-error" role="alert">{message}</p>}
       </section>
     </main>

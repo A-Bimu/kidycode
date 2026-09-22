@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { courses } from "@/lib/course-catalog";
 import { establishGuardian, guardianUnauthorized } from "@/lib/guardian-auth";
-import { normaliseConnectCode } from "@/lib/guardian-codes";
+import { normaliseConnectCode } from "@/lib/one-time-codes";
 import { claimConnectCode, listGuardianLinks, revokeGuardianLink } from "@/lib/guardian-links";
 import { databaseError, getDatabase } from "@/lib/server-database";
 

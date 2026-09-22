@@ -1,10 +1,13 @@
 /*
- * One-time connection codes.
+ * One-time codes.
  *
- * A code is shown to the learner exactly once and only its digest is stored, so
- * a database read can never reveal a usable code. The alphabet avoids letters
- * that are easy to confuse when a code is read aloud or typed by hand.
+ * Shared by grown-up connection codes and learner transfer codes. A code is shown
+ * once and only its digest is stored, so a database read can never reveal a usable
+ * code. The alphabet avoids letters that are easy to confuse when a code is read
+ * aloud or typed by hand.
  */
+
+import { sha256Hex } from "@/lib/digest";
 
 export const CODE_TTL_MINUTES = 10;
 export const CODE_BYTES = 10;
@@ -62,9 +65,7 @@ export function normaliseConnectCode(input: string): string | null {
 
 /* Only the digest is ever stored. */
 export async function hashConnectCode(code: string): Promise<string> {
-  const bytes = new TextEncoder().encode(code);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return sha256Hex(code);
 }
 
 export function codeExpiryFrom(now: string): string {

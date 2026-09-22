@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { hashAccessKey } from "@/lib/access-keys";
 
 export function getDatabase(): D1Database {
   if (!env.DB) {
@@ -15,12 +16,6 @@ export function databaseError(error: unknown): Response {
     { error: "Progress could not be saved right now. Your work is still on screen, so please try again." },
     { status: 503 },
   );
-}
-
-async function hashAccessKey(accessKey: string): Promise<string> {
-  const bytes = new TextEncoder().encode(accessKey);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export async function authenticateLearner(request: Request): Promise<{

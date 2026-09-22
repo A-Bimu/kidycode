@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { clearedSessionCookie, hashAccessKey, makeAccessKey, sessionCookie } from "@/lib/access-keys";
 import { authenticateLearner, databaseError, getDatabase, unauthorized } from "@/lib/server-database";
 
 const courseIds = ["ages-10-12", "ages-13-15", "ages-16-18", "adults"] as const;
@@ -20,17 +21,6 @@ const learnerSchema = z.object({
   }
 });
 
-function makeAccessKey(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return Array.from(bytes, (byte) => byte.toString(36).padStart(2, "0")).join("");
-}
-
-async function hashAccessKey(accessKey: string): Promise<string> {
-  const bytes = new TextEncoder().encode(accessKey);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
 export async function POST(request: Request) {
   try {
     const parsed = learnerSchema.safeParse(await request.json());
@@ -48,10 +38,7 @@ export async function POST(request: Request) {
       .run();
 
     const response = Response.json({ learner: { id, ...parsed.data } }, { status: 201 });
-    response.headers.append(
-      "set-cookie",
-      `kidycode_session=${encodeURIComponent(`${id}.${accessKey}`)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=15552000`,
-    );
+    response.headers.append("set-cookie", sessionCookie(id, accessKey));
     return response;
   } catch (error) {
     return databaseError(error);
@@ -63,10 +50,7 @@ export async function DELETE(request: Request) {
     const learner = await authenticateLearner(request);
     if (!learner) return unauthorized();
     const response = Response.json({ cleared: true });
-    response.headers.append(
-      "set-cookie",
-      "kidycode_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
-    );
+    response.headers.append("set-cookie", clearedSessionCookie);
     return response;
   } catch (error) {
     return databaseError(error);

@@ -34,11 +34,18 @@ for (const exactAgeMap of [
   assert(learners.includes(exactAgeMap), `Learner creation is missing age rule: ${exactAgeMap}`);
 }
 
+/* The cookie and the key helpers live in one shared module now, used by learner
+ * creation, the transfer claim and the reset flow alike. */
+const accessKeys = readFileSync(resolve(root, "lib/access-keys.ts"), "utf8");
 for (const cookieRule of ["HttpOnly", "Secure", "SameSite=Lax", "Max-Age=15552000"]) {
-  assert(learners.includes(cookieRule), `The learner cookie is missing ${cookieRule}.`);
+  assert(accessKeys.includes(cookieRule), `The learner cookie is missing ${cookieRule}.`);
 }
+assert(accessKeys.includes("crypto.getRandomValues(new Uint8Array(32))"), "Learner access keys must be 32 random bytes.");
+assert(learners.includes("sessionCookie(id, accessKey)"), "Learner creation must use the shared cookie builder.");
+assert(learners.includes("clearedSessionCookie"), "Clearing a session must use the shared cookie.");
 assert(database.includes('course_id AS courseId'), "Authentication must return the learner course.");
-assert(database.includes('crypto.subtle.digest("SHA-256"'), "Learner access keys must be hashed before lookup.");
+assert(database.includes("hashAccessKey(accessKey)"), "Learner access keys must be hashed before lookup.");
+assert(readFileSync(resolve(root, "lib/access-keys.ts"), "utf8").includes("sha256Hex(accessKey)"), "Access keys must be hashed with the shared digest.");
 assert(!/UPDATE\s+learner_profiles/i.test(database), "Authentication must remain a read-only database operation.");
 
 for (const required of [

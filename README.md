@@ -61,6 +61,11 @@ A weak concept is also remembered beyond its own lesson. Before new material, th
 | `POST /api/guardian/links` | Connect using a one-time code |
 | `DELETE /api/guardian/links` | Disconnect from a learner |
 | `GET /api/guardian/summary` | A read only progress view for one connected learner |
+| `POST /api/guardian/transfer` | A grown-up creating a transfer code for a linked learner |
+| `GET /api/transfer/codes` | The learner's own pending transfer code |
+| `POST /api/transfer/codes` | Create a one-time transfer code |
+| `DELETE /api/transfer/codes` | Cancel an unused transfer code |
+| `POST /api/transfer/claim` | Open the profile on a new device with a transfer code |
 
 "My progress" in the learner navigation turns that evidence into counts and plain
 labels: activities completed, checks passed, mastery per module, concepts to come
@@ -82,6 +87,19 @@ Guardian identity comes from the platform identity headers alone. There is no
 password system, nothing a page can claim about itself, and no way to reach a
 learner from an identifier. Adult learners keep their progress private and are
 never offered grown-up controls.
+
+## Moving to another device
+
+Learner access is a cookie, so a cleared browser or a new device used to mean a
+lost course. On the progress page a learner can now create a transfer code, and a
+connected grown-up can create one for them. The code lasts ten minutes and works
+once. Claiming it on `/transfer` rotates the learner's access key, so the device
+that made the code is signed out the moment the new one takes over, and the existing
+course and progress open exactly as they were. Only the digest of a code is stored.
+
+Starting a new learning path clears this device's access, so that step now explains
+what would be lost, says whether a transfer code or a connected grown-up exists, and
+offers to create a code before anything is cleared.
 
 ## Technology
 

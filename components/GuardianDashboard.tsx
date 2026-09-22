@@ -24,6 +24,11 @@ function formatWhen(value: string | null): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function minutesLeft(expiresAt: string): number {
+  const remaining = new Date(expiresAt).getTime() - Date.now();
+  return remaining <= 0 ? 0 : Math.max(1, Math.ceil(remaining / 60_000));
+}
+
 function finalAssessmentText(summary: GuardianSummary["finalAssessment"]): string {
   if (summary.status === "passed") return `Passed, best result ${summary.bestScore} of ${summary.total}`;
   if (summary.status === "attempted") return `Attempted, best result ${summary.bestScore} of ${summary.total}`;
@@ -40,6 +45,7 @@ export function GuardianDashboard() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [transfer, setTransfer] = useState<{ linkRef: string; code: string; expiresAt: string } | null>(null);
 
   const loadSession = useCallback(async () => {
     try {
@@ -87,6 +93,31 @@ export function GuardianDashboard() {
       setStatus(`You are now connected to ${data.learner?.firstName || "this learner"}.`);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "That code could not be used.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /* A transfer code is created for a learner through the guardian's own link, so a
+   * revoked or unrelated account cannot ask for one. The learner's own session is
+   * never handed to a guardian: only a code they can pass on. */
+  async function createTransfer(learner: Learner) {
+    setBusy(true);
+    setStatus("");
+    setError("");
+    try {
+      const response = await fetch("/api/guardian/transfer", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ link: learner.linkRef }),
+      });
+      const data = await response.json() as { transfer?: { code: string; expiresAt: string }; error?: string };
+      if (!response.ok || !data.transfer) throw new Error(data.error || "A transfer code could not be created.");
+      setTransfer({ linkRef: learner.linkRef, code: data.transfer.code, expiresAt: data.transfer.expiresAt });
+      setStatus(`A transfer code for ${learner.firstName} is ready. It expires in ten minutes.`);
+    } catch (failure) {
+      setTransfer(null);
+      setError(failure instanceof Error ? failure.message : "A transfer code could not be created.");
     } finally {
       setBusy(false);
     }
@@ -217,6 +248,9 @@ export function GuardianDashboard() {
                     <button className="outline-button" type="button" disabled={busy} onClick={() => void openSummary(learner)}>
                       View progress
                     </button>
+                    <button className="outline-button" type="button" disabled={busy} onClick={() => void createTransfer(learner)}>
+                      Transfer code
+                    </button>
                     <button className="text-button" type="button" disabled={busy} onClick={() => void disconnect(learner)}>
                       Disconnect
                     </button>
@@ -225,6 +259,16 @@ export function GuardianDashboard() {
               ))}
             </ul>
           )}
+        {transfer ? (
+          <div className="guardian-transfer" data-testid="guardian-transfer">
+            <p className="transfer-code-label">{`Transfer code for ${learners.find((learner) => learner.linkRef === transfer.linkRef)?.firstName || "your learner"}`}</p>
+            <p className="transfer-code-value">{transfer.code}</p>
+            <p className="transfer-code-expiry">
+              Expires in about {minutesLeft(transfer.expiresAt)} minutes. It works once, and the device that uses it signs
+              the learner in there.
+            </p>
+          </div>
+        ) : null}
       </section>
 
       <p className="guardian-status" aria-live="polite">{status}</p>

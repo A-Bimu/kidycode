@@ -16,7 +16,7 @@ import {
   hashConnectCode,
   isCodeExpired,
   normaliseConnectCode,
-} from "../lib/guardian-codes.ts";
+} from "../lib/one-time-codes.ts";
 import {
   GUARDIAN_EMAIL_HEADER,
   GUARDIAN_FULL_NAME_HEADER,
@@ -190,8 +190,10 @@ for (const probe of ["<h1>", "My First Website", "workspace", "aggregate", "answ
 
 /* 8. The migration is additive, stores digests, and keeps the right indexes. */
 const journal = JSON.parse(read("drizzle/meta/_journal.json"));
-const latest = journal.entries[journal.entries.length - 1].tag;
-assert.equal(latest, "0005_slimy_xorn", "Phase 4 must add migration 0005.");
+const tags = journal.entries.map((entry) => entry.tag);
+assert(tags.includes("0005_slimy_xorn"), "Phase 4 must add migration 0005.");
+assert.equal(tags.filter((tag) => tag.startsWith("0005")).length, 1, "Phase 4 must own exactly one migration.");
+assert.equal(read("drizzle/0004_light_solo.sql").includes("guardian_"), false, "The guardian tables must not be created twice.");
 const migration = read("drizzle/0005_slimy_xorn.sql");
 assert(migration.includes("CREATE TABLE `guardian_accounts`"));
 assert(migration.includes("CREATE TABLE `guardian_links`"));
@@ -252,7 +254,7 @@ assert(!/console\.(log|info|warn)\(/.test(`${guardianSources}\n${linksRoute}\n${
 assert(learnerRoute.includes("action: z.literal(\"generate\")"), "Only a known action may generate a code.");
 assert(learnerRoute.includes("guardianControlsUnavailable"), "The learner endpoint must refuse the adult path.");
 assert(learnerRoute.includes("authenticateLearner(request)"), "The learner endpoint must authenticate the learner.");
-assert(read("lib/guardian-codes.ts").includes("crypto.getRandomValues"), "Codes must come from a cryptographic source.");
+assert(read("lib/one-time-codes.ts").includes("crypto.getRandomValues"), "Codes must come from a cryptographic source.");
 assert(read("lib/guardian-links.ts").includes("hashConnectCode"), "Only a digest may be stored or looked up.");
 
 const interfaceSource = `${read("components/GrownUpAccess.tsx")}\n${read("components/GuardianDashboard.tsx")}\n${read("components/ProgressPage.tsx")}`;

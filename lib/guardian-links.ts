@@ -7,7 +7,7 @@ import {
   groupConnectCode,
   hashConnectCode,
   isCodeExpired,
-} from "@/lib/guardian-codes";
+} from "@/lib/one-time-codes";
 
 /*
  * Connection codes, guardian links and the reads each side is allowed.
