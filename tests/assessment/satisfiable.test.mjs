@@ -11,7 +11,7 @@
 import assert from "node:assert/strict";
 import { gradeCodeTask } from "../../lib/assessment/engine.ts";
 import { assessmentContent, contentFor } from "../../lib/assessment/manifest.ts";
-import { MODULE_PRACTICAL_MIN, REQUIRED_COURSES } from "../../lib/assessment/blueprint.ts";
+import { FINAL_BUILD_MIN, MODULE_PRACTICAL_MIN, REQUIRED_COURSES } from "../../lib/assessment/blueprint.ts";
 import { check, report, stepSync, sweep, failed } from "./harness.mjs";
 
 const COURSES = REQUIRED_COURSES.filter((courseId) => contentFor(courseId) !== null);
@@ -189,71 +189,56 @@ function compose(requirements, skip = -1) {
 }
 
 let total = 0;
+const proveTask = (task, floor) => {
+  const requirements = task.requirements;
+  const composed = compose(requirements);
+
+  stepSync(`${task.id} earns every mark when the task is done`, () => {
+    const graded = gradeCodeTask(task, composed.files);
+    const unmet = graded.requirements.filter((requirement) => requirement.status !== "met");
+    assert.deepEqual(
+      unmet.map((requirement) => `${requirement.requirementId}: ${requirement.detail}`),
+      [],
+      "every requirement must be achievable",
+    );
+    assert.equal(graded.awarded, requirements.reduce((sum, requirement) => sum + requirement.marks, 0));
+    total += 1;
+  });
+
+  stepSync(`${task.id} cannot reach its floor with empty code`, () => {
+    const graded = gradeCodeTask(task, { html: "", css: "", javascript: "" });
+    assert.ok(graded.awarded < floor, `empty code earned ${graded.awarded}, which reaches the floor of ${floor}`);
+    assert.equal(
+      graded.awarded,
+      graded.requirements.reduce((sum, requirement) => sum + (requirement.status === "met" ? requirement.available : 0), 0),
+      "the mark is exactly the sum of the requirements that were met",
+    );
+    total += 1;
+  });
+
+  stepSync(`${task.id} decides each requirement on its own`, () => {
+    for (let index = 0; index < requirements.length; index += 1) {
+      const alone = compose([requirements[index]]);
+      const graded = gradeCodeTask(task, alone.files);
+      assert.equal(
+        graded.requirements[index].status,
+        "met",
+        `requirement ${index + 1} is not decidable on its own: ${graded.requirements[index].detail}`,
+      );
+    }
+    total += 1;
+  });
+};
+
 for (const courseId of COURSES) {
   const content = assessmentContent[courseId];
   await sweep(`${courseId} requirements are satisfiable`, async () => {
     for (const form of content.moduleForms) {
-      const requirements = form.practical.requirements;
-      const composed = compose(requirements);
-
-      stepSync(`${form.id} earns every mark when the task is done`, () => {
-        const graded = gradeCodeTask(form.practical, composed.files);
-        const unmet = graded.requirements.filter((requirement) => requirement.status !== "met");
-        assert.deepEqual(
-          unmet.map((requirement) => `${requirement.requirementId}: ${requirement.detail}`),
-          [],
-          "every requirement must be achievable",
-        );
-        assert.equal(graded.awarded, 5, "a complete submission earns every mark");
-        total += 1;
-      });
-
-      stepSync(`${form.id} cannot reach the practical floor with empty code`, () => {
-        /* An absence requirement (no personal detail on the page) is met by an empty
-         * page, so the rule is that empty code can never earn enough to pass on its
-         * own. The blueprint refuses a form that could. */
-        const graded = gradeCodeTask(form.practical, { html: "", css: "", javascript: "" });
-        assert.ok(
-          graded.awarded < MODULE_PRACTICAL_MIN,
-          `empty code earned ${graded.awarded} of 5, which is enough to pass the practical task`,
-        );
-        assert.equal(graded.requirements.length, 5);
-        assert.equal(
-          graded.awarded,
-          graded.requirements.reduce((sum, requirement) => sum + (requirement.status === "met" ? requirement.available : 0), 0),
-          "the mark is exactly the sum of the requirements that were met",
-        );
-        total += 1;
-      });
-
-      stepSync(`${form.id} decides each requirement on its own`, () => {
-        /* One requirement's own code, and nothing else, must satisfy that requirement.
-         * This is what makes the marking requirement by requirement rather than all or
-         * nothing. */
-        for (let index = 0; index < requirements.length; index += 1) {
-          const alone = compose([requirements[index]]);
-          const graded = gradeCodeTask(form.practical, alone.files);
-          assert.equal(
-            graded.requirements[index].status,
-            "met",
-            `requirement ${index + 1} is not decidable on its own: ${graded.requirements[index].detail}`,
-          );
-        }
-        total += 1;
-      });
-
-      stepSync(`${form.id} accounts for every mark`, () => {
-        const partial = compose(requirements.slice(0, 3));
-        const graded = gradeCodeTask(form.practical, partial.files);
-        const metCount = graded.requirements.filter((requirement) => requirement.status === "met").length;
-        assert.ok(metCount >= 1, "at least the first requirements must be credited");
-        assert.equal(
-          graded.awarded,
-          graded.requirements.reduce((sum, requirement) => sum + (requirement.status === "met" ? requirement.available : 0), 0),
-          "the mark is exactly the sum of the requirements that were met",
-        );
-        total += 1;
-      });
+      proveTask(form.practical, MODULE_PRACTICAL_MIN);
+    }
+    for (const form of content.finalForms) {
+      for (const task of form.debug) proveTask(task, task.requirements.reduce((sum, requirement) => sum + requirement.marks, 0));
+      proveTask(form.build, FINAL_BUILD_MIN);
     }
   });
 }

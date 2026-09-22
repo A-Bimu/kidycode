@@ -1,18 +1,35 @@
 import { courses } from "@/lib/course-catalog";
 import { type CourseAssessment } from "@/lib/assessment/types";
 import { ages10to12Assessment } from "@/lib/assessment/bank/ages-10-12";
+import { ages10to12Final } from "@/lib/assessment/bank/ages-10-12-final";
 import { ages13to15Assessment } from "@/lib/assessment/bank/ages-13-15";
 import { ages16to18Assessment } from "@/lib/assessment/bank/ages-16-18";
 import { adultsAssessment } from "@/lib/assessment/bank/adults";
 import type { CourseId } from "@/lib/course";
 
-export { ages10to12Assessment, ages13to15Assessment, ages16to18Assessment, adultsAssessment };
+export { ages10to12Assessment, ages10to12Final, ages13to15Assessment, ages16to18Assessment, adultsAssessment };
+
+/*
+ * One course, one content object: the module bank and the final bank are authored in
+ * separate files and merged here, so the engine, the routes and the validator all read a
+ * single course assessment rather than looking in two places.
+ *
+ * A course whose final bank is still being reviewed serves its module assessments and no
+ * final assessment, which the start route answers with 503 rather than inventing one.
+ */
+function mergeAssessment(moduleBank: CourseAssessment, finalBank?: CourseAssessment): CourseAssessment {
+  return {
+    ...moduleBank,
+    finalForms: finalBank?.finalForms ?? moduleBank.finalForms,
+    defence: finalBank?.defence ?? moduleBank.defence,
+  };
+}
 
 export const assessmentContent: Record<CourseId, CourseAssessment> = {
-  "ages-10-12": ages10to12Assessment,
-  "ages-13-15": ages13to15Assessment,
-  "ages-16-18": ages16to18Assessment,
-  adults: adultsAssessment,
+  "ages-10-12": mergeAssessment(ages10to12Assessment, ages10to12Final),
+  "ages-13-15": mergeAssessment(ages13to15Assessment),
+  "ages-16-18": mergeAssessment(ages16to18Assessment),
+  adults: mergeAssessment(adultsAssessment),
 };
 
 /* A bank with nothing reviewed in it must serve no assessment at all. Exported so the

@@ -26,9 +26,11 @@ export const FINAL_KNOWLEDGE_ITEMS = 10;
 export const FINAL_KNOWLEDGE_MARK = 2;
 export const FINAL_DEBUG_TASKS = 3;
 export const FINAL_DEBUG_MARK = 10;
+export const FINAL_DEBUG_REQUIREMENT_MARK = 2;
 export const FINAL_BUILD_MARKS = 50;
 export const FINAL_BUILD_REQUIREMENTS = 10;
 export const FINAL_BUILD_REQUIREMENT_MARK = 5;
+export const FINAL_BUILD_MIN = 30;
 export const FINAL_FORMS = 3;
 export const FINAL_TOTAL_MARKS =
   FINAL_KNOWLEDGE_ITEMS * FINAL_KNOWLEDGE_MARK + FINAL_DEBUG_TASKS * FINAL_DEBUG_MARK + FINAL_BUILD_MARKS;
@@ -327,8 +329,84 @@ export function bankProblems(
     if (content.moduleForms.length !== moduleIds.length * FORMS_PER_MODULE) {
       problems.push(`${courseId} has ${content.moduleForms.length} module forms, not ${moduleIds.length * FORMS_PER_MODULE}.`);
     }
-    if (content.defence.length < 3) {
+    if (content.defence.length > 0 && content.defence.length < 3) {
+      /* The defence templates arrive in their own phase; this only refuses a partial set. */
       problems.push(`${courseId} has ${content.defence.length} defence templates, fewer than three.`);
+    }
+
+    const courseFiles = new Set<string>();
+    for (const moduleId of moduleIds) for (const file of taughtFiles(courseId, moduleId)) courseFiles.add(file);
+
+    const coverage: string[] = [];
+    for (const form of content.finalForms) {
+      const where = form.id;
+      duplicate(form.id, where);
+      if (form.knowledge.length !== FINAL_KNOWLEDGE_ITEMS) {
+        problems.push(`${where} has ${form.knowledge.length} knowledge questions, not ${FINAL_KNOWLEDGE_ITEMS}.`);
+      }
+      for (const item of form.knowledge) {
+        duplicate(item.id, where);
+        if (item.marks !== FINAL_KNOWLEDGE_MARK) problems.push(`${item.id} carries ${item.marks} marks, not ${FINAL_KNOWLEDGE_MARK}.`);
+        if (!Number.isInteger(item.answer) || item.answer < 0 || item.answer > 2) problems.push(`${item.id} has an invalid answer.`);
+        if (item.explanation.length < MIN_EXPLANATION_LENGTH) problems.push(`${item.id} needs a fuller explanation.`);
+        const wrongTags = item.misconceptions.filter((_, index) => index !== item.answer);
+        if (wrongTags.some((tag) => tag.trim().length === 0)) problems.push(`${item.id} has no misconception tag on every wrong option.`);
+        problems.push(...styleProblems(`${item.prompt} ${item.options.join(" ")}`, item.id));
+        const prompt = normalise(item.prompt);
+        const previous = seenPrompts.get(prompt);
+        if (previous) problems.push(`${item.id} repeats the question from ${previous}.`);
+        seenPrompts.set(prompt, item.id);
+      }
+      if (form.debug.length !== FINAL_DEBUG_TASKS) {
+        problems.push(`${where} has ${form.debug.length} debugging tasks, not ${FINAL_DEBUG_TASKS}.`);
+      }
+      for (const task of form.debug) {
+        duplicate(task.id, where);
+        const marks = task.requirements.reduce((total, requirement) => total + requirement.marks, 0);
+        if (marks !== FINAL_DEBUG_MARK) problems.push(`${task.id} carries ${marks} marks, not ${FINAL_DEBUG_MARK}.`);
+        for (const requirement of task.requirements) {
+          duplicate(requirement.id, where);
+          const file = checkFile(requirement.check);
+          if (file && !courseFiles.has(file)) problems.push(`${requirement.id} checks a ${file} skill this course has not taught.`);
+          if (requirement.check.kind === "cannot-verify" && !requirement.mandatory) {
+            problems.push(`${requirement.id} is undecidable and not mandatory.`);
+          }
+          problems.push(...styleProblems(requirement.label, requirement.id));
+        }
+        problems.push(...styleProblems(`${task.title} ${task.brief}`, task.id));
+      }
+      const buildMarks = form.build.requirements.reduce((total, requirement) => total + requirement.marks, 0);
+      if (form.build.requirements.length !== FINAL_BUILD_REQUIREMENTS) {
+        problems.push(`${form.build.id} has ${form.build.requirements.length} requirements, not ${FINAL_BUILD_REQUIREMENTS}.`);
+      }
+      if (buildMarks !== FINAL_BUILD_MARKS) problems.push(`${form.build.id} carries ${buildMarks} marks, not ${FINAL_BUILD_MARKS}.`);
+      duplicate(form.build.id, where);
+      const mandatoryKinds = form.build.requirements.filter((requirement) => requirement.mandatory).map((requirement) => requirement.mandatory);
+      if (!mandatoryKinds.includes("accessibility")) problems.push(`${form.build.id} has no mandatory accessibility requirement.`);
+      if (!mandatoryKinds.includes("privacy") && !mandatoryKinds.includes("safety")) {
+        problems.push(`${form.build.id} has no mandatory privacy or safety requirement.`);
+      }
+      const absence = form.build.requirements.filter((requirement) =>
+        requirement.check.kind === "js-absent" || requirement.check.kind === "html-text-free-of").length;
+      if (absence >= FINAL_BUILD_MIN) {
+        problems.push(`${form.build.id} could reach the build floor with an empty submission.`);
+      }
+      for (const requirement of form.build.requirements) {
+        duplicate(requirement.id, where);
+        const file = checkFile(requirement.check);
+        if (file && !courseFiles.has(file)) problems.push(`${requirement.id} checks a ${file} skill this course has not taught.`);
+        problems.push(...styleProblems(requirement.label, requirement.id));
+      }
+      problems.push(...styleProblems(`${form.build.title} ${form.build.brief}`, form.build.id));
+
+      const total = form.knowledge.reduce((sum, item) => sum + item.marks, 0)
+        + form.debug.reduce((sum, task) => sum + task.requirements.reduce((inner, requirement) => inner + requirement.marks, 0), 0)
+        + buildMarks;
+      if (total !== FINAL_TOTAL_MARKS) problems.push(`${where} totals ${total} marks, not ${FINAL_TOTAL_MARKS}.`);
+      coverage.push([...new Set(form.knowledge.map((item) => item.moduleId))].sort().join(","));
+    }
+    if (new Set(coverage).size !== 1 && coverage.length > 1) {
+      problems.push(`${courseId} final forms do not cover the same modules as each other.`);
     }
   }
 

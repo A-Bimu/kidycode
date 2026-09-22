@@ -27,7 +27,7 @@ import {
   type RequirementCheck,
 } from "@/lib/assessment/types";
 import type { CourseId } from "@/lib/course";
-import type { ModuleForm } from "@/lib/assessment/types";
+import type { FinalForm, ModuleForm } from "@/lib/assessment/types";
 
 export type Idea = {
   slug: string;
@@ -236,6 +236,176 @@ export function buildModuleForms(courseId: CourseId, authored: Record<string, Au
         objectives: [...new Set(knowledge.map((item) => item.objective))].sort(),
       });
     }
+  }
+  return forms;
+}
+
+/* ------------------------------------------------------------------ finals ---- */
+
+/*
+ * A final applied assessment is one form out of three, marked out of 100: ten knowledge
+ * questions of two marks, three debugging tasks of ten marks each, and one unseen
+ * independent build of fifty marks. The build carries the mandatory safety, privacy and
+ * accessibility checks, so a high total can never override a mandatory failure.
+ */
+
+export type FinalIdea = {
+  slug: string;
+  /* The module whose lesson teaches this idea, so a final item is still traceable to
+   * real teaching rather than to a course-wide assertion. */
+  module: string;
+  lesson: string;
+  difficulty: Difficulty;
+  cognitive: CognitiveLevel;
+};
+
+export type AuthoredDebug = {
+  idea: string;
+  title: string;
+  brief: string;
+  requirements: AuthoredRequirement[];
+  starter: { html?: string; css?: string; javascript?: string };
+  editable?: FileKey[];
+};
+
+export type AuthoredBuild = {
+  idea: string;
+  title: string;
+  brief: string;
+  requirements: AuthoredRequirement[];
+  editable?: FileKey[];
+};
+
+export type AuthoredFinalForm = {
+  knowledge: AuthoredQuestion[];
+  debug: AuthoredDebug[];
+  build: AuthoredBuild;
+};
+
+export const FINAL_KNOWLEDGE_MARK = 2;
+export const FINAL_DEBUG_REQUIREMENT_MARK = 2;
+export const FINAL_BUILD_REQUIREMENT_MARK = 5;
+
+export function buildFinalForms(
+  courseId: CourseId,
+  authored: Record<string, AuthoredFinalForm>,
+  ideas: Record<string, FinalIdea>,
+): FinalForm[] {
+  const forms: FinalForm[] = [];
+  for (const variant of FORM_VARIANTS) {
+    const form = authored[variant];
+    if (!form) throw new Error(`${courseId} has no final form ${variant}.`);
+    const lessonIdFor = (idea: FinalIdea) => lessonFor(courseId, idea.module, idea.lesson).id;
+
+    const knowledge = form.knowledge.map((spec, index) => {
+      const idea = ideas[spec[0]];
+      if (!idea) throw new Error(`Unknown final idea ${spec[0]} in form ${variant}.`);
+      const lesson = lessonIdFor(idea);
+      const base = buildQuestion(courseId, idea.module, variant, index + 1, spec, {
+        [spec[0]]: { slug: spec[0], lesson: idea.lesson, difficulty: idea.difficulty, cognitive: idea.cognitive },
+      }, FINAL_KNOWLEDGE_MARK);
+      /* The identifier carries the final form, while the assessed objective stays the
+       * real lesson of the module that teaches it. */
+      return {
+        ...base,
+        id: itemId(courseId, `${idea.module}-final`, variant, "k", index + 1),
+        moduleId: idea.module,
+        objective: lesson,
+        revision: lesson,
+      };
+    });
+
+    const debug = form.debug.map((spec, index) => {
+      const idea = ideas[spec.idea];
+      if (!idea) throw new Error(`Unknown final idea ${spec.idea} in form ${variant}.`);
+      const lesson = lessonIdFor(idea);
+      const requirements: Requirement[] = spec.requirements.map((entry, position) => {
+        const [label, check, ideaSlug, mandatory] = entry;
+        const requirementIdea = ideas[ideaSlug];
+        if (!requirementIdea) throw new Error(`Unknown requirement idea ${ideaSlug} in final ${variant}.`);
+        return {
+          id: `${itemId(courseId, `${idea.module}-final`, variant, "d", index + 1)}-r${position + 1}`,
+          label: label.trim(),
+          marks: FINAL_DEBUG_REQUIREMENT_MARK,
+          check,
+          concept: conceptKey(courseId, requirementIdea.module, ideaSlug),
+          revision: lessonIdFor(requirementIdea),
+          ...(mandatory ? { mandatory } : {}),
+        };
+      });
+      return {
+        id: itemId(courseId, `${idea.module}-final`, variant, "d", index + 1),
+        version: CONTENT_VERSION,
+        courseId,
+        moduleId: idea.module,
+        formVariant: variant,
+        type: "debug" as const,
+        title: spec.title.trim(),
+        brief: spec.brief.trim(),
+        objective: lesson,
+        concept: conceptKey(courseId, idea.module, spec.idea),
+        difficulty: idea.difficulty,
+        cognitive: "analyse" as const,
+        marks: requirements.reduce((total, requirement) => total + requirement.marks, 0),
+        editableFiles: spec.editable ?? ["html", "css", "javascript"],
+        starterFiles: {
+          html: spec.starter.html ?? "",
+          css: spec.starter.css ?? "",
+          javascript: spec.starter.javascript ?? "",
+        },
+        requirements,
+        revision: lesson,
+        allowedSkills: ["HTML", "CSS", "JavaScript"],
+      };
+    });
+
+    const buildIdea = ideas[form.build.idea];
+    if (!buildIdea) throw new Error(`Unknown build idea ${form.build.idea} in final ${variant}.`);
+    const buildRequirements: Requirement[] = form.build.requirements.map((entry, position) => {
+      const [label, check, ideaSlug, mandatory] = entry;
+      const requirementIdea = ideas[ideaSlug];
+      if (!requirementIdea) throw new Error(`Unknown build requirement idea ${ideaSlug} in final ${variant}.`);
+      return {
+        id: `${itemId(courseId, `${buildIdea.module}-final`, variant, "b", 1)}-r${position + 1}`,
+        label: label.trim(),
+        marks: FINAL_BUILD_REQUIREMENT_MARK,
+        check,
+        concept: conceptKey(courseId, requirementIdea.module, ideaSlug),
+        revision: lessonIdFor(requirementIdea),
+        ...(mandatory ? { mandatory } : {}),
+      };
+    });
+    const build: CodeTask = {
+      id: itemId(courseId, `${buildIdea.module}-final`, variant, "b", 1),
+      version: CONTENT_VERSION,
+      courseId,
+      moduleId: buildIdea.module,
+      formVariant: variant,
+      type: "build",
+      title: form.build.title.trim(),
+      brief: form.build.brief.trim(),
+      objective: lessonIdFor(buildIdea),
+      concept: conceptKey(courseId, buildIdea.module, form.build.idea),
+      difficulty: "secure",
+      cognitive: "evaluate",
+      marks: buildRequirements.reduce((total, requirement) => total + requirement.marks, 0),
+      editableFiles: form.build.editable ?? ["html", "css", "javascript"],
+      starterFiles: { html: "", css: "", javascript: "" },
+      requirements: buildRequirements,
+      revision: lessonIdFor(buildIdea),
+      allowedSkills: ["HTML", "CSS", "JavaScript"],
+    };
+
+    forms.push({
+      id: `${courseId}-final-form-${variant}`,
+      courseId,
+      variant,
+      knowledge,
+      debug,
+      build,
+      difficultyProfile: difficultyProfile([...knowledge, ...debug, build]),
+      objectives: [...new Set([...knowledge.map((item) => item.objective), ...debug.map((item) => item.objective)])].sort(),
+    });
   }
   return forms;
 }
