@@ -244,3 +244,195 @@ export const tutorInterventions = sqliteTable(
     index("tutor_interventions_learner_lesson_idx").on(table.learnerId, table.lessonId, table.createdAt),
   ],
 );
+
+/* ---------------------------------------------------------------------------------
+ * Assessment V2.
+ *
+ * One shared engine, four courses of content. Every row here belongs to exactly one
+ * learner and is removed with that learner. The server grades every item from the
+ * content definition; no mark, form, course identity or pass status is ever accepted
+ * from the client.
+ * ------------------------------------------------------------------------------- */
+
+/* One row per assessment attempt. The row is created when the learner opens the
+ * assessment, which is not the same as submitting it: autosave writes the draft on
+ * this row and never creates a second one. Submission is a conditional update, so a
+ * repeated or concurrent request cannot award the marks twice. */
+export const assessmentAttempts = sqliteTable(
+  "assessment_attempts",
+  {
+    id: text("id").primaryKey(),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    courseId: text("course_id").notNull(),
+    kind: text("kind").notNull(),
+    moduleId: text("module_id"),
+    formId: text("form_id").notNull(),
+    contentVersion: text("content_version").notNull(),
+    status: text("status").notNull().default("in_progress"),
+    stage: text("stage").notNull().default("knowledge"),
+    draftJson: text("draft_json").notNull().default("{}"),
+    answersJson: text("answers_json").notNull().default("[]"),
+    codeJson: text("code_json").notNull().default("{}"),
+    knowledgeAwarded: integer("knowledge_awarded").notNull().default(0),
+    knowledgeTotal: integer("knowledge_total").notNull().default(0),
+    practicalAwarded: integer("practical_awarded").notNull().default(0),
+    practicalTotal: integer("practical_total").notNull().default(0),
+    debugAwarded: integer("debug_awarded").notNull().default(0),
+    debugTotal: integer("debug_total").notNull().default(0),
+    buildAwarded: integer("build_awarded").notNull().default(0),
+    buildTotal: integer("build_total").notNull().default(0),
+    totalAwarded: integer("total_awarded").notNull().default(0),
+    totalAvailable: integer("total_available").notNull().default(0),
+    mandatoryPassed: integer("mandatory_passed", { mode: "boolean" }).notNull().default(false),
+    needsVerification: integer("needs_verification", { mode: "boolean" }).notNull().default(false),
+    defencePassed: integer("defence_passed", { mode: "boolean" }).notNull().default(false),
+    outcome: text("outcome"),
+    startedAt: text("started_at").notNull(),
+    savedAt: text("saved_at"),
+    submittedAt: text("submitted_at"),
+  },
+  (table) => [
+    index("assessment_attempts_learner_created_idx").on(table.learnerId, table.startedAt),
+    index("assessment_attempts_learner_form_idx").on(table.learnerId, table.kind, table.formId),
+    index("assessment_attempts_learner_scope_idx").on(table.learnerId, table.courseId, table.kind, table.moduleId),
+  ],
+);
+
+/* One row per graded item, and one per marked requirement inside a practical or build
+ * task. The composite key makes grading idempotent: a repeat submit cannot double a
+ * mark, and the stored item id and content version keep an old result readable after a
+ * later content edit. */
+export const assessmentItemResults = sqliteTable(
+  "assessment_item_results",
+  {
+    attemptId: text("attempt_id")
+      .notNull()
+      .references(() => assessmentAttempts.id, { onDelete: "cascade" }),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    itemId: text("item_id").notNull(),
+    requirementId: text("requirement_id").notNull().default(""),
+    formId: text("form_id").notNull(),
+    contentVersion: text("content_version").notNull(),
+    itemType: text("item_type").notNull(),
+    concept: text("concept").notNull().default(""),
+    status: text("status").notNull(),
+    awarded: integer("awarded").notNull().default(0),
+    available: integer("available").notNull().default(0),
+    mandatory: text("mandatory"),
+    detail: text("detail").notNull().default(""),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.attemptId, table.itemId, table.requirementId] }),
+    index("assessment_item_results_learner_concept_idx").on(table.learnerId, table.concept),
+  ],
+);
+
+/* The independent-understanding check. Three reviewed parts: explain in the learner's
+ * own words, predict the result of a change, and make a small live change that a fresh
+ * deterministic test verifies. No detector, no camera, no keystroke or clipboard
+ * capture. */
+export const assessmentDefence = sqliteTable(
+  "assessment_defence",
+  {
+    attemptId: text("attempt_id")
+      .primaryKey()
+      .references(() => assessmentAttempts.id, { onDelete: "cascade" }),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    courseId: text("course_id").notNull(),
+    templateId: text("template_id").notNull(),
+    explainItemId: text("explain_item_id").notNull(),
+    predictItemId: text("predict_item_id").notNull(),
+    predictExpected: text("predict_expected").notNull(),
+    changeItemId: text("change_item_id").notNull(),
+    changePrompt: text("change_prompt").notNull(),
+    explainResponse: text("explain_response").notNull().default(""),
+    predictResponse: text("predict_response").notNull().default(""),
+    changeCodeJson: text("change_code_json").notNull().default("{}"),
+    predictCorrect: integer("predict_correct", { mode: "boolean" }).notNull().default(false),
+    changeStatus: text("change_status").notNull().default("pending"),
+    status: text("status").notNull().default("pending"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [index("assessment_defence_learner_idx").on(table.learnerId, table.courseId)],
+);
+
+/* Coarse integrity signals, disclosed before the assessment begins. Counts and times
+ * only: never clipboard contents, never unrelated keystrokes, never a judgement. A
+ * signal may add or vary a defence task and can never reduce a mark or fail a learner. */
+export const assessmentSignals = sqliteTable(
+  "assessment_signals",
+  {
+    attemptId: text("attempt_id")
+      .primaryKey()
+      .references(() => assessmentAttempts.id, { onDelete: "cascade" }),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    visibilityChanges: integer("visibility_changes").notNull().default(0),
+    pasteEvents: integer("paste_events").notNull().default(0),
+    largestPasteChars: integer("largest_paste_chars").notNull().default(0),
+    saveCount: integer("save_count").notNull().default(0),
+    firstSavedAt: text("first_saved_at"),
+    lastSavedAt: text("last_saved_at"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [index("assessment_signals_learner_idx").on(table.learnerId)],
+);
+
+/* One private credential per learner and course, written once and only when
+ * eligibility genuinely holds. The unique pair makes issue idempotent. */
+export const assessmentCredentials = sqliteTable(
+  "assessment_credentials",
+  {
+    id: text("id").primaryKey(),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    courseId: text("course_id").notNull(),
+    level: text("level").notNull(),
+    certificateName: text("certificate_name").notNull(),
+    projectTitle: text("project_title").notNull().default(""),
+    skillsJson: text("skills_json").notNull().default("[]"),
+    attemptId: text("attempt_id")
+      .notNull()
+      .references(() => assessmentAttempts.id, { onDelete: "cascade" }),
+    issuedAt: text("issued_at").notNull(),
+  },
+  (table) => [uniqueIndex("assessment_credentials_learner_course_unique").on(table.learnerId, table.courseId)],
+);
+
+/* The recovery queue and its readiness gate, built from the real rubric results of the
+ * attempt the learner just finished. Readiness is a guide, not a lock: unlimited
+ * retakes with no artificial waiting period. */
+export const assessmentRevisionItems = sqliteTable(
+  "assessment_revision_items",
+  {
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    courseId: text("course_id").notNull(),
+    concept: text("concept").notNull(),
+    label: text("label").notNull(),
+    lessonId: text("lesson_id").notNull().default(""),
+    sourceAttemptId: text("source_attempt_id").notNull(),
+    sourceKind: text("source_kind").notNull(),
+    mandatory: text("mandatory"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    readinessPassedAt: text("readiness_passed_at"),
+    readinessJson: text("readiness_json").notNull().default("{}"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.learnerId, table.courseId, table.concept] }),
+    index("assessment_revision_items_learner_idx").on(table.learnerId, table.courseId, table.readinessPassedAt),
+  ],
+);

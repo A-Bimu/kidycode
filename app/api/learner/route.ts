@@ -28,6 +28,14 @@ export const LEARNER_OWNED_TABLES = [
   "guardian_links",
   "guardian_connect_codes",
   "learner_transfer_codes",
+  /* Assessment V2. The attempt children are listed before the attempt itself so the
+   * delete never depends on a cascade to stay consistent. */
+  "assessment_item_results",
+  "assessment_signals",
+  "assessment_defence",
+  "assessment_credentials",
+  "assessment_revision_items",
+  "assessment_attempts",
 ] as const;
 
 export async function DELETE(request: Request) {
