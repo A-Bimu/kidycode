@@ -659,3 +659,78 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   max-width: 100%;
 }
 .guardian-learners li, .guardian-learner-copy, .guardian-learner-actions { min-width: 0; max-width: 100%; }
+
+/* The learner portfolio. Calm and factual: the eight module cards carry the story,
+   and code only appears once a version is opened. */
+.portfolio-page { min-height: 70vh; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: clamp(1.5rem, 4vw, 2.4rem); padding: clamp(1.2rem, 4vw, 3rem) clamp(1rem, 4vw, 3.5rem) 5rem; background: var(--paper); color: var(--navy); }
+.portfolio-page section { min-width: 0; max-width: 68rem; }
+.portfolio-head { display: grid; gap: .7rem; justify-items: start; max-width: 48rem; }
+.portfolio-head h1, .version-head h1 { margin: 0; font: 500 clamp(2rem, 5vw, 3rem)/1.08 Georgia, serif; letter-spacing: -.03em; }
+.portfolio-head > p { margin: 0; color: var(--ink-soft); font-size: 1.05rem; line-height: 1.6; }
+.portfolio-status-line { margin: 0; color: var(--ink-soft); }
+.portfolio-quiet { margin: 0; color: var(--ink-soft); line-height: 1.55; }
+.portfolio-modules, .portfolio-final, .portfolio-record { display: grid; gap: 1rem; padding-top: 1.2rem; border-top: 3px solid var(--purple); }
+.portfolio-modules h2, .portfolio-final h2, .portfolio-record h2, .version-reflection h2, .version-preview h2, .version-code h2 { margin: 0; font: 500 clamp(1.3rem, 3vw, 1.7rem)/1.2 Georgia, serif; }
+.portfolio-module-list { display: grid; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.portfolio-module { display: grid; gap: .45rem; justify-items: start; height: 100%; padding: 1rem 1.1rem; background: var(--white); border-left: 5px solid var(--paper-deep); }
+.portfolio-module.is-saved { border-left-color: var(--amber); }
+.portfolio-module h3 { margin: 0; font: 500 1.15rem/1.25 Georgia, serif; }
+.portfolio-module-number { margin: 0; color: var(--purple); font-size: .78rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.portfolio-skill { margin: 0; color: var(--ink-soft); line-height: 1.5; }
+.portfolio-module-status { margin: 0; font-weight: 750; }
+.portfolio-warning { margin: 0; color: var(--navy); font-weight: 750; }
+.portfolio-actions { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; }
+.portfolio-final > p { margin: 0; color: var(--ink-soft); line-height: 1.6; }
+
+/* The completion record. The sheet is the printable artefact. */
+.portfolio-record { gap: .9rem; }
+.record-sheet { display: grid; gap: .9rem; max-width: 44rem; padding: 1.4rem 1.5rem; background: var(--white); border: 2px solid var(--navy); }
+.record-brand { margin: 0; color: var(--purple); font: 700 1.05rem/1 Georgia, serif; letter-spacing: .04em; }
+.record-title { margin: 0; font: 500 clamp(1.3rem, 3vw, 1.7rem)/1.2 Georgia, serif; }
+.record-facts { display: grid; grid-template-columns: minmax(9rem, auto) 1fr; gap: .45rem 1rem; margin: 0; }
+.record-facts dt { color: var(--ink-soft); font-size: .85rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
+.record-facts dd { margin: 0; font-weight: 650; }
+.record-statement { margin: 0; padding-top: .6rem; border-top: 1px solid var(--line); line-height: 1.6; }
+.record-next { margin: 0; line-height: 1.6; }
+.record-missing { display: grid; gap: .35rem; margin: 0; padding: 0 0 0 1.1rem; color: var(--ink-soft); line-height: 1.5; }
+
+/* One saved version, opened on its own. */
+.portfolio-version { gap: clamp(1.2rem, 3vw, 1.8rem); }
+.portfolio-version .text-button { justify-self: start; }
+.version-head { display: grid; gap: .5rem; max-width: 46rem; }
+.version-outcome { margin: 0; color: var(--ink-soft); font-size: 1.05rem; line-height: 1.6; }
+.version-reflection, .version-preview, .version-code { display: grid; gap: .7rem; padding-top: 1.1rem; border-top: 3px solid var(--purple); }
+.version-reflection p { margin: 0; max-width: 46rem; line-height: 1.6; }
+.version-preview iframe { width: 100%; max-width: 100%; min-height: 20rem; background: var(--white); border: 2px solid var(--navy); }
+.version-code details { min-width: 0; max-width: 100%; background: var(--white); border-left: 5px solid var(--amber); }
+.version-code summary { padding: .7rem .9rem; cursor: pointer; font-weight: 800; }
+.version-code pre { margin: 0; min-width: 0; max-width: 100%; max-height: 22rem; overflow: auto; padding: .9rem 1rem; background: var(--navy); color: var(--paper); font: 400 .85rem/1.5 ui-monospace, monospace; }
+.version-code code { white-space: pre; }
+
+/* The same record, shortened, on the progress page. */
+.progress-record { display: grid; gap: .6rem; padding-top: 1.2rem; border-top: 3px solid var(--purple); }
+.progress-record h2 { margin: 0; font: 500 clamp(1.3rem, 3vw, 1.7rem)/1.2 Georgia, serif; }
+.progress-record p { margin: 0; line-height: 1.6; }
+
+/* Grids for the module cards, so eight cards stay readable at every width. */
+@media (min-width: 620px) { .portfolio-module-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1020px) { .portfolio-module-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .portfolio-page { padding: .9rem .8rem 4rem; gap: 1.4rem; }
+  .portfolio-head h1, .version-head h1 { font-size: 2rem; }
+  .portfolio-head .primary-button, .portfolio-final .outline-button, .portfolio-actions .primary-button { width: 100%; }
+  .record-facts { grid-template-columns: 1fr; gap: .15rem; }
+  .record-facts dt { margin-top: .5rem; }
+  .version-preview iframe { min-height: 16rem; }
+}
+
+/* Printing. Only the record sheet survives, and every control is hidden. */
+@media print {
+  .course-header, .course-header nav, nav, button, .kicker, .toast, .local-progress,
+  .portfolio-head, .portfolio-modules, .portfolio-final, .portfolio-actions,
+  .portfolio-status-line, .form-message, .lesson-stepper { display: none !important; }
+  body, .portfolio-page { background: #fff; color: #111936; padding: 0; margin: 0; display: block; }
+  .portfolio-record { border: 0; padding: 0; }
+  .record-sheet { border: 2px solid #111936; max-width: 100%; page-break-inside: avoid; }
+}
+

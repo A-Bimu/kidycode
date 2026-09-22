@@ -2,6 +2,7 @@ import { z } from "zod";
 import { courses } from "@/lib/course-catalog";
 import { establishGuardian, guardianUnauthorized } from "@/lib/guardian-auth";
 import { resolveGuardianLink } from "@/lib/guardian-links";
+import { readCheckpointFiles } from "@/lib/portfolio";
 import { toGuardianSummary } from "@/lib/guardian-view";
 import { buildSummary, type EvidenceInput, type ProgressInput, type ReviewSummaryInput } from "@/lib/summary";
 import { databaseError, getDatabase } from "@/lib/server-database";
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
       return Response.json({ error: "This learning path is not available." }, { status: 409 });
     }
 
-    const [progressRows, evidenceRows, reviewRows, checkpointRows, examRows] = await Promise.all([
+    const [progressRows, evidenceRows, reviewRows, checkpointRows, examRows, learnerRows] = await Promise.all([
       database
         .prepare("SELECT lesson_id AS lessonId, status, updated_at AS updatedAt FROM course_progress WHERE learner_id = ? ORDER BY updated_at")
         .bind(link.learnerId)
@@ -64,13 +65,19 @@ export async function GET(request: Request) {
         .bind(link.learnerId)
         .all<ReviewRow>(),
       database
-        .prepare("SELECT stage_id AS stageId, version, created_at AS createdAt FROM project_checkpoints WHERE learner_id = ? ORDER BY created_at")
+        .prepare("SELECT stage_id AS stageId, version, created_at AS createdAt, project_json AS projectJson FROM project_checkpoints WHERE learner_id = ? ORDER BY created_at")
         .bind(link.learnerId)
-        .all<{ stageId: string; version: number; createdAt: string }>(),
+        .all<{ stageId: string; version: number; createdAt: string; projectJson: string }>(),
       database
         .prepare("SELECT score, total, passed, created_at AS createdAt, answers_json AS answersJson FROM exam_attempts WHERE learner_id = ? ORDER BY created_at")
         .bind(link.learnerId)
         .all<{ score: number; total: number; passed: number; createdAt: string; answersJson: string }>(),
+      /* The project the learner chose, so the record can name it. No other
+       * learner field is read here. */
+      database
+        .prepare("SELECT theme FROM learner_profiles WHERE id = ?")
+        .bind(link.learnerId)
+        .first<{ theme: string }>(),
     ]);
 
     const courseLessonIds = new Set(course.lessons.map((lesson) => lesson.id));
@@ -85,7 +92,15 @@ export async function GET(request: Request) {
       reviews: reviewRows.results
         .filter((row) => courseLessonIds.has(row.lessonId))
         .map((row) => ({ ...row, due: Boolean(row.due) })),
-      checkpoints: checkpointRows.results.filter((row) => courseStageIds.has(row.stageId)),
+      checkpoints: checkpointRows.results
+        .filter((row) => courseStageIds.has(row.stageId))
+        .map((row) => ({
+          stageId: row.stageId,
+          version: row.version,
+          createdAt: row.createdAt,
+          readable: readCheckpointFiles(row.projectJson) !== null,
+        })),
+      theme: learnerRows?.theme || "",
       exams,
     });
 

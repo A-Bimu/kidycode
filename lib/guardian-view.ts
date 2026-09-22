@@ -1,3 +1,4 @@
+import { toGuardianCompletion, type GuardianCompletionRecord } from "@/lib/completion";
 import type { Summary } from "@/lib/summary";
 
 /*
@@ -19,6 +20,9 @@ export type GuardianSummary = {
   finalAssessment: { status: "not-started" | "attempted" | "passed"; bestScore: number; total: number };
   lastActivityAt: string | null;
   nextLesson: { title: string; moduleNumber: number };
+  /* The completion record, reduced to the facts a grown-up may read. It names no
+   * code, no reflection, no answer and no identifier. */
+  completion: GuardianCompletionRecord;
 };
 
 export type GuardianLearnerFacts = {
@@ -61,6 +65,7 @@ export function toGuardianSummary(summary: Summary, learner: GuardianLearnerFact
       title: summary.nextAction.title,
       moduleNumber: summary.nextAction.moduleNumber,
     },
+    completion: toGuardianCompletion(summary.completion),
   };
 }
 
@@ -76,6 +81,7 @@ export const GUARDIAN_SUMMARY_KEYS = [
   "finalAssessment",
   "lastActivityAt",
   "nextLesson",
+  "completion",
 ] as const;
 
 /* Keys that must never appear anywhere in a guardian response, whatever the
@@ -111,6 +117,14 @@ export const GUARDIAN_FORBIDDEN_KEYS = [
   "timesRecovered",
   "reviewStreak",
   "reflection",
+  "projectJson",
+  "codeDigestValue",
+  "files",
+  "html",
+  "css",
+  "javascript",
+  "statement",
+  "sessionCookie",
 ] as const;
 
 /* Collects every key path in a value so a test can assert that nothing outside

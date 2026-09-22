@@ -27,7 +27,9 @@ import {
   type Stage,
   type WorkspaceFiles,
 } from "@/lib/course";
+import PortfolioPage from "@/components/PortfolioPage";
 import { courseRoutes } from "@/lib/course-routes";
+import { buildPreview, type PreviewStorage } from "@/lib/preview";
 import type { Summary } from "@/lib/summary";
 
 type Learner = {
@@ -49,7 +51,6 @@ type Checkpoint = { id: string; stageId: string; version: number; createdAt: str
 type CheckResult = { label: string; passed: boolean };
 type LessonStep = "notes" | "practice" | "check";
 type AutosaveStatus = "idle" | "saving" | "saved" | "error";
-type PreviewStorage = Record<string, string>;
 
 export type TutorNudge = {
   concept: string;
@@ -189,48 +190,6 @@ function fillProjectTokens(source: WorkspaceFiles, projectId: ProjectId, choices
   const replace = (value: string) => Object.entries(replacements)
     .reduce((result, [token, content]) => result.split(token).join(content), value);
   return { html: replace(source.html), css: replace(source.css), javascript: replace(source.javascript) };
-}
-
-function buildPreview(source: WorkspaceFiles, storedValues: PreviewStorage = {}): string {
-  const css = source.css.replace(/<\/style/gi, "<\\/style");
-  const script = source.javascript.replace(/<\/script/gi, "<\\/script");
-  const initialStorage = JSON.stringify(storedValues).replace(/</g, "\\u003c");
-  const previewBridge = `
-    (function () {
-      var memory = ${initialStorage};
-      var storage = {
-        getItem: function (key) { return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : null; },
-        setItem: function (key, value) {
-          memory[String(key)] = String(value);
-          report("storage", JSON.stringify({ operation: "set", key: String(key), value: String(value) }));
-        },
-        removeItem: function (key) {
-          delete memory[String(key)];
-          report("storage", JSON.stringify({ operation: "remove", key: String(key) }));
-        },
-        clear: function () {
-          memory = {};
-          report("storage", JSON.stringify({ operation: "clear" }));
-        },
-        key: function (index) { return Object.keys(memory)[index] || null; }
-      };
-      Object.defineProperty(storage, "length", { get: function () { return Object.keys(memory).length; } });
-      try { Object.defineProperty(window, "localStorage", { configurable: true, value: storage }); } catch (error) {}
-      function report(kind, value) {
-        window.parent.postMessage({ source: "kidycode-preview", kind: kind, value: String(value || "Unknown error") }, "*");
-      }
-      window.addEventListener("error", function (event) { report("error", event.message); });
-      window.addEventListener("unhandledrejection", function (event) {
-        report("error", event.reason && event.reason.message ? event.reason.message : event.reason);
-      });
-      var originalError = console.error.bind(console);
-      console.error = function () {
-        originalError.apply(console, arguments);
-        report("error", Array.prototype.map.call(arguments, String).join(" "));
-      };
-      window.__kidycodeReport = report;
-    }());`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Arial,sans-serif;padding:1rem;color:#111936}img{max-width:100%;height:auto}${css}</style></head><body>${source.html}<script>${previewBridge.replace(/<\/script/gi, "<\\/script")}</script><script>try {${script}\n} catch (error) { window.__kidycodeReport("error", error && error.message ? error.message : error); }</script></body></html>`;
 }
 
 function activityLabel(activity: Lesson): string {
@@ -870,7 +829,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
           onOpenNext={openActivityById}
         />
       ) : view === "project" ? (
-        <ProjectPage course={course} saved={saved} workspaces={workspaces} projectId={projectId} checkpoints={checkpoints} onContinue={() => setView("course")} />
+        <PortfolioPage onContinue={() => setView("course")} />
       ) : (
         <main className="fcc-course-layout">
           <CourseRail
@@ -1392,26 +1351,6 @@ function QuestionList({ questions, answers, setAnswers, showFeedback }: { questi
         );
       })}
     </div>
-  );
-}
-
-function ProjectPage({ course, saved, workspaces, projectId, checkpoints, onContinue }: { course: CourseBundle; saved: Record<string, SavedProgress>; workspaces: Record<string, WorkspaceFiles>; projectId: ProjectId; checkpoints: Checkpoint[]; onContinue: () => void }) {
-  const project = course.projectChoices.find((choice) => choice.id === projectId) || course.projectChoices[0];
-  const firstProject = course.stages[0].lessons.find((lesson) => lesson.activityType === "project");
-  let latestFiles = firstProject ? fillProjectTokens(firstProject.starterFiles, projectId, course.projectChoices) : emptyFiles;
-  for (const stage of course.stages) {
-    const activity = stage.lessons.find((lesson) => lesson.activityType === "project");
-    if (!activity) continue;
-    if (workspaces[activity.id]) latestFiles = workspaces[activity.id];
-    else if (saved[activity.id]) latestFiles = normaliseFiles(parseWorkspace(saved[activity.id].workspaceJson), latestFiles);
-  }
-  return (
-    <main className="website-project-page">
-      <section className="website-project-heading"><div><p className="kicker">YOUR GROWING WEBSITE</p><h1>{project.title}</h1><p>This is the latest version of the website you are building with HTML, CSS and JavaScript.</p></div><button className="primary-button" type="button" onClick={onContinue}>Continue learning</button></section>
-      <section className="website-project-preview"><div><b>Latest browser preview</b><span>Saved lesson code</span></div><iframe title="Latest project preview" sandbox="allow-scripts" srcDoc={buildPreview(latestFiles)} /></section>
-      <section className="project-code-summary"><details><summary>View HTML</summary><pre><code>{latestFiles.html}</code></pre></details><details><summary>View CSS</summary><pre><code>{latestFiles.css}</code></pre></details><details><summary>View JavaScript</summary><pre><code>{latestFiles.javascript}</code></pre></details></section>
-      <section className="checkpoint-history"><h2>Saved module versions</h2>{checkpoints.length ? checkpoints.map((checkpoint) => <article key={checkpoint.id}><span>Module {course.stages.find((stage) => stage.id === checkpoint.stageId)?.number}</span><b>Version {checkpoint.version}</b><time>{new Date(checkpoint.createdAt).toLocaleDateString()}</time></article>) : <p>Your first saved version appears after the first module check.</p>}</section>
-    </main>
   );
 }
 

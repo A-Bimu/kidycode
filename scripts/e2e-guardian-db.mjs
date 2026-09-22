@@ -19,6 +19,8 @@ import { existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import { courses } from "../lib/course-catalog.ts";
+import { GUARDIAN_FORBIDDEN_KEYS, GUARDIAN_SUMMARY_KEYS, collectKeys } from "../lib/guardian-view.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const candidates = [
@@ -300,6 +302,108 @@ await step("a real transfer rotates the access hash and stops the old session", 
   for (const leak of ["accessKey", "accessHash", "learnerId", "kidycode_session"]) {
     assert.equal(JSON.stringify(body).includes(leak), false, `the transfer response must not carry ${leak}`);
   }
+});
+
+/* 6. The grown-up's view of the completion record. */
+await step("a connected grown-up sees the completion record and nothing private", async () => {
+  const course = courses["ages-10-12"];
+  const learner = await newLearner("DbRecord", "ages-10-12", 11);
+
+  /* Every activity and every module version, written as fixtures: the grading paths
+   * they would otherwise re-test are covered by the tutor and backend suites. */
+  const progressInsert = database.prepare(`INSERT INTO course_progress
+    (learner_id, lesson_id, status, question_correct, reflection, workspace_json, updated_at)
+    VALUES (?, ?, 'completed', 1, '', '{}', ?)
+    ON CONFLICT (learner_id, lesson_id) DO UPDATE SET status = 'completed'`);
+  course.lessons.forEach((lesson, index) => {
+    progressInsert.run(learner.id, lesson.id, new Date(Date.now() - 3600_000 + index * 60_000).toISOString());
+  });
+  const checkpointInsert = database.prepare(`INSERT INTO project_checkpoints
+    (id, learner_id, stage_id, version, project_json, reflection, created_at)
+    VALUES (?, ?, ?, 1, ?, ?, ?)
+    ON CONFLICT (id) DO UPDATE SET project_json = excluded.project_json, created_at = excluded.created_at`);
+  const files = JSON.stringify({ html: "<h1>My First Website</h1>", css: "h1 { color: #111936; }", javascript: "console.log('ready');", theme: "interest" });
+  for (const stage of course.stages) {
+    checkpointInsert.run(`${learner.id}:${stage.id}`, learner.id, stage.id, files, "A reflection only the learner may read.", new Date(Date.now() - 1800_000 + stage.number * 60_000).toISOString());
+  }
+
+  /* The final check runs through the real API. */
+  const practicalCode = `<h2>Final check</h2>
+<button id="check">Check work</button>
+<p id="message">Waiting</p>
+<script>
+const button = document.querySelector("#check");
+const message = document.querySelector("#message");
+button.addEventListener("click", function () {
+  message.textContent = "Ready";
+});
+</script>`;
+  const attempt = await learnerApi("/api/exam", {
+    method: "POST",
+    body: JSON.stringify({
+      courseId: "ages-10-12",
+      answers: course.finalExam.map((question) => question.answer),
+      practicalCode,
+      explanation: "I repaired the heading, the selector and the message text.",
+    }),
+  });
+  assert.equal(attempt.status, 200, `the final check must be accepted, received ${attempt.status}`);
+
+  const connection = await learnerApi("/api/guardian/connections", { method: "POST", body: JSON.stringify({ action: "generate" }) });
+  const identity = { id: `guardian-record-${runTag}`, email: `record-${runTag}@example.test` };
+  const linked = await guardianApi("/api/guardian/links", { method: "POST", body: JSON.stringify({ code: connection.body.issuedCode }) }, identity);
+  assert.equal(linked.status, 200, `the grown-up must connect, received ${linked.status}`);
+  const linkRef = linked.body.learner.linkRef;
+
+  const read = await guardianApi(`/api/guardian/summary?link=${encodeURIComponent(linkRef)}`, {}, identity);
+  assert.equal(read.status, 200, `the summary must open, received ${read.status}`);
+  const record = read.body.summary.completion;
+  assert.ok(record, "the grown-up response must carry a completion record");
+  assert.equal(record.status, "complete", `the record must show completion, received ${record.status}`);
+  assert.equal(record.courseTitle, course.courseFacts.title, "the record must name the course");
+  assert.equal(record.projectTitle, "Interest Guide", "the record must name the project");
+  assert.equal(record.activities.completed, 48, "48 activities completed");
+  assert.equal(record.activities.required, 48, "48 activities required");
+  assert.equal(record.modules.saved, 8, "eight module versions saved");
+  assert.equal(record.finalAssessment.status, "passed", "the final assessment is passed");
+  assert.ok(record.completedAt, "a complete record carries the completion date");
+
+  /* Nothing else may cross the boundary. */
+  const serialised = JSON.stringify(read.body);
+  for (const probe of ["<h1", "console.log", "My First Website", "projectJson", "workspace", "reflection", "A reflection only the learner may read", "answers", "practical", "querySelector", "access_hash", "accessHash", "kidycode_session", "learnerId", "guardianId", "linkId", "explanation", "statement"]) {
+    assert.equal(serialised.includes(probe), false, `the grown-up response must not carry ${probe}`);
+  }
+  /* The top level must match the allow list exactly, and no key anywhere may be a
+   * forbidden one. */
+  const topLevel = Object.keys(read.body.summary);
+  for (const key of topLevel) {
+    assert(GUARDIAN_SUMMARY_KEYS.includes(key), `the grown-up response carries a field outside the allow list: ${key}`);
+  }
+  for (const key of GUARDIAN_SUMMARY_KEYS) {
+    assert(topLevel.includes(key), `the grown-up response is missing ${key}`);
+  }
+  const keys = new Set(collectKeys(read.body.summary));
+  for (const forbidden of GUARDIAN_FORBIDDEN_KEYS) {
+    assert(!keys.has(forbidden), `the grown-up response carries a forbidden field: ${forbidden}`);
+  }
+  assert(keys.has("completion"), "the allow list must include the completion record");
+
+  /* A revoked grown-up sees nothing at all. The learner revokes through their own
+   * handle for the connection, which is not the grown-up's handle. */
+  const learnerConnections = await learnerApi("/api/guardian/connections");
+  assert.equal(learnerConnections.body.connections.length, 1, "the learner must see the connected grown-up");
+  const revoked = await learnerApi("/api/guardian/connections", {
+    method: "DELETE",
+    body: JSON.stringify({ action: "revoke", linkRef: learnerConnections.body.connections[0].linkRef }),
+  });
+  assert.equal(revoked.status, 200, `revoking must be accepted, received ${revoked.status}`);
+  const after = await guardianApi(`/api/guardian/summary?link=${encodeURIComponent(linkRef)}`, {}, identity);
+  assert.equal(after.status, 403, `a revoked grown-up must be refused, received ${after.status}`);
+  assert.equal(JSON.stringify(after.body).includes("complete"), false, "a revoked grown-up receives no learner information");
+
+  /* An unrelated grown-up is refused too. */
+  const stranger = await guardianApi(`/api/guardian/summary?link=${encodeURIComponent(linkRef)}`, {}, { id: `guardian-outsider-${runTag}`, email: `outsider-${runTag}@example.test` });
+  assert.equal(stranger.status, 403, `an unrelated grown-up must be refused, received ${stranger.status}`);
 });
 
 database.close();

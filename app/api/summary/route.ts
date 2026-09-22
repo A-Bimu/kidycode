@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { courses } from "@/lib/course-catalog";
+import { readCheckpointFiles } from "@/lib/portfolio";
 import { buildSummary, type EvidenceInput, type ProgressInput, type ReviewSummaryInput } from "@/lib/summary";
 import { authenticateLearner, databaseError, getDatabase, unauthorized } from "@/lib/server-database";
 
@@ -52,9 +53,9 @@ export async function GET(request: Request) {
         .bind(learner.id)
         .all<ReviewRow>(),
       database
-        .prepare("SELECT stage_id AS stageId, version, created_at AS createdAt FROM project_checkpoints WHERE learner_id = ? ORDER BY created_at")
+        .prepare("SELECT stage_id AS stageId, version, created_at AS createdAt, project_json AS projectJson FROM project_checkpoints WHERE learner_id = ? ORDER BY created_at")
         .bind(learner.id)
-        .all<{ stageId: string; version: number; createdAt: string }>(),
+        .all<{ stageId: string; version: number; createdAt: string; projectJson: string }>(),
       /* Only the score and outcome are read. The stored answers and repaired code
        * are never selected, and never leave the database through this route. */
       database
@@ -77,7 +78,15 @@ export async function GET(request: Request) {
       reviews: reviewRows.results
         .filter((row) => courseLessonIds.has(row.lessonId))
         .map((row) => ({ ...row, due: Boolean(row.due) })),
-      checkpoints: checkpointRows.results.filter((row) => courseStageIds.has(row.stageId)),
+      checkpoints: checkpointRows.results
+        .filter((row) => courseStageIds.has(row.stageId))
+        .map((row) => ({
+          stageId: row.stageId,
+          version: row.version,
+          createdAt: row.createdAt,
+          readable: readCheckpointFiles(row.projectJson) !== null,
+        })),
+      theme: learner.theme,
       exams,
     });
 

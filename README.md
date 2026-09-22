@@ -54,6 +54,8 @@ A weak concept is also remembered beyond its own lesson. Before new material, th
 | `GET /api/review` | Concepts this learner should come back to |
 | `POST /api/review` | Record a recall outcome for one concept |
 | `GET /api/summary` | The learner's own progress summary, derived from existing records |
+| `GET /api/portfolio` | The learner's own saved module versions and completion record |
+| `GET /api/portfolio?module=<id>` | One saved module version, with its code and reflection |
 | `GET /api/guardian/connections` | The learner's own connected grown-ups |
 | `POST /api/guardian/connections` | Create a one-time connection code |
 | `DELETE /api/guardian/connections` | End a grown-up's access |
@@ -73,6 +75,21 @@ back to, concepts already strengthened, project versions saved, the final
 assessment status, the most recent activity and one specific next action. Nothing
 is stored twice: every figure is computed from records that already exist. There
 is no school grade and no percentage.
+
+## The project and the completion record
+
+Every learner builds one website across the whole course. My website shows that work
+as a portfolio: eight module cards in learning order, each with the date its version
+was saved and the skill that module added, opening into a focused view with one
+sandboxed preview and the code as it stood then.
+
+A course counts as complete only when all 48 activities are done, one readable
+project version is saved for each of the eight modules, and a final assessment was
+passed. Everything is derived from existing evidence on read, so nothing is stored
+twice and no flag can be edited. When the work is incomplete the record names the
+exact next requirement; when it is complete the learner can print a KidyCode course
+completion record. A connected grown-up can see that record too, and never the code,
+the reflections or the answers.
 
 ## Grown-up access
 

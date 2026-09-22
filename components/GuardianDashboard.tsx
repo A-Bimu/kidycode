@@ -287,6 +287,19 @@ export function GuardianDashboard() {
             <div><dt>Recommended next lesson</dt><dd>{summary.nextLesson.title} (Module {summary.nextLesson.moduleNumber})</dd></div>
           </dl>
 
+          <h3>Completion record</h3>
+          <dl className="guardian-figures guardian-record" data-testid="guardian-record">
+            <div><dt>Course</dt><dd>{summary.completion.courseTitle}</dd></div>
+            <div><dt>Project</dt><dd>{summary.completion.projectTitle}</dd></div>
+            <div><dt>Status</dt><dd>{summary.completion.status === "complete" ? "Complete" : "Still in progress"}</dd></div>
+            <div><dt>Activities completed</dt><dd>{summary.completion.activities.completed} of {summary.completion.activities.required}</dd></div>
+            <div><dt>Project versions saved</dt><dd>{summary.completion.modules.saved} of {summary.completion.modules.required}</dd></div>
+            <div><dt>Final assessment</dt><dd>{summary.completion.finalAssessment.status === "passed" ? "Passed" : summary.completion.finalAssessment.status === "attempted" ? "Attempted, not passed yet" : "Not started"}</dd></div>
+            {summary.completion.status === "complete" && summary.completion.completedAt
+              ? <div><dt>Completed</dt><dd>{formatWhen(summary.completion.completedAt)}</dd></div>
+              : null}
+          </dl>
+
           <h3>Modules</h3>
           <ul className="guardian-modules">
             {summary.modules.map((module) => (

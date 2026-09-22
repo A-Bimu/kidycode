@@ -201,6 +201,23 @@ export function ProgressPage({
         </p>
       </section>
 
+      <section className="progress-record" aria-labelledby="progress-record-heading">
+        <h2 id="progress-record-heading">Course completion record</h2>
+        {summary.completion.complete ? (
+          <p>
+            <b>Complete.</b>{" "}
+            {`${summary.completion.activities.completed} of ${summary.completion.activities.required} activities, ${summary.completion.modules.saved} of ${summary.completion.modules.required} module versions and a passed final assessment.`}
+            {summary.completion.completedAt ? ` Completed ${formatDate(summary.completion.completedAt)}.` : ""}
+          </p>
+        ) : (
+          <p>
+            <b>{`Not complete yet. Next: ${summary.completion.nextRequirement?.label || "finish the course requirements"}.`}</b>{" "}
+            {summary.completion.nextRequirement?.detail || ""}
+          </p>
+        )}
+        <p className="progress-quiet">Open My website to see every saved version and your completion record.</p>
+      </section>
+
       <section className="progress-next" aria-labelledby="progress-next-heading">
         <h2 id="progress-next-heading">Next step</h2>
         <p className="next-title">{summary.nextAction.title}</p>

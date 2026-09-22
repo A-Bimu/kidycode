@@ -38,12 +38,14 @@ for (const requiredText of [
   "quizAnswers",
   "courseId: courseFacts.id",
   "CourseMismatch",
-  "ProjectPage",
+  /* The project area is the learner's portfolio now, in its own component. */
+  "<PortfolioPage",
 ]) {
   assert(interfaceSource.includes(requiredText), `The learner interface is missing: ${requiredText}`);
 }
 
 assert(interfaceSource.includes('sandbox="allow-scripts"'), "Learner previews must use a restricted iframe sandbox.");
+assert(read("components/PortfolioPage.tsx").includes('sandbox="allow-scripts"'), "The portfolio preview must use the same restricted sandbox.");
 assert(!interfaceSource.includes("allow-same-origin"), "Learner previews must not receive same-origin access.");
 assert(!interfaceSource.includes("—"), "The learner interface contains an em dash.");
 assert(!/\bgreen\b/i.test(interfaceSource), "The learner interface contains the banned colour name.");

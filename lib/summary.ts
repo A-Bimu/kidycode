@@ -1,3 +1,4 @@
+import { buildCompletionRecord, type CompletionRecord } from "@/lib/completion";
 import type { CourseBundle, Lesson, Stage } from "@/lib/course";
 import { conceptFocusFor } from "@/lib/tutor";
 
@@ -31,10 +32,19 @@ export type ReviewSummaryInput = {
   reviewStreak: number;
   due: boolean;
 };
-export type CheckpointInput = { stageId: string; version: number; createdAt: string };
+export type CheckpointInput = {
+  stageId: string;
+  version: number;
+  createdAt: string;
+  /* False when the stored project JSON cannot be read. A corrupt version is
+   * reported as needing another save rather than counting toward completion. */
+  readable?: boolean;
+};
 export type ExamInput = { score: number; total: number; passed: boolean; createdAt: string };
 
 export type SummaryInput = {
+  /* The project the learner chose, needed for the completion record's title. */
+  theme: string;
   progress: ProgressInput[];
   evidence: EvidenceInput[];
   reviews: ReviewSummaryInput[];
@@ -102,6 +112,9 @@ export type Summary = {
   finalAssessment: { status: "not-started" | "attempted" | "passed"; attempts: number; bestScore: number; total: number };
   recentActivityAt: string | null;
   nextAction: NextAction;
+  /* The one completion calculation, shared with the portfolio and the grown-up
+   * view so the three can never disagree. */
+  completion: CompletionRecord;
 };
 
 function lessonChecksAvailable(lesson: Lesson): number {
@@ -204,7 +217,27 @@ export function buildSummary(course: CourseBundle, input: SummaryInput): Summary
 
   const courseStageIds = new Set(course.stages.map((stage) => stage.id));
   const courseCheckpoints = input.checkpoints.filter((row) => courseStageIds.has(row.stageId));
-  const savedStageIds = new Set(courseCheckpoints.map((row) => row.stageId));
+  /* A version whose stored JSON cannot be read is not a saved version. */
+  const readableCheckpoints = courseCheckpoints.filter((row) => row.readable !== false);
+  const savedStageIds = new Set(readableCheckpoints.map((row) => row.stageId));
+  const savedStageTimes = new Map<string, string>();
+  for (const row of readableCheckpoints) {
+    const current = savedStageTimes.get(row.stageId);
+    if (!current || row.createdAt > current) savedStageTimes.set(row.stageId, row.createdAt);
+  }
+  const completedLessonTimes = new Map<string, string>();
+  for (const row of input.progress) {
+    if (row.status !== "completed") continue;
+    if (!courseLessonIds.has(row.lessonId)) continue;
+    const current = completedLessonTimes.get(row.lessonId);
+    if (!current || row.updatedAt > current) completedLessonTimes.set(row.lessonId, row.updatedAt);
+  }
+  const completion = buildCompletionRecord(course, {
+    theme: input.theme,
+    completedLessons: completedLessonTimes,
+    savedModules: savedStageTimes,
+    exams: input.exams,
+  });
 
   const bestScore = input.exams.reduce((best, attempt) => Math.max(best, attempt.score), 0);
   const passedExam = input.exams.some((attempt) => attempt.passed);
@@ -259,6 +292,7 @@ export function buildSummary(course: CourseBundle, input: SummaryInput): Summary
       ...input.exams.map((row) => row.createdAt),
     ]),
     nextAction,
+    completion,
   };
 }
 
