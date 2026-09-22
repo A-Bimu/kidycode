@@ -17,6 +17,7 @@ import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { hashAccessKey } from "../lib/access-keys.ts";
 import { normaliseConnectCode } from "../lib/one-time-codes.ts";
 import { claimTransferCode, createTransferCode } from "../lib/transfer-codes.ts";
@@ -110,7 +111,9 @@ class TestDatabase {
 }
 
 function openMigratedDatabase() {
-  const path = join(process.env.LOCALAPPDATA || process.env.TMPDIR || ".", "Temp", `kidycode-races-${crypto.randomUUID().slice(0, 8)}.sqlite`);
+  /* The operating system's temporary directory, so this runs the same way on
+   * Windows, macOS and Linux. Nothing is created inside the repository. */
+  const path = join(tmpdir(), `kidycode-races-${crypto.randomUUID().slice(0, 8)}.sqlite`);
   const sqlite = new DatabaseSync(path);
   sqlite.exec("PRAGMA foreign_keys = ON");
   const files = readdirSync(join(root, "drizzle")).filter((name) => name.endsWith(".sql")).sort();
