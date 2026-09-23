@@ -28,6 +28,9 @@ import type { CourseId } from "@/lib/course";
 
 const postSchema = z.object({
   attemptId: z.string().min(6).max(64),
+  /* A draft saves the learner's work without deciding anything, so an interrupted defence
+   * resumes at the step it was left on. Only a submit decides. */
+  mode: z.enum(["draft", "submit"]).default("submit"),
   explain: z.string().max(2000).default(""),
   predictChoice: z.number().int().min(0).max(3).nullable().default(null),
   changeCode: z.object({
@@ -147,6 +150,13 @@ export async function GET(request: Request) {
         predictCorrect: Boolean(row.predictCorrect),
         changeStatus: row.changeStatus,
         explainResponse: row.explainResponse,
+        /* Enough for the interface to put the learner back on the step they left, without
+         * sending anything the learner should not see. */
+        predictChoice: row.predictResponse === "" ? null : Number(row.predictResponse),
+        changeSaved: row.changeCodeJson !== "{}",
+        ...(row.status === "passed" || row.status === "not_passed" || row.status === "needs-verification"
+          ? decisionCopy(row.status)
+          : {}),
       },
     });
   } catch (error) {
@@ -187,6 +197,21 @@ export async function POST(request: Request) {
     }
 
     const predict = row.predictItemId === template.escalatedPredict.id ? template.escalatedPredict : template.predict;
+
+    /* A draft is saved as evidence and decides nothing: no marks, no outcome, no status. */
+    if (parsed.data.mode === "draft") {
+      const now = new Date().toISOString();
+      await updateDefence(database, base.learner.id, parsed.data.attemptId, {
+        explainResponse: parsed.data.explain,
+        predictResponse: parsed.data.predictChoice === null ? "" : String(parsed.data.predictChoice),
+        changeCodeJson: JSON.stringify(parsed.data.changeCode || {}),
+        predictCorrect: Boolean(row.predictCorrect),
+        changeStatus: row.changeStatus,
+        status: row.status,
+      }, now);
+      return json({ draft: true, savedAt: now });
+    }
+
     const prediction = predictionCorrect(predict, parsed.data.predictChoice);
     const build = finalFormOf(base.content, attempt.formId)?.build;
     if (!build) return notReady();

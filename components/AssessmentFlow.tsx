@@ -80,6 +80,28 @@ type RevisionPackView = {
   readinessPassedAt: string | null;
 };
 type GradedQuestion = { index: number; correct: boolean; correctAnswer: number; explanation: string };
+type DefenceView = {
+  attemptId: string;
+  templateId: string;
+  escalated: boolean;
+  explain: { prompt: string; snippet: string };
+  predict: { prompt: string; snippet: string; options: string[] };
+  change: { prompt: string; instruction: string; snippet: string };
+  status: string;
+  predictChoice: number | null;
+  changeSaved: boolean;
+  explainResponse: string;
+  reason?: string;
+  nextStep?: string;
+};
+type DefenceDecisionView = {
+  status: string;
+  predictCorrect: boolean;
+  changeStatus: string;
+  reason: string;
+  nextStep: string;
+  changeDetail?: string;
+};
 type ReferenceSheet = { rules: string[]; sections: Array<{ id: string; title: string; note: string; lines: string[] }> };
 
 const OUTCOME_LABELS: Record<string, string> = {
@@ -88,7 +110,17 @@ const OUTCOME_LABELS: Record<string, string> = {
   needs_verification: "Needs verification",
 };
 
-type Screen = "choose" | "overview" | "knowledge" | "practical" | "review" | "reference" | "result" | "revision";
+type Screen = "choose" | "overview" | "knowledge" | "practical" | "review" | "reference" | "result" | "revision" | "defence";
+
+/* The steps of the independent-understanding check, in the order a learner meets them. */
+const DEFENCE_STEPS = [
+  "Introduction",
+  "Explain your work",
+  "Predict what the code does",
+  "Make the change",
+  "Check before submitting",
+  "Your result",
+];
 
 export default function AssessmentFlow({
   course,
@@ -120,6 +152,13 @@ export default function AssessmentFlow({
   const [readyAt, setReadyAt] = useState<string | null>(null);
   const [hintLevel, setHintLevel] = useState(0);
   const [pending, setPending] = useState<Array<{ concept: string; label: string }>>([]);
+  const [defence, setDefence] = useState<DefenceView | null>(null);
+  const [defenceStep, setDefenceStep] = useState(1);
+  const [explain, setExplain] = useState("");
+  const [predictChoice, setPredictChoice] = useState<number | null>(null);
+  const [changeCode, setChangeCode] = useState<{ html: string; css: string; javascript: string }>({ html: "", css: "", javascript: "" });
+  const [decision, setDecision] = useState<DefenceDecisionView | null>(null);
+  const [defenceSave, setDefenceSave] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const signals = useRef({ visibilityChanges: 0, pasteEvents: 0, largestPasteChars: 0 });
   const completed = useMemo(() => new Set(completedActivityIds), [completedActivityIds]);
@@ -141,7 +180,7 @@ export default function AssessmentFlow({
    * told where they have arrived rather than being left at the bottom of the last screen. */
   useEffect(() => {
     headingRef.current?.focus();
-  }, [screen, questionIndex, taskIndex]);
+  }, [screen, questionIndex, taskIndex, defenceStep]);
 
   /* Coarse integrity signals, disclosed before the work starts. Counts only: no clipboard
    * contents, no keystrokes, and nothing here can change a mark. */
@@ -282,6 +321,77 @@ export default function AssessmentFlow({
     setReadinessResult(graded);
     if (response.body.passed === true) setReadyAt(String(response.body.readinessPassedAt ?? "ready"));
   }, [busy, pack, post, practiceAnswers, readinessAnswers]);
+
+  /* The code defence. Nothing here decides anything: the learner's own words and choices are
+   * saved as evidence, and the server decides when they submit. Resume is exact, because the
+   * saved draft says which step was reached. */
+  const openDefence = useCallback(async (attemptId: string) => {
+    setBusy(true);
+    setMessage("");
+    const response = await fetch(`/api/assessment/defence?attemptId=${encodeURIComponent(attemptId)}`);
+    const data = await response.json().catch(() => null);
+    setBusy(false);
+    if (!data || !data.defence) {
+      setMessage("The code defence could not be opened. Try again in a moment.");
+      return;
+    }
+    const view = data.defence as DefenceView;
+    setDefence(view);
+    setExplain(view.explainResponse || "");
+    setPredictChoice(view.predictChoice);
+    setChangeCode({ html: "", css: "", javascript: "" });
+    setDefenceSave("idle");
+    if (["passed", "not_passed", "needs-verification"].includes(view.status)) {
+      setDecision({
+        status: view.status,
+        predictCorrect: false,
+        changeStatus: "",
+        reason: view.reason || "",
+        nextStep: view.nextStep || "",
+      });
+      setDefenceStep(6);
+    } else if (view.explainResponse && view.predictChoice !== null) {
+      setDefenceStep(view.changeSaved ? 5 : 4);
+    } else if (view.explainResponse) {
+      setDefenceStep(3);
+    } else {
+      setDefenceStep(1);
+    }
+    setScreen("defence");
+  }, []);
+
+  const saveDefenceDraft = useCallback(async () => {
+    if (!defence) return;
+    setDefenceSave("saving");
+    const response = await post("/api/assessment/defence", {
+      attemptId: defence.attemptId,
+      mode: "draft",
+      explain,
+      predictChoice,
+      changeCode,
+    });
+    setDefenceSave(response.status === 200 && response.body.draft === true ? "saved" : "failed");
+  }, [changeCode, defence, explain, post, predictChoice]);
+
+  const submitDefence = useCallback(async () => {
+    if (!defence || busy) return;
+    setBusy(true);
+    setMessage("");
+    const response = await post("/api/assessment/defence", {
+      attemptId: defence.attemptId,
+      mode: "submit",
+      explain,
+      predictChoice,
+      changeCode,
+    });
+    setBusy(false);
+    if (response.status !== 200 || !response.body.decision) {
+      setMessage(typeof response.body.error === "string" ? response.body.error : "That defence could not be submitted. Your work is still on screen.");
+      return;
+    }
+    setDecision(response.body.decision as unknown as DefenceDecisionView);
+    setDefenceStep(6);
+  }, [busy, changeCode, defence, explain, post, predictChoice]);
 
   if (screen === "choose") {
     return (
@@ -459,6 +569,174 @@ export default function AssessmentFlow({
     );
   }
 
+  if (screen === "defence" && defence) {
+    const stepName = DEFENCE_STEPS[defenceStep - 1];
+    const words = explain.trim().split(/\s+/).filter((word) => word.length > 0).length;
+    const saveLabel = defenceSave === "saving"
+      ? "Saving your work..."
+      : defenceSave === "saved"
+        ? "Your defence is saved."
+        : defenceSave === "failed"
+          ? "Your defence is on screen but not saved yet. Keep this page open and try again."
+          : "Nothing saved yet.";
+
+    const advance = (next: number) => {
+      void saveDefenceDraft();
+      setDefenceStep(next);
+    };
+
+    return (
+      <main className="assessment-page">
+        <p className="assessment-progress">Step {defenceStep} of {DEFENCE_STEPS.length}: {stepName}</p>
+        <ol className="assessment-review">
+          {DEFENCE_STEPS.map((step, index) => (
+            <li key={step}>{step}{index + 1 === defenceStep ? " (you are here)" : index + 1 < defenceStep ? " (done)" : ""}</li>
+          ))}
+        </ol>
+
+        {defenceStep === 1 && (
+          <>
+            <h1 ref={headingRef} tabIndex={-1}>The code defence</h1>
+            <p className="assessment-lede">
+              This is the last part of your final assessment. It shows that the project is your own work.
+            </p>
+            <ul className="assessment-rules">
+              <li>You explain one decision in your own words.</li>
+              <li>You predict what a small piece of code does.</li>
+              <li>You make one small change to your own project, and the server checks it.</li>
+              {defence.escalated && <li>One extra prediction has been added, because your saved work changed while you were working.</li>}
+              <li>Your writing is kept as evidence. It is not marked by a machine that guesses at words.</li>
+              <li>KidyCode does not use a detector, a camera or a microphone, and it cannot tell whether another device is nearby.</li>
+              <li>If the change cannot be checked automatically, your result becomes Needs verification, and a person looks at it with you.</li>
+            </ul>
+            <p className="assessment-save" role="status">{saveLabel}</p>
+            <button className="primary-button" type="button" disabled={busy} onClick={() => advance(2)}>Start the explain task</button>
+            <button className="text-button" type="button" onClick={onExit}>Finish later and return to the course</button>
+          </>
+        )}
+
+        {defenceStep === 2 && (
+          <>
+            <h1 ref={headingRef} tabIndex={-1}>Explain one decision</h1>
+            <p className="assessment-brief">{defence.explain.prompt}</p>
+            {defence.explain.snippet && <pre>{defence.explain.snippet}</pre>}
+            <div className="assessment-editor">
+              <label htmlFor="defence-explain">Your answer, in your own words</label>
+              <textarea
+                id="defence-explain"
+                value={explain}
+                onChange={(event) => setExplain(event.target.value)}
+                onBlur={() => void saveDefenceDraft()}
+              />
+            </div>
+            <p className="assessment-save" role="status">{words} words. {saveLabel}</p>
+            <div className="assessment-actions">
+              <button className="primary-button" type="button" disabled={busy || defenceSave === "saving"} onClick={() => advance(3)}>Save and continue</button>
+              <button className="primary-button" type="button" disabled={busy} onClick={() => setDefenceStep(1)}>Back to the introduction</button>
+            </div>
+          </>
+        )}
+
+        {defenceStep === 3 && (
+          <>
+            <h1 ref={headingRef} tabIndex={-1}>Predict what the code does</h1>
+            <p className="assessment-brief">{defence.predict.prompt}</p>
+            <pre>{defence.predict.snippet}</pre>
+            <fieldset className="assessment-question">
+              <legend>Choose the result you expect</legend>
+              {defence.predict.options.map((option, index) => (
+                <label key={option}>
+                  <input
+                    type="radio"
+                    name="defence-predict"
+                    checked={predictChoice === index}
+                    onChange={() => setPredictChoice(index)}
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </fieldset>
+            <p className="assessment-save" role="status">{saveLabel}</p>
+            <div className="assessment-actions">
+              <button className="primary-button" type="button" disabled={busy || predictChoice === null || defenceSave === "saving"} onClick={() => advance(4)}>Save and continue</button>
+              <button className="primary-button" type="button" disabled={busy} onClick={() => setDefenceStep(2)}>Back to the explain task</button>
+            </div>
+          </>
+        )}
+
+        {defenceStep === 4 && (
+          <>
+            <h1 ref={headingRef} tabIndex={-1}>Make the change</h1>
+            <p className="assessment-brief">{defence.change.instruction}</p>
+            {defence.change.snippet && <pre>{defence.change.snippet}</pre>}
+            <p>Your project is loaded as the starting point. Change only what the task asks for.</p>
+            {(["html", "css", "javascript"] as const).map((file) => (
+              <div key={file} className="assessment-editor">
+                <label htmlFor={`defence-change-${file}`}>{file === "javascript" ? "JavaScript" : file.toUpperCase()}</label>
+                <textarea
+                  id={`defence-change-${file}`}
+                  spellCheck={false}
+                  value={changeCode[file]}
+                  onChange={(event) => setChangeCode((current) => ({ ...current, [file]: event.target.value }))}
+                  onBlur={() => void saveDefenceDraft()}
+                />
+              </div>
+            ))}
+            <p className="assessment-save" role="status">{saveLabel}</p>
+            <div className="assessment-actions">
+              <button className="primary-button" type="button" disabled={busy || defenceSave === "saving"} onClick={() => advance(5)}>Save and continue</button>
+              <button className="primary-button" type="button" disabled={busy} onClick={() => setDefenceStep(3)}>Back to the prediction</button>
+            </div>
+          </>
+        )}
+
+        {defenceStep === 5 && (
+          <>
+            <h1 ref={headingRef} tabIndex={-1}>Check before submitting</h1>
+            <ul className="assessment-review">
+              <li>{words >= 12 ? `Your explanation is ${words} words long.` : `Your explanation is only ${words} words. A few sentences are needed before it counts as evidence.`}</li>
+              <li>{predictChoice === null ? "You have not chosen a prediction." : `You chose prediction ${predictChoice + 1}.`}</li>
+              <li>{(changeCode.html + changeCode.css + changeCode.javascript).trim().length > 0 ? "Your change is ready to be checked." : "You have not written the change yet."}</li>
+              <li>Submitting finishes the defence and decides it once, even if you press the button twice.</li>
+            </ul>
+            {message && <p className="form-message is-error" role="alert">{message}</p>}
+            <p className="assessment-save" role="status">{saveLabel}</p>
+            <button className="primary-button" type="button" disabled={busy} onClick={() => void submitDefence()}>
+              {busy ? "Submitting..." : "Submit the defence"}
+            </button>
+            <button className="text-button" type="button" onClick={() => setDefenceStep(4)}>Back to the change</button>
+          </>
+        )}
+
+        {defenceStep === 6 && decision && (
+          <>
+            <h1 ref={headingRef} tabIndex={-1}>
+              {decision.status === "passed" ? "Passed" : decision.status === "needs-verification" ? "Needs verification" : "Not passed yet"}
+            </h1>
+            <p className={`assessment-outcome is-${decision.status === "passed" ? "passed" : decision.status === "needs-verification" ? "needs_verification" : "not_passed_yet"}`}>
+              {decision.status === "passed" ? "Your independent-understanding check is complete." : decision.status === "needs-verification" ? "This needs a person to look at it." : "This is not passed yet."}
+            </p>
+            {decision.reason && <p>{decision.reason}</p>}
+            {decision.changeDetail && <p>{decision.changeDetail}</p>}
+            {decision.status === "needs-verification" && (
+              <section aria-label="What Needs verification means">
+                <h2>What Needs verification means</h2>
+                <p>
+                  Nothing is wrong and nothing is taken away. KidyCode could not confirm your change on its own, so a
+                  grown-up or a teacher checks it with you. Your marks stay exactly as they are, and your project keeps
+                  every skill it already earned.
+                </p>
+              </section>
+            )}
+            {decision.nextStep && <p className="assessment-next">{decision.nextStep}</p>}
+            <button className="primary-button" type="button" onClick={() => setScreen("choose")}>Back to the assessments</button>
+            <button className="text-button" type="button" onClick={onExit}>Return to the course</button>
+          </>
+        )}
+      </main>
+    );
+  }
+
   if (screen === "result" && result) {
     const outcome = OUTCOME_LABELS[result.attempt.outcome] ?? result.attempt.outcome;
     return (
@@ -530,6 +808,18 @@ export default function AssessmentFlow({
           </section>
         )}
         {message && <p className="form-message is-error" role="alert">{message}</p>}
+        {result.defenceRequired && result.attempt.outcome !== "passed" && (
+          <section aria-label="Independent understanding">
+            <h2>Show the work is yours</h2>
+            <p>
+              The final assessment also asks you to explain one decision, predict what a piece of code does and make one
+              small change. It is not marked until you submit it.
+            </p>
+            <button className="primary-button" type="button" disabled={busy} onClick={() => void openDefence(result.attempt.id)}>
+              Start the code defence
+            </button>
+          </section>
+        )}
         <section aria-label="Your answers">
           <h2>Your answers</h2>
           {result.corrections.map((correction, index) => {

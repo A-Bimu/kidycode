@@ -61,6 +61,14 @@ const insert = database.prepare(`INSERT INTO course_progress
 
 for (const lesson of course.lessons.slice(0, howMany)) insert.run(learnerId, lesson.id, now);
 
+/* The final assessment also waits for a saved project version per module. */
+const checkpoint = database.prepare(`INSERT OR REPLACE INTO project_checkpoints
+  (id, learner_id, stage_id, version, reflection, project_json, created_at)
+  VALUES (?, ?, ?, 1, 'Seeded project version.', '{}', ?)`);
+if (howMany === total) {
+  for (const stage of course.stages) checkpoint.run(`${learnerId}-${stage.id}`, learnerId, stage.id, now);
+}
+
 console.log(JSON.stringify({
   learnerId,
   cookie,
