@@ -14,7 +14,10 @@ import {
   type CodeFiles,
   type CodeTask,
   type CourseAssessment,
+  type DefenceTask,
+  type DefenceTemplate,
   type ItemResult,
+  type ItemResultStatus,
   type KnowledgeItem,
   type ModuleForm,
   type FinalForm,
@@ -528,6 +531,123 @@ export function gradeReadiness(
 }
 
 /* ------------------------------------------------------------------ defence --- */
+
+/*
+ * Grading the code defence.
+ *
+ * The prediction is decided against the reviewed answer index stored with the template, and
+ * the live change is decided by exactly the same deterministic requirement checker the rest of
+ * the engine uses. The explanation is stored as evidence and never marked by keyword scoring,
+ * because guessing at free text would be the unreliable thing this design exists to avoid.
+ */
+
+export function predictionCorrect(task: DefenceTask, chosen: number | null): { correct: boolean; correctAnswer: number } {
+  const answer = typeof task.answer === "number" ? task.answer : -1;
+  return { correct: chosen !== null && chosen === answer, correctAnswer: answer };
+}
+
+/* A change task is one requirement on the learner's own submitted files, so it is graded by
+ * the ordinary requirement grader rather than by anything new. */
+export function changeTaskFrom(template: DefenceTemplate, like: CodeTask): CodeTask | null {
+  const requirement = template.change.changeRequirement;
+  if (!requirement) return null;
+  /* The change is graded in the shape of the build the learner already submitted, so it uses
+   * the same requirement checker and the same file bounds as everything else. */
+  return {
+    ...like,
+    id: template.change.id,
+    title: template.change.prompt,
+    brief: template.change.changeInstruction || template.change.prompt,
+    marks: 1,
+    requirements: [{
+      id: `${template.change.id}-r1`,
+      marks: 1,
+      label: template.change.changeInstruction || template.change.prompt,
+      check: requirement,
+      concept: template.change.revision,
+    }],
+  };
+}
+
+export function gradeChange(template: DefenceTemplate, files: Partial<CodeFiles>, like: CodeTask, baseline?: Partial<CodeFiles>): { status: ItemResultStatus; awarded: number; detail: string } {
+  const task = changeTaskFrom(template, like);
+  if (!task) {
+    return { status: "needs-verification", awarded: 0, detail: "This change could not be checked on its own, so it needs a person to look." };
+  }
+  /* The baseline is the build the learner actually submitted, so a requirement that asks for
+   * one more of something is decided against their own work rather than against nothing. */
+  const graded = gradeCodeTask(task, files, baseline);
+  const requirement = graded.requirements[0];
+  if (!requirement) return { status: "needs-verification", awarded: 0, detail: "This change could not be checked on its own." };
+  return { status: requirement.status, awarded: requirement.awarded, detail: requirement.detail };
+}
+
+export type DefenceDecision = {
+  status: "passed" | "not_passed" | "needs-verification";
+  predictCorrect: boolean;
+  changeStatus: string;
+  reason: string;
+  nextStep: string;
+};
+
+/*
+ * The decision itself. A learner passes when their own words are long enough to be evidence,
+ * their prediction is right and their live change satisfies the new requirement. An
+ * undecidable change is never guessed at in either direction: it becomes Needs verification
+ * with a plain explanation of what happens next.
+ */
+export function decideDefence(input: {
+  explain: string;
+  predictionCorrect: boolean;
+  changeStatus: ItemResultStatus;
+}): DefenceDecision {
+  const words = input.explain.trim().split(/\s+/).filter((word) => word.length > 0).length;
+  const enoughWords = words >= DEFENCE_MIN_WORDS;
+
+  if (input.changeStatus === "needs-verification") {
+    return {
+      status: "needs-verification",
+      predictCorrect: input.predictionCorrect,
+      changeStatus: input.changeStatus,
+      reason: "The change you made could not be checked automatically, so a person needs to look at it.",
+      nextStep: "Keep your project as it is and ask your connected grown-up or your teacher to check the change with you.",
+    };
+  }
+  if (!enoughWords) {
+    return {
+      status: "not_passed",
+      predictCorrect: input.predictionCorrect,
+      changeStatus: input.changeStatus,
+      reason: "The explanation was too short to show how the work was made.",
+      nextStep: "Write a few sentences about one decision in your project, then try the defence again.",
+    };
+  }
+  if (!input.predictionCorrect) {
+    return {
+      status: "not_passed",
+      predictCorrect: false,
+      changeStatus: input.changeStatus,
+      reason: "The prediction did not match what the code does.",
+      nextStep: "Read the snippet once more, work out what it does line by line, then try the defence again.",
+    };
+  }
+  if (input.changeStatus !== "met") {
+    return {
+      status: "not_passed",
+      predictCorrect: true,
+      changeStatus: input.changeStatus,
+      reason: "The small change did not yet do what the task asked.",
+      nextStep: "Make the change again in your own project, then submit the defence once more.",
+    };
+  }
+  return {
+    status: "passed",
+    predictCorrect: true,
+    changeStatus: input.changeStatus,
+    reason: "The explanation, the prediction and the live change all hold together.",
+    nextStep: "Your independent-understanding check is complete for this assessment.",
+  };
+}
 
 export function defenceComplete(explain: string, predictChosen: number | null, changeSubmitted: boolean): boolean {
   const words = explain.trim().split(/\s+/).filter((word) => word.length > 0).length;

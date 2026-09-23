@@ -115,8 +115,13 @@ assert(!/searchParams\.get\("courseId"\)/.test(routes), "the course must never c
  * key, the explanation or the grading rule. */
 assert(/export function toClientKnowledge/.test(engineSource), "knowledge items must pass through a client projection.");
 assert(/export function toClientTask/.test(engineSource), "tasks must pass through a client projection.");
+/* The rule is about the two projection functions, so the region is bounded to them rather than
+ * to the end of the file: later sections of the engine legitimately mention a grading check. */
+const projectionStart = engineSource.indexOf("export function toClientKnowledge");
+const taskStart = engineSource.indexOf("export function toClientTask");
+const regionEnd = engineSource.indexOf("\n/*", taskStart + 10);
 const projection = engineSource
-  .slice(engineSource.indexOf("export function toClientKnowledge"))
+  .slice(projectionStart, regionEnd > taskStart ? regionEnd : undefined)
   .replace(/\/\*[\s\S]*?\*\//g, " ")
   .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
 assert(!/answer:/.test(projection), "the client projection must not carry the correct answer.");

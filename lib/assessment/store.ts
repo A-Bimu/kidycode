@@ -595,6 +595,22 @@ export async function flagAttemptDefence(
     .run();
 }
 
+/* After the defence the attempt's own outcome is recomputed, because passing the defence is
+ * part of passing the final assessment. Only the defence fields change: the marks stay the
+ * ones already stored and recorded, so a later defence can never alter a mark. */
+export async function updateAttemptOutcome(
+  database: D1Database,
+  learnerId: string,
+  attemptId: string,
+  update: { outcome: string; needsVerification: boolean; stage: string },
+): Promise<void> {
+  await database
+    .prepare(`UPDATE assessment_attempts SET outcome = ?, needs_verification = ?, stage = ?
+      WHERE id = ? AND learner_id = ?`)
+    .bind(update.outcome.slice(0, 32), update.needsVerification ? 1 : 0, update.stage.slice(0, 24), attemptId, learnerId)
+    .run();
+}
+
 /* --------------------------------------------------------------- credentials -- */
 
 export type CredentialRow = {
