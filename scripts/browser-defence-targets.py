@@ -119,6 +119,23 @@ def run_once(dj, sw, course_id, route, width, expect, attempt_index):
         os.remove(report_path)
 
     cookie, seed_data = sw.seed(course_id, width, f"t{width}{expect[:2]}{attempt_index}")
+    seeded_attempt = None
+    if expect == "Needs verification":
+        # The route assigns a template from the attempt id, so the starting state is seeded with an
+        # id chosen to land on a template whose change the grader cannot decide without the
+        # learner's own code to compare against. Only the starting state is seeded: the browser
+        # still submits the defence and the server still decides.
+        seeded = subprocess.run(
+            ["node", "--import", "tsx", "--no-warnings", "scripts/defence-verify-seed.mjs",
+             course_id, "kind:increase", f"Verify{width}Needs"],
+            capture_output=True, text=True, check=False,
+        )
+        if seeded.returncode != 0:
+            raise SystemExit(f"HARNESS: {course_id} has no undecidable-by-design change template: "
+                             f"{seeded.stderr.strip()[:240]}")
+        seeded_attempt = json.loads(seeded.stdout.strip().splitlines()[-1])
+        cookie = seeded_attempt["cookie"]
+        seed_data = {"learnerId": seeded_attempt["learnerId"]}
     bj = dj.load_driver()
     bj.ensure_chrome()
     page = bj.Page()
@@ -164,6 +181,9 @@ def run_once(dj, sw, course_id, route, width, expect, attempt_index):
     # The fixture is read now, from the attempt the browser really submitted.
     attempt = attempt_for(seed_data["learnerId"])
     facts = fixture(attempt["id"])
+    if seeded_attempt and facts["templateId"] != seeded_attempt["templateId"]:
+        raise SystemExit(f"FAILED {label}: the route assigned {facts['templateId']} but the seeded id "
+                         f"was chosen for {seeded_attempt['templateId']}")
     change = facts["satisfyingChange"] if expect == "Passed" else facts["undecidableChange"]
     if change is None and expect == "Needs verification":
         # A decidable template for this attempt: nothing was handed in that the engine cannot
