@@ -74,6 +74,8 @@ def main():
     if len(sys.argv) < 6:
         raise SystemExit(__doc__)
     course_id, route, cookie, width, report_path = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), sys.argv[5]
+    predict_index = int(sys.argv[6]) if len(sys.argv) > 6 else 0
+    change_index = int(sys.argv[7]) if len(sys.argv) > 7 else 0
     if cookie.startswith("kidycode_session="):
         cookie = cookie.split("=", 1)[1]
     if not cookie.strip():
@@ -139,11 +141,14 @@ def main():
         if blocked.get("clicked"):
             raise Failure("the prediction step was left without choosing a prediction")
 
-        picked = pick_prediction(page)
+        picked = pick_prediction(page, predict_index)
         report["facts"]["predictionPicked"] = picked
+        report["facts"]["predictIndex"] = predict_index
         page.click("Save and continue")
         report["screens"].append(bj.audit(page, f"{width} defence change"))
-        typed_change = type_into(page, "#defence-change-css", "body { color: #111936; }\n.card { color: #ee9d2b; }")
+        typed_change = type_into(page, f"#defence-change-{CHANGE_CANDIDATES[change_index][0]}",
+                                 CHANGE_CANDIDATES[change_index][1])
+        report["facts"]["changeIndex"] = change_index
         page.click("Save and continue")
         report["screens"].append(bj.audit(page, f"{width} defence review"))
         report["facts"]["changeTyped"] = typed_change
@@ -192,10 +197,10 @@ def type_into(page, selector, text):
 
 
 PICK = r"""
-(() => {
+((args) => {
   const inputs = [...document.querySelectorAll('input[name="defence-predict"]')];
   if (inputs.length === 0) return JSON.stringify({ picked: false, options: 0 });
-  const input = inputs[0];
+  const input = inputs[Math.min(args.index, inputs.length - 1)];
   const label = input.closest("label");
   (label || input).click();
   if (!input.checked) {
@@ -203,13 +208,22 @@ PICK = r"""
     input.dispatchEvent(new Event("click", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }
-  return JSON.stringify({ picked: input.checked, options: inputs.length });
-})()
+  return JSON.stringify({ picked: input.checked, options: inputs.length, index: args.index });
+})(%s)
 """
 
 
-def pick_prediction(page):
-    return json.loads(page.evaluate(PICK))
+def pick_prediction(page, index=0):
+    return json.loads(page.evaluate(PICK % json.dumps({"index": index})))
+
+
+# Small, taught-material changes on the learner's own project. The hunt varies both the
+# prediction and the change, because a defence is decided once and cannot be re-decided.
+CHANGE_CANDIDATES = [
+    ("css", "body { color: #111936; }\n.card { color: #ee9d2b; }"),
+    ("html", "<!doctype html>\n<html lang=\"en\">\n<body>\n<header><h1>My club</h1><nav><a href=\"#news\">News</a></nav></header>\n<main><section id=\"news\"><h2>This week</h2><p>We meet on Saturday.</p>\n<ul><li>Biscuits</li><li>Badges</li><li>Photos</li></ul></section></main>\n<img src=\"club.webp\" alt=\"The club table with three finished models\">\n<footer><p>A page by a member.</p></footer>\n</body>\n</html>"),
+    ("javascript", "const list = document.querySelector('#list');\nconst item = document.createElement('li');\nitem.textContent = 'One more';\nlist.append(item);"),
+]
 
 
 # React keeps its own value, so a plain assignment is ignored: the native setter is used and an

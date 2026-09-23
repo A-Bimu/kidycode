@@ -18,6 +18,9 @@ import {
   gradeCodeTask,
   gradePractice,
   gradeReadiness,
+  gradeChange,
+  decideDefence,
+  predictionCorrect,
   gradeKnowledge,
   revisionConceptsFrom,
   scoreAttempt,
@@ -437,6 +440,64 @@ await sweep("secure skills, the first action and readiness follow the product ru
     assert.equal(view.guided.length, 2);
     assert.equal(view.hints.length, 3);
     assert.equal(view.readinessPassedAt, "2026-01-01T00:00:00.000Z");
+  });
+});
+
+await sweep("the code defence decision follows the product rules", async () => {
+  const long = "I put the list inside the main region so the page has one clear main area, and the headings step down one level at a time so a reader can follow the shape of the page.";
+
+  check("a correct prediction, a real explanation and a met change pass", () => {
+    const decision = decideDefence({ explain: long, predictionCorrect: true, changeStatus: "met" });
+    assert.equal(decision.status, "passed");
+    assert.ok(decision.nextStep.length > 10);
+  });
+  check("a wrong prediction never passes, however good the change", () => {
+    assert.equal(decideDefence({ explain: long, predictionCorrect: false, changeStatus: "met" }).status, "not_passed");
+  });
+  check("a thin explanation never passes", () => {
+    assert.equal(decideDefence({ explain: "I chose it.", predictionCorrect: true, changeStatus: "met" }).status, "not_passed");
+  });
+  check("an unmet change never passes", () => {
+    assert.equal(decideDefence({ explain: long, predictionCorrect: true, changeStatus: "unmet" }).status, "not_passed");
+  });
+  check("an undecidable change becomes Needs verification, never a guess", () => {
+    const decision = decideDefence({ explain: long, predictionCorrect: true, changeStatus: "needs-verification" });
+    assert.equal(decision.status, "needs-verification");
+    assert.ok(/person/.test(decision.nextStep), "the learner was not told a person will look at it");
+  });
+  check("the prediction is decided against the reviewed index, not the client", () => {
+    const task = { id: "t", courseId: "ages-10-12", kind: "predict", prompt: "A prediction task with enough words.", snippet: "x", options: ["a", "b", "c", "d"], answer: 2, explanation: "Because that is what the code does.", objectives: ["o"], revision: "r" };
+    assert.equal(predictionCorrect(task, 2).correct, true);
+    assert.equal(predictionCorrect(task, 0).correct, false);
+    assert.equal(predictionCorrect(task, null).correct, false);
+    assert.equal(predictionCorrect(task, 0).correctAnswer, 2);
+  });
+  check("a live change is graded by the ordinary requirement checker", () => {
+    const template = {
+      id: "t1",
+      courseId: "ages-10-12",
+      objectives: ["o"],
+      explain: { id: "e", courseId: "ages-10-12", kind: "explain", prompt: "Explain something in your own words.", snippet: "x", explanation: "What a good answer contains.", objectives: ["o"], revision: "r" },
+      predict: { id: "p", courseId: "ages-10-12", kind: "predict", prompt: "Predict what this does.", snippet: "x", options: ["a", "b", "c", "d"], answer: 1, explanation: "Because of the rules.", objectives: ["o"], revision: "r" },
+      change: {
+        id: "c",
+        courseId: "ages-10-12",
+        kind: "change",
+        prompt: "Add one more colour to your stylesheet.",
+        snippet: "x",
+        explanation: "One more colour declaration.",
+        objectives: ["o"],
+        revision: "r",
+        changeInstruction: "Add one more rule that sets a text colour in your own stylesheet.",
+        changeRequirement: { kind: "css-declaration", file: "css", property: "color", value: "colour" },
+      },
+      escalatedPredict: { id: "x", courseId: "ages-10-12", kind: "predict", prompt: "A harder prediction task.", snippet: "x", options: ["a", "b", "c", "d"], answer: 0, explanation: "Because of the rules.", objectives: ["o"], revision: "r" },
+    };
+    const like = { id: "b", version: "v", courseId: "ages-10-12", moduleId: "m", formVariant: "A", title: "Build", brief: "b", marks: 50, editableFiles: ["html", "css", "javascript"], starterFiles: { html: "", css: "", javascript: "" }, requirements: [], difficultyProfile: {}, objectives: [] };
+    const met = gradeChange(template, { css: ".card { color: #ee9d2b; }" }, like);
+    assert.equal(met.status, "met", `a colour declaration did not satisfy the change: ${met.detail}`);
+    const unmet = gradeChange(template, { css: ".card { padding: 1rem; }" }, like);
+    assert.equal(unmet.status, "unmet", "an unrelated change satisfied the requirement");
   });
 });
 

@@ -32,11 +32,11 @@ def require_websocket():
     print(f"websocket ready for {sys.executable}")
 
 
-def seed(course_id, width):
+def seed(course_id, width, tag="all"):
     """Create a fresh learner and return their cookie. The seed travels through a file, never
     through shell substitution, and is validated before it is used."""
-    path = os.path.join(TEMP, f"seed-{course_id}-{width}.json")
-    nickname = f"Sweep{width}x{course_id.replace('-', '')}"
+    path = os.path.join(TEMP, f"seed-{course_id}-{width}-{tag}.json")
+    nickname = (f"Sweep{width}{course_id.replace('-', '')}{tag}")[:20]
     result = subprocess.run(
         ["node", "--import", "tsx", "--no-warnings", "scripts/e2e-browser-seed.mjs", course_id, "all", nickname],
         capture_output=True, text=True, check=False,
@@ -53,6 +53,36 @@ def seed(course_id, width):
         raise SystemExit(f"HARNESS: the seeded learner cannot reach the final assessment for {course_id}")
     os.remove(path)
     return cookie, seed_data
+
+
+def outcome_hunt(courses, width=320, attempts=4):
+    """A defence is decided once, and the correct prediction is deliberately not visible to the
+    client, so a learner can only be observed passing by trying. This runs one fresh learner per
+    prediction option with a different small change, and records which outcomes are reachable in
+    a browser. It is bounded on purpose."""
+    seen = {}
+    for course_id, route in courses:
+        for index in range(attempts):
+            tag = f"hunt{index}"
+            report_path = os.path.join(TEMP, f"report-{course_id}-{width}-{tag}.json")
+            try:
+                cookie, _ = seed(course_id, width, tag)
+            except SystemExit as error:
+                print(f"  HUNT SEED FAILED {course_id} {tag}: {error}")
+                continue
+            run = subprocess.run(
+                [sys.executable, "scripts/browser-journey-defence.py", course_id, route, cookie,
+                 str(width), report_path, str(index), str(index % 3)],
+                capture_output=True, text=True, check=False,
+            )
+            if not os.path.exists(report_path):
+                print(f"  HUNT {course_id} predict {index}: no report ({(run.stderr or run.stdout).strip()[-120:]})")
+                continue
+            report = json.load(open(report_path, encoding="utf-8"))
+            outcome = report.get("facts", {}).get("outcome", "-")
+            seen.setdefault(course_id, []).append(outcome)
+            print(f'  HUNT {course_id} predict {index} change {index % 3}: outcome={outcome} ok={report.get("ok")} error={report.get("error")}')
+    return seen
 
 
 def main():
@@ -113,10 +143,19 @@ def main():
 
     outcomes = {row["outcome"] for row in rows}
     print(f"\njourneys finished {len(rows)} of {len(courses) * len(WIDTHS)}, outcomes observed {sorted(outcomes)}")
+
+    print("\noutcome hunt (a decided defence cannot be re-decided, so a pass can only be observed by trying):")
+    hunted = outcome_hunt([("ages-10-12", "/learn"), ("adults", "/learn/adults")], 320, 4)
+    for course_id, seen in hunted.items():
+        print(f"  {course_id}: {seen}")
+        outcomes.update(seen)
+
     for failure in failures:
         print("  FAILURE:", failure)
-    if "Passed" not in outcomes and "Needs verification" not in outcomes:
-        failures.append("neither a passed defence nor Needs verification was observed in a browser")
+    if "Passed" not in outcomes:
+        failures.append("a passed defence was never observed in a browser")
+    if "Needs verification" not in outcomes:
+        failures.append("Needs verification was never observed in a browser")
     if failures:
         print(f"\ndefence sweep FAILED with {len(failures)} problem(s)")
         raise SystemExit(1)
