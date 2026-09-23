@@ -326,4 +326,29 @@ would have left one commit whose bank was not wired in.
 
 ### Phase 4
 
-Pending.
+Complete and verified in a real browser. `scripts/browser-journey.py` drives an isolated
+headless Chrome over CDP and `scripts/browser-sweep.sh` runs every course; the report for each
+course is thirty screens audited at 320, 768 and 1440 pixels.
+
+| Course | Screens | Max overflow | Green | Em dashes | Unlabelled controls | Wrong h1 count |
+| --- | --- | --- | --- | --- | --- | --- |
+| ages 10 to 12 | 30 | 0 | 0 | 0 | 0 | none |
+| ages 13 to 15 | 30 | 0 | 0 | 0 | 0 | none |
+| ages 16 to 18 | 30 | 0 | 0 | 0 | 0 | none |
+| adults | 30 | 0 | 0 | 0 | 0 | none |
+
+Saved status was read off the page as "Your work is saved." on every course, real Tab presses
+landed on labelled controls with a visible ring, and with `prefers-reduced-motion: reduce`
+emulated the computed transition and animation durations were both 0s.
+
+One real defect was found by the sweep and fixed in `c29f4e2`: the loading guard rendered
+before the chooser, so opening Module checks showed a spinner with no buttons and no attempt
+was ever started.
+
+### Phase 5
+
+In progress. The revision library contract (`lib/assessment/revision/index.ts`) and
+`scripts/validate-assessment-revision.mjs` are committed with empty pack files; the four
+content passes that fill them are running. Remaining for this phase: the results screen with
+skill-level secure and needs-revision lists, the revision pages, the readiness check that
+unlocks a retake, and the journey tests.
