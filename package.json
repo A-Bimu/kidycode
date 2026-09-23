@@ -16,7 +16,7 @@
     "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate",
     "test:browser:defence": "bash scripts/browser-sweep-defence.sh",
     "test:browser:targets": "python scripts/browser-defence-targets.py",
-    "test:e2e": "node --import tsx scripts/e2e-tutor.mjs && node --import tsx --no-warnings scripts/e2e-guardian-db.mjs && node --import tsx --no-warnings scripts/e2e-portfolio.mjs && node --import tsx --no-warnings scripts/e2e-lifecycle.mjs && node --import tsx --no-warnings scripts/e2e-transfer-races.mjs && node --import tsx --no-warnings scripts/e2e-assessment-api.mjs && node --import tsx --no-warnings scripts/e2e-assessment-revision.mjs && node --import tsx --no-warnings scripts/e2e-assessment-defence.mjs"
+    "test:e2e": "bash scripts/e2e-all.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
