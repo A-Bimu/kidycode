@@ -10,3 +10,7 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 npm-debug.log*
 *.pem
+
+# Generated Python bytecode from the browser-journey harnesses
+__pycache__/
+*.pyc

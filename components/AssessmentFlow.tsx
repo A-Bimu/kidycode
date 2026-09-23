@@ -606,7 +606,9 @@ export default function AssessmentFlow({
               <li>You make one small change to your own project, and the server checks it.</li>
               {defence.escalated && <li>One extra prediction has been added, because your saved work changed while you were working.</li>}
               <li>Your writing is kept as evidence. It is not marked by a machine that guesses at words.</li>
-              <li>KidyCode does not use a detector, a camera or a microphone, and it cannot tell whether another device is nearby.</li>
+              <li>Complete this assessment independently, without AI-generated answers. You may use the built-in reference sheet.</li>
+              <li>KidyCode does not use camera or microphone monitoring, and it does not use an AI-content detector.</li>
+              <li>Leaving the tab or pasting text is counted only so the right task can be chosen. It never lowers a mark and never fails you.</li>
               <li>If the change cannot be checked automatically, your result becomes Needs verification, and a person looks at it with you.</li>
             </ul>
             <p className="assessment-save" role="status">{saveLabel}</p>
