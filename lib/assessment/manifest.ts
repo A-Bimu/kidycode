@@ -2,6 +2,7 @@ import { courses } from "@/lib/course-catalog";
 import { type CourseAssessment } from "@/lib/assessment/types";
 import { ages10to12Assessment } from "@/lib/assessment/bank/ages-10-12";
 import { ages10to12Final } from "@/lib/assessment/bank/ages-10-12-final";
+import { templatesFor } from "@/lib/assessment/defence";
 import { ages13to15Assessment } from "@/lib/assessment/bank/ages-13-15";
 import { ages13to15Final } from "@/lib/assessment/bank/ages-13-15-final";
 import { ages16to18Assessment } from "@/lib/assessment/bank/ages-16-18";
@@ -33,7 +34,7 @@ function mergeAssessment(moduleBank: CourseAssessment, finalBank?: CourseAssessm
   return {
     ...moduleBank,
     finalForms: finalBank?.finalForms ?? moduleBank.finalForms,
-    defence: finalBank?.defence ?? moduleBank.defence,
+    defence: templatesFor(moduleBank.courseId),
   };
 }
 

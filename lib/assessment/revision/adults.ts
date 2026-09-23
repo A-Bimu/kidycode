@@ -37,9 +37,9 @@ export const packs: RevisionPack[] = [
     ],
     "independent": "Open your client page and wrap the menu, the main service description and the closing details in header, nav, main and footer regions. Check the page still reads in a sensible order.",
     "hints": [
-      "Start with the closing information and work upwards through the page.",
+      "Read the page from top to bottom and ask what each block is for.",
       "A region can hold other regions, so the nav often sits inside the header.",
-      "Read the page from top to bottom and ask what each block is for."
+      "Work upwards from the closing details and wrap each block in the element that names its job."
     ],
     "readiness": [
       {
@@ -142,7 +142,7 @@ export const packs: RevisionPack[] = [
     "independent": "Review every link on the client page. Rewrite any that only say click here so each one names its destination, and check that the menu link reaches the right section.",
     "hints": [
       "Read each link on its own and ask where it goes.",
-      "Learn which links point outside the site.",
+      "Rewrite any link whose words do not name its destination.",
       "Check that the id a fragment link aims at really exists."
     ],
     "readiness": [
@@ -321,7 +321,7 @@ export const packs: RevisionPack[] = [
       "adults"
     ],
     "title": "Choosing the right control for each answer",
-    "meaning": "The type of an input decides which keyboard or picker a visitor sees: text for a name, email for an address, tel for a number and checkbox for a yes or no.",
+    "meaning": "The type of an input decides which keyboard or picker a visitor sees: text for a name, email for an address, tel for a telephone number, number for a quantity and a checkbox for a yes or no.",
     "whyItMatters": "On a phone the right control turns a fiddly form into a quick one, and it lets the browser check the answer before it is ever sent.",
     "workedExample": "<input type='email' id='email' name='email'> <input type='tel' id='phone' name='phone'>",
     "commonMistake": "Leaving every field as a plain text input, which forces phone visitors to hunt for the right keys and gives the browser nothing to validate.",
@@ -427,7 +427,7 @@ export const packs: RevisionPack[] = [
     "title": "Guidance and feedback on a form",
     "meaning": "A form should explain what it needs before it is submitted and report what happened afterwards, using hints beside the field and a live region for the result.",
     "whyItMatters": "An enquiry form that fails silently loses a client. Clear guidance and a visible result tell the visitor what to fix and confirm that the message arrived.",
-    "workedExample": "<p id='email-hint'>We reply within two working days</p> <p role='status'>Thank you, your enquiry was sent</p>",
+    "workedExample": "<input id='email' type='email' aria-describedby='email-hint'> <p id='email-hint'>We reply within two working days</p> <p role='status'>Thank you, your enquiry was sent</p>",
     "commonMistake": "Relying on colour alone to show that a field is wrong, which helps nobody who cannot see the difference and leaves the message unexplained.",
     "guided": [
       {
@@ -555,7 +555,7 @@ export const packs: RevisionPack[] = [
         "explanation": "A class is shared by design, so it suits a button style or a card used across the site."
       }
     ],
-    "independent": "Find three pieces of styling repeated on the client site and give the shared element a single class that every instance can reuse.",
+    "independent": "Find three pieces of styling repeated across the client pages, give the repeated block one class name in the HTML and replace the three copies with a single rule for that class.",
     "hints": [
       "Look for repetition in the pages before touching the CSS.",
       "Choose names that describe what the block is.",
@@ -739,7 +739,7 @@ export const packs: RevisionPack[] = [
     "title": "A consistent visual system",
     "meaning": "A visual system collects the shared type scale, colours, spacing and component styles into a small set of rules that every page uses in the same way.",
     "whyItMatters": "Clients judge a business by how consistent its site looks. A shared system keeps pages recognisable and makes later additions quick to fit.",
-    "workedExample": ".card { border-radius: 8px; padding: var(--space); } h2 { font-size: 1.5rem; line-height: 1.3; }",
+    "workedExample": "h2 { font-size: 1.5rem; line-height: 1.3; } .card { border-radius: 8px; padding: 1rem; } .button { border-radius: 8px; padding: 0.75rem 1rem; }",
     "commonMistake": "Styling each page on its own so headings, buttons and spacing slowly drift apart across the site.",
     "guided": [
       {
@@ -999,7 +999,7 @@ export const packs: RevisionPack[] = [
     "title": "One page that fits every screen",
     "meaning": "A responsive page combines a viewport meta tag, flexible widths, a flex or grid layout and breakpoints so the same content suits any screen.",
     "whyItMatters": "Clients and their customers browse on phones. A page that needs sideways scrolling looks unprofessional and loses enquiries.",
-    "workedExample": "<meta name='viewport' content='width=device-width, initial-scale=1'> .wrap { max-width: 900px; margin: 0 auto; }",
+    "workedExample": ".wrap { max-width: 900px; margin: 0 auto; } .cards { display: grid; grid-template-columns: 1fr; } @media (min-width: 700px) { .cards { grid-template-columns: repeat(3, 1fr); } }",
     "commonMistake": "Setting a fixed pixel width on the page wrapper, which forces sideways scrolling on every phone.",
     "guided": [
       {
@@ -1335,7 +1335,7 @@ export const packs: RevisionPack[] = [
         "explanation": "Index counting starts at zero, so the first item sits at index zero."
       }
     ],
-    "independent": "Store the client service list in an array and write the array to the page as a single line of text.",
+    "independent": "Store the client service list in an array of three items, read the second item by its index and show how many items the array holds on the page.",
     "hints": [
       "Keep one kind of value in each array where you can.",
       "Count from zero when you read an item.",
@@ -1415,7 +1415,7 @@ export const packs: RevisionPack[] = [
     "title": "Working through a list with forEach",
     "meaning": "The forEach method runs a function once for every item in an array, passing the current item to the function as a parameter.",
     "whyItMatters": "Most business pages render a list of services or jobs. forEach turns one template into many blocks without repeating the markup by hand.",
-    "workedExample": "items.forEach(function (item) { render(item); });",
+    "workedExample": "['Fitting', 'Repairs', 'Maintenance'].forEach(function (service) { console.log(service); });",
     "commonMistake": "Using return inside a forEach callback expecting it to stop the loop, when forEach always visits every item.",
     "guided": [
       {
@@ -1519,7 +1519,7 @@ export const packs: RevisionPack[] = [
     "title": "Driving page content from data",
     "meaning": "A data driven page keeps its content in a list of records and renders the page from that list, so content and layout stay separate.",
     "whyItMatters": "A client who wants to add a service should not need a developer. Keeping content in data makes that change small and predictable.",
-    "workedExample": "const services = [{ title: 'Fitting' }, { title: 'Repairs' }]; services.forEach(render);",
+    "workedExample": "const services = [{ title: 'Fitting' }, { title: 'Repairs' }]; services.forEach(function (service) { list.append(service.title); });",
     "commonMistake": "Writing each service directly into the HTML by hand, so adding one means editing the structure and hoping nothing else breaks.",
     "guided": [
       {
@@ -1597,9 +1597,9 @@ export const packs: RevisionPack[] = [
     ],
     "independent": "Select the client site menu and all of its links in a script and confirm in the console that the count matches the page.",
     "hints": [
-      "Inspect the page to confirm the selector matches.",
-      "Prefer a class over an id for repeated items.",
-      "Check the count before writing more code."
+      "Decide which element the script must hold before writing the selector.",
+      "Prefer a class over an id when the selector must match more than one element.",
+      "Log the count and confirm it against the page before building on it."
     ],
     "readiness": [
       {
@@ -1728,7 +1728,7 @@ export const packs: RevisionPack[] = [
     "meaning": "Browser storage saves a small value under a key, so a page can read it again on the next visit without a server.",
     "whyItMatters": "Small conveniences such as remembering a chosen branch or a display preference make a service site feel considered.",
     "workedExample": "localStorage.setItem('branch', 'north'); const branch = localStorage.getItem('branch');",
-    "commonMistake": "Storing a complex object directly, which browser storage refuses, instead of converting it to text first.",
+    "commonMistake": "Saving a whole record under one key, which browser storage quietly turns into the text [object Object], instead of saving one plain value under a clear name.",
     "guided": [
       {
         "prompt": "Which method saves a value in browser storage?",
@@ -2091,7 +2091,7 @@ export const packs: RevisionPack[] = [
     "title": "Semantic regions rather than plain containers",
     "meaning": "Semantic elements name the role of a region, so a header, a nav, a main and a footer each tell the browser and assistive technology what they contain.",
     "whyItMatters": "Clients review the structure long before the design. Named regions give the page meaning that survives any later styling change.",
-    "workedExample": "<nav aria-label='Main menu'> <a href='#services'>Services</a> </nav>",
+    "workedExample": "<main> <h1>Studio services</h1> <section aria-labelledby='work'> <h2 id='work'>Recent work</h2> <article><h3>Shopfront refresh</h3><p>Two week project.</p></article> </section> </main>",
     "commonMistake": "Building the whole page from div elements with descriptive class names, which looks tidy to a developer but means nothing to assistive technology.",
     "guided": [
       {
@@ -2169,9 +2169,9 @@ export const packs: RevisionPack[] = [
     ],
     "independent": "Check every label on the client form, confirm each for value matches exactly one id on the page and fix any duplicates.",
     "hints": [
-      "Search the page for repeated id values.",
-      "Match capital letters exactly.",
-      "Click each label to prove the pair works."
+      "Search the page for id values that appear more than once.",
+      "Give each field a short unique id and repeat it exactly in the for value of its label.",
+      "Click each label and confirm the cursor lands in the right field."
     ],
     "readiness": [
       {
@@ -2195,7 +2195,7 @@ export const packs: RevisionPack[] = [
     "title": "One place for repeated values",
     "meaning": "A design token stores a repeated value once at the root of the stylesheet, under a name that says what the value is for.",
     "whyItMatters": "Rebrands and refinements are normal on a client project, and tokens turn an afternoon of edits into a single line.",
-    "workedExample": ":root { --ink: #222222; --space: 1rem; } p { color: var(--ink); margin-bottom: var(--space); }",
+    "workedExample": ":root { --ink: #222222; } .masthead { background: var(--ink); } .tagline { color: var(--ink); }",
     "commonMistake": "Naming a token after the current colour rather than its role, so the name becomes wrong the moment the palette changes.",
     "guided": [
       {
@@ -2247,7 +2247,7 @@ export const packs: RevisionPack[] = [
     "title": "Hover, focus and active states",
     "meaning": "Each interactive state gives the visitor feedback: hover shows interest, focus shows the keyboard position and active shows the moment of the press.",
     "whyItMatters": "Clear states make a site feel responsive and keep it usable for anyone who navigates without a mouse.",
-    "workedExample": ".link:hover { text-decoration: underline; } .link:focus-visible { outline: 3px solid #1f4e79; }",
+    "workedExample": ".button { background: #1f4e79; color: #ffffff; } .button:hover { background: #163a5a; } .button:focus-visible { outline: 3px solid #163a5a; outline-offset: 2px; }",
     "commonMistake": "Styling hover so heavily that the focus state becomes invisible, which leaves keyboard visitors worse off than no styling at all.",
     "guided": [
       {
@@ -2299,11 +2299,11 @@ export const packs: RevisionPack[] = [
     "title": "Choosing a breakpoint from the layout",
     "meaning": "A breakpoint is the width at which the layout changes, chosen because the content starts to look cramped rather than because of a device name.",
     "whyItMatters": "Devices change every year, but the width at which a two column layout stops working stays stable, which keeps the stylesheet useful.",
-    "workedExample": "@media (min-width: 720px) { .services { display: grid; grid-template-columns: repeat(2, 1fr); } }",
+    "workedExample": "@media (min-width: 720px) { .intro { display: flex; gap: 2rem; align-items: flex-start; } }",
     "commonMistake": "Copying a list of device widths from an old article, so the layout changes at points that do not match the content at all.",
     "guided": [
       {
-        "prompt": "What should decide a breakpoint width?",
+        "prompt": "Which evidence should set the width of a breakpoint?",
         "options": [
           "The point where the content starts to look cramped",
           "The newest phone dimensions",
@@ -2377,9 +2377,9 @@ export const packs: RevisionPack[] = [
     ],
     "independent": "Split one long handler on the client site into two or three named functions, each doing a single job.",
     "hints": [
-      "Name each function after the action it performs.",
-      "Pass in the values that vary.",
-      "Check the page still behaves after the split."
+      "Look for a handler that does more than one job.",
+      "Split it so each piece performs a single action and takes the values it needs.",
+      "Run the page again after the split and check the behaviour is unchanged."
     ],
     "readiness": [
       {
@@ -2407,14 +2407,14 @@ export const packs: RevisionPack[] = [
     "commonMistake": "Assigning visitor input to innerHTML, which lets anything the visitor typed become part of the page structure.",
     "guided": [
       {
-        "prompt": "Which property writes a value as text only?",
+        "prompt": "Which assignment keeps visitor text out of the page structure?",
         "options": [
           "textContent",
           "innerHTML",
           "dataset"
         ],
         "answer": 0,
-        "explanation": "The text property treats the value as words, never as markup."
+        "explanation": "Assigning to the text property inserts the value as words, so nothing the visitor typed can become part of the page structure."
       },
       {
         "prompt": "Which kind of value is most risky to write as markup?",
@@ -2507,7 +2507,7 @@ export const packs: RevisionPack[] = [
     "title": "Saving a small preference",
     "meaning": "A small preference can be saved in the browser under a key and read back on the next visit, so the site remembers the visitor's choice.",
     "whyItMatters": "Remembering a branch or a display option makes a service site feel thoughtful without asking the visitor to repeat themselves.",
-    "workedExample": "localStorage.setItem('branch', chosen); const saved = localStorage.getItem('branch');",
+    "workedExample": "const chosenOffice = 'North'; localStorage.setItem('office', chosenOffice); const remembered = localStorage.getItem('office') || 'Head office';",
     "commonMistake": "Saving everything the visitor did in the browser, including private detail, when the browser is not a safe place for sensitive information.",
     "guided": [
       {
@@ -2580,7 +2580,7 @@ export const packs: RevisionPack[] = [
           "The owner's own contact details"
         ],
         "answer": 0,
-        "explanation": "Invented examples prove the design while keeping everyone safe."
+        "explanation": "Making up the example data lets you show the layout working without using anybody's real details."
       }
     ],
     "independent": "Search the client site and its code comments for anything private and replace it with invented examples.",
@@ -2598,7 +2598,7 @@ export const packs: RevisionPack[] = [
           "Only the client"
         ],
         "answer": 0,
-        "explanation": "A public page can be opened and copied by anyone, so private detail cannot be there."
+        "explanation": "Anyone with the address can open the page, and a search engine may copy it, so private detail has no safe home in a published file."
       }
     ],
     "lessonId": "adults-quality-security"
@@ -2716,7 +2716,7 @@ export const packs: RevisionPack[] = [
     "meaning": "Flexible layouts use relative units and maximum widths so content reflows on any screen, instead of assuming one fixed canvas.",
     "whyItMatters": "A client's visitors arrive on everything from a small phone to a large monitor, and a flexible layout serves them all from one stylesheet.",
     "workedExample": ".wrap { width: 100%; max-width: 880px; margin: 0 auto; }",
-    "commonMistake": "Setting a fixed pixel width on the page shell, which forces sideways scrolling on every phone.",
+    "commonMistake": "Giving every section a fixed pixel width, so the text stops reflowing and a visitor on a narrow screen has to scroll sideways to finish a sentence.",
     "guided": [
       {
         "prompt": "What is a flexible way to set a main content width?",
@@ -2767,7 +2767,7 @@ export const packs: RevisionPack[] = [
     "title": "Cards in a responsive grid",
     "meaning": "Card grids use repeat with minmax or auto-fit so the number of columns follows the space available rather than a fixed count.",
     "whyItMatters": "Service lists and project galleries look orderly in a grid and rearrange themselves neatly when the screen narrows.",
-    "workedExample": ".cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }",
+    "workedExample": "<section class='gallery'> <article class='card'>Fitting</article> <article class='card'>Repairs</article> </section> with .gallery { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.5rem; }",
     "commonMistake": "Forcing three columns at every width, so the cards squash on a phone and become unreadable.",
     "guided": [
       {
@@ -2791,7 +2791,7 @@ export const packs: RevisionPack[] = [
         "explanation": "An adaptive grid stays readable across widths without extra rules."
       }
     ],
-    "independent": "Lay the client service cards out in a grid that fits as many columns as the space allows, then test it at several widths.",
+    "independent": "Give the client service cards a grid that fits as many columns as the space allows, then check the layout at three different widths.",
     "hints": [
       "Decide the smallest width a card can use.",
       "Let the grid count the columns.",
@@ -2843,7 +2843,7 @@ export const packs: RevisionPack[] = [
         "explanation": "A quick count in the console confirms the selector is doing what the script assumes."
       }
     ],
-    "independent": "Write a script that selects the client menu and its links, then log the number of matches and confirm it against the page.",
+    "independent": "Select the enquiry form and the feedback paragraph in a script, then check in the console that each reference holds the element you expected.",
     "hints": [
       "Look at the page in the browser tools first.",
       "Use a class for repeated elements.",
@@ -2903,7 +2903,7 @@ export const packs: RevisionPack[] = [
     ],
     "readiness": [
       {
-        "prompt": "What does an else branch handle?",
+        "prompt": "Which code runs when the condition in an if is false?",
         "options": [
           "The case the condition did not catch",
           "The same case again",
@@ -3002,7 +3002,7 @@ export const packs: RevisionPack[] = [
     "independent": "Add a check to the client form for each essential field that names the field and says plainly what is needed.",
     "hints": [
       "Decide which fields the business cannot do without.",
-      "Write the message as an instruction.",
+      "Say which field is wrong and what a good entry looks like.",
       "Test each check with an empty and a filled field."
     ],
     "readiness": [
@@ -3027,7 +3027,7 @@ export const packs: RevisionPack[] = [
     "title": "Handling a form submission",
     "meaning": "A submit listener runs when a form is submitted, and calling preventDefault stops the page reloading so the script can respond.",
     "whyItMatters": "The moment of submission is where the business either receives an enquiry or loses one, so the handler must be deliberate.",
-    "workedExample": "form.addEventListener('submit', function (event) { event.preventDefault(); respond(); });",
+    "workedExample": "document.querySelector('#enquiry').addEventListener('submit', function (event) { event.preventDefault(); note.textContent = 'Enquiry received'; });",
     "commonMistake": "Forgetting to stop the default behaviour, so the page reloads and the visitor never sees the confirmation.",
     "guided": [
       {
@@ -3157,9 +3157,9 @@ export const packs: RevisionPack[] = [
     ],
     "independent": "Wrap the choice of service on the client form in a fieldset whose legend states the question plainly.",
     "hints": [
-      "Group only the controls that answer one question.",
-      "Write the legend as the question itself.",
-      "Keep the legend short enough to read aloud."
+      "Look for the part of the form where one question has several answers.",
+      "Put the question in a legend and keep each answer as its own label.",
+      "Read the legend and the first option together to check they make sense as a pair."
     ],
     "readiness": [
       {
@@ -3210,8 +3210,8 @@ export const packs: RevisionPack[] = [
     "independent": "Write alternative text for every image on the client page, describing what each one adds to the words around it.",
     "hints": [
       "Read the sentence around the image first.",
-      "Describe the content, not the file.",
-      "Decide deliberately whether each image needs a description at all."
+      "Write the description from the point of view of someone who cannot see the picture.",
+      "Mark a picture that adds no information as decorative instead of inventing words for it."
     ],
     "readiness": [
       {

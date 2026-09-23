@@ -161,10 +161,10 @@ export const packs: RevisionPack[] = [
         explanation: "The words name the destination even when the rest of the sentence is missing.",
       },
       {
-        prompt: "A link should open a page called prices.html that sits beside the current page. Which href is correct?",
-        options: ["prices.html", "#prices", "prices"],
+        prompt: "A navigation link should move to the section that holds the programme. What has to exist for the link to work?",
+        options: ["An element with id=\"programme\" on the same page", "An element with class=\"programme\" on the same page", "A second page called programme.html"],
         answer: 0,
-        explanation: "A relative file name in href points at the page that sits beside the current one.",
+        explanation: "A fragment link resolves against an id, so the destination id has to exist on the same page.",
       },
     ],
     independent: "Go through the links on one page and rewrite any link text that would be meaningless if it were the only words on screen.",
@@ -189,10 +189,10 @@ export const packs: RevisionPack[] = [
     commonMistake: "Testing only the first few links, which leaves the ones added last unchecked and broken.",
     guided: [
       {
-        prompt: "You find a link whose href is a file that was renamed last week. What is the right repair?",
-        options: ["Update the href to the new file name", "Delete the link text", "Change the link text to click here"],
+        prompt: "A section's id was renamed but the navigation link still points at the old name. What is the right repair?",
+        options: ["Point the href at the id that now exists", "Delete the link text", "Change the link text to click here"],
         answer: 0,
-        explanation: "The destination moved, so the href is what needs to change.",
+        explanation: "The destination changed, so the href is what has to follow it.",
       },
       {
         prompt: "A page links to itself. What is the most likely effect?",
@@ -201,8 +201,8 @@ export const packs: RevisionPack[] = [
         explanation: "A self link adds a step without adding information, so it is usually removed.",
       },
     ],
-    independent: "List every link on your site in a file, open each destination once, and mark the ones that need a repair or a rename.",
-    hints: ["Collect the hrefs first and work through the list, rather than clicking at random.", "Changed file names are the usual cause of a link that points nowhere.", "Read the link words after the destination works, because both can be wrong."],
+    independent: "List every link on one of your pages, follow each destination once, and mark the ones that need a repair.",
+    hints: ["Collect the hrefs first and work through the list, rather than clicking at random.", "A renamed id is the usual cause of a link that points nowhere.", "Read the link words after the destination works, because both can be wrong."],
     readiness: [
       {
         prompt: "Which habit catches the most broken links in the least time?",
@@ -467,7 +467,7 @@ export const packs: RevisionPack[] = [
         explanation: "A number type brings up a numeric keyboard and rejects letters.",
       },
       {
-        prompt: "A field asks for the date of a visit. Which type fits best?",
+        prompt: "A form collects the date of a visit. Which type fits that value?",
         options: ["date", "text", "search"],
         answer: 0,
         explanation: "A date type offers a picker and sends the value in a predictable shape.",
@@ -492,13 +492,13 @@ export const packs: RevisionPack[] = [
     meaning: "A type that does not match the question sends the browser looking for the wrong shape of value and the visitor the wrong keyboard.",
     whyItMatters: "A wrong type is easy to miss on a laptop and obvious on a phone, so it is worth checking field by field.",
     workedExample: "For each field, read the words of the question and then ask which type would let a visitor answer it with the fewest taps.",
-    commonMistake: "Using a number type for a phone number, which strips the leading zero that many phone numbers begin with.",
+    commonMistake: "Using a number type for a phone number, which cannot hold the leading zero or the spaces a real number is written with.",
     guided: [
       {
         prompt: "A field asks for a phone number. Why is the number type a poor choice?",
         options: ["Leading zeros and symbols are not part of a number", "Phone numbers are too long for a number field", "The number type hides the value"],
         answer: 0,
-        explanation: "A phone number is text, and a number field cannot hold a leading zero.",
+        explanation: "A phone number is text, and a number field cannot keep a leading zero or a space.",
       },
       {
         prompt: "A field asks for a postcode. Which type accepts it?",
@@ -514,7 +514,7 @@ export const packs: RevisionPack[] = [
         prompt: "Which value would a number field fail to keep exactly as typed?",
         options: ["02380 445566", "128", "42.5"],
         answer: 0,
-        explanation: "The leading zero is not part of a number, so a number field drops it.",
+        explanation: "A number field cannot keep a leading zero or a space, so a value like that is lost before it is sent.",
       },
     ],
     lessonId: "ages-13-15-forms-types",
@@ -522,7 +522,7 @@ export const packs: RevisionPack[] = [
   {
     concept: "ages-13-15:ages-13-15-forms:fieldset-legend",
     courses: ["ages-13-15"],
-    title: "Grouping related choices",
+    title: "One fieldset for one shared question",
     meaning: "A fieldset groups related controls and a legend names the group, so a set of choices reads as one question.",
     whyItMatters: "Without a group, a speech tool reads a run of radio buttons as separate items and the question they answer is lost.",
     workedExample: "The pattern is a fieldset holding the radio buttons, with a legend as its first child carrying the question.",
@@ -545,10 +545,10 @@ export const packs: RevisionPack[] = [
     hints: ["Look for controls that share one question rather than one block of styling.", "The legend names the whole group, so it holds the question and nothing else.", "Groups can sit inside other groups when a form has two levels of questions."],
     readiness: [
       {
-        prompt: "Which element carries the question that a group of radio buttons answers?",
-        options: ["legend", "label", "caption"],
+        prompt: "Which pair of elements turns a run of radio buttons into one named group?",
+        options: ["fieldset for the group and legend for its name", "label for each radio and no group at all", "section for the group and heading for its name"],
         answer: 0,
-        explanation: "The legend names the fieldset, so the question belongs there.",
+        explanation: "The fieldset holds the group together and its legend names the question they answer.",
       },
     ],
     lessonId: "ages-13-15-forms-groups",
@@ -592,25 +592,25 @@ export const packs: RevisionPack[] = [
     courses: ["ages-13-15"],
     title: "Guidance before and feedback after",
     meaning: "Guidance tells a visitor what a field expects before they type, and a status region reports the result afterwards.",
-    whyItMatters: "A visitor who is told the rules in advance makes fewer mistakes, and a polite live region reports results without interrupting.",
+    whyItMatters: "A visitor who is told the rules in advance makes fewer mistakes, and a status region reports results without interrupting.",
     workedExample: "Hints are tied to a field with aria-describedby pointing at the id of the element holding the hint.",
-    commonMistake: "Reporting every result with an alert region, which interrupts a visitor in the middle of typing the next field.",
+    commonMistake: "Reporting every result in a region that interrupts, which cuts across a visitor in the middle of typing the next field.",
     guided: [
       {
         prompt: "A password field must be at least ten characters. Where should that rule appear?",
-        options: ["As a hint tied to the field with aria-describedby", "In an alert that fires on every keystroke", "Only after the visitor submits"],
+        options: ["As a hint tied to the field with aria-describedby", "In a message that interrupts on every keystroke", "Only after the visitor submits"],
         answer: 0,
         explanation: "The rule is guidance, so it belongs with the field before anything is typed.",
       },
       {
         prompt: "A form saves a draft. Which region reports that calmly without cutting across the visitor?",
-        options: ["A status region with a polite live setting", "An alert region", "A dialog that takes the focus"],
+        options: ["A status region, which waits for a pause", "A region that interrupts straight away", "A dialog that takes the focus"],
         answer: 0,
-        explanation: "A polite status region reports the news without interrupting the visitor.",
+        explanation: "A status region reports the news without cutting across the visitor.",
       },
     ],
     independent: "Add one hint to each field that has a rule, tie it with aria-describedby, and add one status region for the form result.",
-    hints: ["Guidance comes before typing, and feedback comes after submitting.", "Tie a hint to its field, otherwise a speech tool may never read it.", "Reserve the interrupting live setting for faults a visitor has to act on now."],
+    hints: ["Guidance comes before typing, and feedback comes after submitting.", "Tie a hint to its field, otherwise a speech tool may never read it.", "Reserve a region that interrupts for news a visitor has to act on now."],
     readiness: [
       {
         prompt: "Which attribute ties a hint element to the field it describes?",
@@ -625,29 +625,29 @@ export const packs: RevisionPack[] = [
     concept: "ages-13-15:ages-13-15-forms:f-status",
     courses: ["ages-13-15"],
     title: "Reporting a result without shouting",
-    meaning: "A live region reports updates to a visitor, and the polite setting waits for a pause while the assertive setting interrupts.",
-    whyItMatters: "Choosing the wrong setting makes a form exhausting to use, because every small update cuts across whatever is being read.",
-    workedExample: "The pattern is a container with a live setting and a role of status, whose text is changed by script when something happens.",
-    commonMistake: "Using the assertive setting for routine news such as a saved draft.",
+    meaning: "A region can report a change to a visitor: a status region waits for a pause, while a region that interrupts cuts across what is being read.",
+    whyItMatters: "Choosing the wrong kind of region makes a form exhausting to use, because every small update cuts across whatever is being read.",
+    workedExample: "The pattern is an empty container with a status role, whose text is changed by script when something happens.",
+    commonMistake: "Using a region that interrupts for routine news such as a saved draft.",
     guided: [
       {
-        prompt: "A form reports that a field is valid while the visitor moves through the fields. Which live setting suits that?",
-        options: ["Polite", "Assertive", "No live setting at all"],
+        prompt: "A form reports that a field is valid while the visitor moves through the fields. Which kind of region suits that?",
+        options: ["A status region, because the news can wait", "A region that interrupts, because the news matters", "No region at all"],
         answer: 0,
-        explanation: "Polite news waits for a pause, which suits routine progress reports.",
+        explanation: "Routine progress can wait for a pause, which is what a status region does.",
       },
       {
-        prompt: "The connection drops and the form cannot be sent. Which live setting suits that?",
-        options: ["Assertive, because the visitor has to act now", "Polite, because the news can wait", "No live setting, because the page reloads"],
+        prompt: "The connection drops and the form cannot be sent. Which kind of region suits that?",
+        options: ["One that interrupts, because the visitor has to act now", "A status region, because the news can wait", "None, because the page reloads"],
         answer: 0,
-        explanation: "News that blocks progress deserves the interrupting setting.",
+        explanation: "News that blocks progress deserves a region that interrupts.",
       },
     ],
-    independent: "Review every live region on your form and write one line for each, saying what it reports and why that live setting was chosen.",
-    hints: ["Ask whether the visitor has to act now, because that decides the setting.", "Routine progress reports are polite, and blocked progress is assertive.", "An empty live region that script fills in is the usual way to report news."],
+    independent: "Review every region that reports news on your form and write one line for each, saying what it reports and why that kind of region was chosen.",
+    hints: ["Ask whether the visitor has to act now, because that decides the kind of region.", "Routine progress is reported by a status region, and blocked progress needs one that interrupts.", "An empty status region that script fills in is the usual way to report news."],
     readiness: [
       {
-        prompt: "Which piece of news deserves the interrupting live setting?",
+        prompt: "Which piece of news deserves a region that interrupts?",
         options: ["The form could not be sent", "A draft was saved quietly", "The visitor moved to the next field"],
         answer: 0,
         explanation: "Only news that stops the visit from continuing should interrupt.",
@@ -726,11 +726,11 @@ export const packs: RevisionPack[] = [
   {
     concept: "ages-13-15:ages-13-15-css-system:box-model",
     courses: ["ages-13-15"],
-    title: "The box model and box sizing",
-    meaning: "Every element is a box made of content, padding, border and margin, and box sizing decides whether width includes the padding and border.",
-    whyItMatters: "Once width includes padding and border, a 50 percent wide pair of cards fits on one row instead of overflowing.",
+    title: "The four parts of a box",
+    meaning: "A box stacks outwards in four parts: the content, the padding around it, the border around that, and the margin separating it from the next box.",
+    whyItMatters: "Naming the four parts makes every gap on a page traceable, so you can point at the layer that produced it instead of guessing at values.",
     workedExample: "Setting the border box sizing mode on every element, then setting padding and border freely, keeps widths predictable.",
-    commonMistake: "Adding padding to a fixed width element and being surprised when it grows past its container.",
+    commonMistake: "Forgetting that padding is added on top of a set width, so two cards set to half the width each no longer fit on one row.",
     guided: [
       {
         prompt: "Two cards are each set to half the width and both have padding. They wrap onto two rows. What is the most likely cause?",
@@ -745,14 +745,14 @@ export const packs: RevisionPack[] = [
         explanation: "Margin sits outside the border, so it keeps other boxes away.",
       },
     ],
-    independent: "Set the border box sizing mode at the top of your stylesheet, then check every element that has both a set width and padding.",
-    hints: ["Padding sits inside the box and margin sits outside it.", "A rule that applies the border box mode to everything saves a long list of exceptions.", "Check any element that has a width and padding together, because that pair causes overflow."],
+    independent: "Take one panel from your page and give it inner spacing, a border and outside spacing, then apply the border box mode and note what changes about its width.",
+    hints: ["The space you add inside a box is padding, and the space that keeps its neighbours away is margin.", "A rule that applies the border box mode to everything saves a long list of exceptions.", "Check any element that has a width and padding together, because that pair causes overflow."],
     readiness: [
       {
         prompt: "Which mode makes a width value include the padding and border?",
-        options: ["border-box", "content-box", "inline-box"],
+        options: ["border-box", "content-box", "padding-box"],
         answer: 0,
-        explanation: "The border box mode counts padding and border inside the width.",
+        explanation: "The border box mode measures the whole box, so padding and border sit inside the declared width.",
       },
     ],
     lessonId: "ages-13-15-css-system-box-model",
@@ -760,33 +760,33 @@ export const packs: RevisionPack[] = [
   {
     concept: "ages-13-15:ages-13-15-css-system:c-box",
     courses: ["ages-13-15"],
-    title: "Reading a box in the inspector",
-    meaning: "The inspector draws the box model of the selected element and shows each layer of padding, border and margin with its size.",
-    whyItMatters: "Reading the diagram turns a guessing game into a measurement, which is much faster than editing values at random.",
-    workedExample: "The diagram is read from the inside out: content, then padding, then border, then margin.",
-    commonMistake: "Changing values in the stylesheet before reading the diagram, which hides what is actually producing the space.",
+    title: "Sizing that stays inside a set width",
+    meaning: "In the border box mode a declared width is the whole box, so padding and border are counted inside it rather than added on top.",
+    whyItMatters: "One rule at the top of the stylesheet sets that mode everywhere, which is what keeps a layout predictable as soon as padding appears.",
+    workedExample: "The usual shape is a single rule for every element that sets the border box mode, so no rule below has to allow for its own padding.",
+    commonMistake: "Setting a width on a card and then adding padding without the border box mode, so the card is wider than the space it was given.",
     guided: [
       {
-        prompt: "An element has a large gap on its left that no padding rule explains. Where do you look first?",
-        options: ["The margin layer in the inspector diagram", "The font size of the element", "The colour of the border"],
+        prompt: "A row holds two cards of 50 percent width, each with padding. What keeps both of them on one row?",
+        options: ["The border box mode, so the padding counts inside the 50 percent", "A smaller font size inside each card", "An extra rule for the row height"],
         answer: 0,
-        explanation: "A gap outside the border is margin, and the diagram shows it with its size.",
+        explanation: "The border box mode makes the declared width the whole box, so the padding does not widen it.",
       },
       {
-        prompt: "The diagram shows padding of zero and a border of one pixel, yet the text sits away from the edge. What explains it?",
-        options: ["The margin is inside the diagram too, so its value is being measured", "The text has its own padding", "The border has a hidden thickness"],
+        prompt: "A paragraph of very long lines is tiring to read. Which pair of settings helps most?",
+        options: ["A comfortable font size and a line height greater than one", "A wider border and more padding", "A bold weight and a dark background"],
         answer: 0,
-        explanation: "Margin is the remaining layer, so a gap that is not padding or border is margin.",
+        explanation: "Text reads comfortably when the size suits the screen and the lines have room between them.",
       },
     ],
-    independent: "Select three elements on a page you built and write down all four box layers from the inspector for each one.",
-    hints: ["Read the diagram from the inside out, content first and margin last.", "Measure before editing, because the diagram names the layer producing the gap.", "Margin is the layer outside the border, so a gap beyond the border is margin."],
+    independent: "Set the border box mode for every element at the top of your stylesheet, then check each element that has a width and padding together and give the body text a readable line height.",
+    hints: ["One rule for every element sets the border box mode, which saves a long list of exceptions.", "Check any element with a width and padding together, because that pair is what grows past its space.", "A line height greater than one gives long paragraphs room to breathe."],
     readiness: [
       {
-        prompt: "The inspector shows a gap outside the border of an element. Which layer is it?",
-        options: ["Margin", "Padding", "Content"],
+        prompt: "An element must stay 400 pixels wide overall while keeping its padding. Which mode does that?",
+        options: ["border-box", "content-box", "padding-box"],
         answer: 0,
-        explanation: "The margin layer sits outside the border, so the gap is margin.",
+        explanation: "The border box mode counts the padding inside the declared 400 pixels.",
       },
     ],
     lessonId: "ages-13-15-css-system-box-model",
@@ -794,7 +794,7 @@ export const packs: RevisionPack[] = [
   {
     concept: "ages-13-15:ages-13-15-css-system:tokens",
     courses: ["ages-13-15"],
-    title: "Custom properties as design tokens",
+    title: "One name for one repeated value",
     meaning: "A custom property stores a value under a name so the same value can be reused from one place.",
     whyItMatters: "When a colour lives in one named place, changing the whole site takes one edit instead of a search through every rule.",
     workedExample: "Custom properties are declared in a rule with a name that starts with two dashes, and read back with the var function.",
@@ -802,7 +802,7 @@ export const packs: RevisionPack[] = [
     guided: [
       {
         prompt: "You want the main heading colour to come from one named value. What goes in the heading rule?",
-        options: ["colour: var(--heading-colour)", "colour: heading-colour", "colour: --heading-colour"],
+        options: ["color: var(--heading-colour)", "color: heading-colour", "color: --heading-colour"],
         answer: 0,
         explanation: "The var function reads a custom property into a declaration.",
       },
@@ -964,33 +964,33 @@ export const packs: RevisionPack[] = [
   {
     concept: "ages-13-15:ages-13-15-responsive:viewport",
     courses: ["ages-13-15"],
-    title: "The viewport and page scale",
-    meaning: "The viewport meta tag tells a mobile browser to match its layout width to the device width instead of pretending to be a wide desktop screen.",
-    whyItMatters: "Without it, a phone shrinks the whole page to fit and every size you wrote is scaled down to unreadable text.",
-    workedExample: "The tag is a meta element in the head with a name of viewport and a content value holding the width and initial scale settings.",
-    commonMistake: "Leaving the tag out, then trying to fix the tiny text with larger font sizes.",
+    title: "A width that follows the screen",
+    meaning: "A mobile first layout begins with the smallest screen, and the page width follows the space it is given instead of being fixed in pixels.",
+    whyItMatters: "Nothing can shrink a fixed pixel width, so it is wider than a phone screen and pushes the whole page sideways.",
+    workedExample: "The pattern is a wrapper whose width follows the screen up to a sensible maximum, so it fits a phone and still reads well on a wide monitor.",
+    commonMistake: "Giving the page shell a fixed pixel width, so a phone shows the left part of the page and the rest is reached by scrolling sideways.",
     guided: [
       {
-        prompt: "A page looks tiny on a phone until it is pinched to zoom. Which change fixes the cause?",
-        options: ["Add a viewport meta tag in the head", "Increase every font size", "Remove the responsive stylesheet"],
+        prompt: "Which width lets a page follow a phone screen and still stop growing on a wide monitor?",
+        options: ["A width that follows the screen with a maximum", "A width of exactly 960 pixels", "A width of exactly 70rem"],
         answer: 0,
-        explanation: "The missing tag makes the browser shrink the page, so the tag is the fix.",
+        explanation: "Following the screen fits any width, and the maximum stops the lines becoming too long.",
       },
       {
-        prompt: "Which part of the page holds a viewport meta tag?",
-        options: ["The head element", "The body element", "The first section of the page"],
+        prompt: "Which choice of width is the usual cause of a page sliding sideways on a phone?",
+        options: ["A page width wider than the screen", "A font size smaller than sixteen pixels", "A line height greater than one"],
         answer: 0,
-        explanation: "The tag describes the document, so it belongs in the head.",
+        explanation: "Anything wider than the screen forces the page to scroll sideways.",
       },
     ],
-    independent: "Add a viewport meta tag to every page of your site and check one page on a narrow window to confirm the text no longer needs pinching.",
-    hints: ["The tag belongs in the head, beside the other document settings.", "If a phone shrinks the page, the tag is missing rather than the fonts being small.", "Set the width to the device width and the scale to one as a sensible default."],
+    independent: "Give the wrapper of one of your pages a width that follows the screen with a sensible maximum, then set the window to a phone width and check that nothing slides sideways.",
+    hints: ["Start from the smallest screen you support and let the width grow from there.", "A maximum width is what stops lines becoming uncomfortably long on a large monitor.", "Check wide blocks and images too, because one fixed width is enough to force sideways scrolling."],
     readiness: [
       {
-        prompt: "A page has no viewport setting. Which effect appears on a modern phone?",
-        options: ["The page is scaled down as if the screen were wide", "The page refuses to load", "The fonts are replaced with the browser default"],
+        prompt: "Why does a width that follows the screen still need a maximum?",
+        options: ["So lines do not become uncomfortably long on a large screen", "So the page loads more quickly", "So the images can be left out"],
         answer: 0,
-        explanation: "The browser assumes a wide layout and scales it down to fit the screen.",
+        explanation: "The maximum keeps the content comfortable when there is more space than it needs.",
       },
     ],
     lessonId: "ages-13-15-responsive-viewport",
@@ -999,7 +999,7 @@ export const packs: RevisionPack[] = [
     concept: "ages-13-15:ages-13-15-responsive:flex-nav",
     courses: ["ages-13-15"],
     title: "A navigation bar with flex",
-    meaning: "A flex container lays its children out in a row and can wrap them when the space runs out.",
+    meaning: "Flex arranges the children of a container along one line, and the wrap setting is what stops a long row from spilling over.",
     whyItMatters: "Navigation is the part of a site most likely to overflow on a small screen, so wrapping is what keeps it usable.",
     workedExample: "The container takes a display value of flex, a gap for the spacing between items, and a wrap setting so items fall onto a second row.",
     commonMistake: "Setting fixed widths on the navigation items, which forces a horizontal scroll on a narrow window.",
@@ -1035,7 +1035,7 @@ export const packs: RevisionPack[] = [
     title: "Cards that fit the space",
     meaning: "A grid with automatic columns fits as many cards as the width allows, so a phone shows one and a desktop shows several.",
     whyItMatters: "Cards that fit themselves mean the layout needs no separate rules for each screen size.",
-    workedExample: "The track pattern uses a repeat function with an automatic fit setting and a minimum width, so tracks are added or removed as space changes.",
+    workedExample: "The pattern is a repeat of automatically fitted tracks, each with a minimum size, so the number of columns follows the space available.",
     commonMistake: "Setting a fixed number of columns for the desktop and discovering that the same number is unreadable on a phone.",
     guided: [
       {
@@ -1209,10 +1209,10 @@ export const packs: RevisionPack[] = [
     commonMistake: "Checking only the widest and the narrowest settings, which misses the middle where two columns often look worst.",
     guided: [
       {
-        prompt: "A card grid shows four columns, then two, then one as the window narrows. Which setting deserves the closest look?",
-        options: ["The two column setting, because the cards there are widest per card", "The four column setting, because it holds the most cards", "The one column setting, because there is only one card"],
+        prompt: "A card grid shows four columns, then two, then one as the window narrows. Why check the two column setting as well as the two extremes?",
+        options: ["A count in the middle can read badly and is easily skipped", "Two columns holds the most cards", "One column is never wide enough to read"],
         answer: 0,
-        explanation: "Two columns often leaves the longest lines of text, so it is the setting to check first.",
+        explanation: "A quick check at the widest and narrowest counts never shows what the counts in between look like.",
       },
       {
         prompt: "A card becomes taller than the screen at one column width. What is the likely cause?",
@@ -1225,7 +1225,7 @@ export const packs: RevisionPack[] = [
     hints: ["Count the columns as you narrow, and stop each time the count changes.", "Two columns is often the hardest setting, so do not skip it.", "A card taller than the screen is a content problem more often than a grid problem."],
     readiness: [
       {
-        prompt: "A grid map of a card list is finished when which of these holds?",
+        prompt: "A card grid check is finished when which of these holds?",
         options: ["Every column count reads well and no card overflows the screen", "The widest setting looks tidy", "The grid has a fixed number of columns"],
         answer: 0,
         explanation: "Each count has to read well, because visitors see all of them.",
@@ -1237,14 +1237,14 @@ export const packs: RevisionPack[] = [
     concept: "ages-13-15:ages-13-15-responsive:responsive-page",
     courses: ["ages-13-15"],
     title: "A page that works at every width",
-    meaning: "A responsive page combines a viewport setting, flexible layout, sensible breakpoints and content that survives a narrow column.",
+    meaning: "A responsive page combines a mobile first base, flexible layout, sensible breakpoints and content that survives a narrow column.",
     whyItMatters: "One narrow screen is where most visitors arrive, so the responsive pass decides whether the site is used at all.",
-    workedExample: "The usual order is viewport first, then flexible layout, then breakpoints only where the layout demands them.",
+    workedExample: "The usual order is the narrow base first, then flexible layout, then breakpoints only where the layout demands them.",
     commonMistake: "Adding breakpoints before the flexible layout, which produces fixes for one width that break the next.",
     guided: [
       {
         prompt: "Which order produces the fewest breakpoints?",
-        options: ["Viewport, flexible layout, then breakpoints where needed", "Breakpoints, then layout, then viewport", "Content, then colours, then breakpoints"],
+        options: ["A mobile first base, flexible layout, then breakpoints where needed", "Breakpoints, then layout, then the narrow base", "Content, then colours, then breakpoints"],
         answer: 0,
         explanation: "A flexible layout removes the need for many of the breakpoints you would otherwise write.",
       },
@@ -1270,17 +1270,17 @@ export const packs: RevisionPack[] = [
   {
     concept: "ages-13-15:ages-13-15-javascript:values",
     courses: ["ages-13-15"],
-    title: "Values, names and types",
+    title: "Names that hold values",
     meaning: "A value is a piece of data such as a number, a piece of text or a true and false flag, and a variable gives a value a name.",
     whyItMatters: "Code that reads and changes values is the base of everything later, so a muddled idea of types causes faults everywhere.",
     workedExample: "A name is declared with let, given a value with a single equals sign, and read later by writing the name on its own.",
     commonMistake: "Mixing numbers and text together, so that adding two values joins them as text instead of totalling them.",
     guided: [
       {
-        prompt: "A variable holds the text five rather than the number five. What does that affect?",
-        options: ["It cannot be used in arithmetic, because text values join instead", "It cannot be shown on the page", "It cannot be given a new name"],
+        prompt: "A variable holds the text five rather than the number five. What goes wrong when one is added to it?",
+        options: ["The two values are joined as text instead of totalled", "The value cannot be shown on the page", "The value cannot be given a new name"],
         answer: 0,
-        explanation: "Text and number values behave differently, so arithmetic on text joins rather than adds.",
+        explanation: "Text and number values behave differently, so adding a number to text joins the two instead of totalling them.",
       },
       {
         prompt: "Which statement creates a name that can be given a new value later?",
@@ -1406,7 +1406,7 @@ export const packs: RevisionPack[] = [
   {
     concept: "ages-13-15:ages-13-15-javascript:dom-output",
     courses: ["ages-13-15"],
-    title: "Writing results into the page",
+    title: "Putting a result on the page",
     meaning: "Script reaches the page through the document object, finding an element by id or class and setting its text.",
     whyItMatters: "A result nobody can see is not a result, so writing into the page is how code becomes something a visitor can use.",
     workedExample: "The pattern is to find an element once, keep it in a variable, and set its text value when something changes.",
@@ -1429,10 +1429,10 @@ export const packs: RevisionPack[] = [
     hints: ["Find the element once, then reuse the variable rather than searching again.", "Set text rather than markup when the value came from a visitor.", "Test your script with symbols such as a less than sign to see how the output behaves."],
     readiness: [
       {
-        prompt: "Which method writes a value into an element as plain text?",
-        options: ["Setting the text value of the element", "Setting the inner HTML of the element", "Setting an attribute on the body"],
+        prompt: "Which way of writing a value keeps it as text that cannot be read as markup?",
+        options: ["Setting the text of the element", "Setting the inner HTML of the element", "Setting an attribute on the body"],
         answer: 0,
-        explanation: "Setting text keeps the value as text rather than interpreting it as markup.",
+        explanation: "Setting text keeps the value as words rather than interpreting it as markup.",
       },
     ],
     lessonId: "ages-13-15-javascript-dom-output",
@@ -1497,7 +1497,7 @@ export const packs: RevisionPack[] = [
     hints: ["Include empty and boundary values in the list, not only typical ones.", "Check every path through a function for a return value.", "Record the results as you go, so a case is not forgotten halfway through."],
     readiness: [
       {
-        prompt: "A behaviour checkpoint is finished when which of these holds?",
+        prompt: "Which evidence shows that every value on your test list produces a result?",
         options: ["Every function returns a result for every value on the test list", "The page loads without an error in one case", "Every button responds to a click"],
         answer: 0,
         explanation: "The point of the checkpoint is a result for every value, not one happy path.",
@@ -1509,7 +1509,7 @@ export const packs: RevisionPack[] = [
     concept: "ages-13-15:ages-13-15-javascript:j-functions",
     courses: ["ages-13-15"],
     title: "Testing a function on its own",
-    meaning: "A function can be tested on its own by calling it with a value and comparing what it hands back with what you expected.",
+    meaning: "A function that takes its input as a parameter and hands a result back with a return can be tested on its own, with one value at a time.",
     whyItMatters: "A function that is tested once with a sensible value usually fails on the empty, text or boundary value a visitor supplies.",
     workedExample: "A method that works well is to list the inputs, write the expected result beside each one, then call the function once per line.",
     commonMistake: "Testing a function only through the page it belongs to, which hides the case it cannot handle.",
@@ -1518,7 +1518,7 @@ export const packs: RevisionPack[] = [
         prompt: "A function turns a price into text with a currency mark. Which value deserves the first test?",
         options: ["Zero, because it is the boundary of the range", "A large but typical price", "A price with many decimal places"],
         answer: 0,
-        explanation: "A boundary value is where a formatting function most often fails.",
+        explanation: "A price of zero is the awkward case for formatting, so it belongs in the first test.",
       },
       {
         prompt: "A function is given a piece of text where a number belongs. What should a careful function do?",
@@ -1611,16 +1611,16 @@ export const packs: RevisionPack[] = [
     concept: "ages-13-15:ages-13-15-data:records",
     courses: ["ages-13-15"],
     title: "Records with named fields",
-    meaning: "A record groups several named fields, written between curly brackets, and each field is reached by its name.",
+    meaning: "A record is an object that groups several named properties, written between curly brackets, and each one is reached by its name.",
     whyItMatters: "Names are steadier than positions, so a record keeps working when its fields are reordered.",
     workedExample: "The pattern is a name holding curly brackets, with field names followed by a colon and a value, separated by commas.",
     commonMistake: "Reaching a field by a name that does not exist, which hands back nothing rather than reporting a fault.",
     guided: [
       {
         prompt: "A record has fields for a title and a price. How is the price reached?",
-        options: ["By the field name joined with a dot to the record name", "By the position of the field", "By the length of the record"],
+        options: ["By the property name joined with a dot to the record name", "By the position of the property", "By the length of the record"],
         answer: 0,
-        explanation: "Fields are reached by name, so the record name and the field name are joined.",
+        explanation: "Properties are reached by name, so the record name and the property name are joined.",
       },
       {
         prompt: "A record is written with its fields in a different order. What changes in the code that reads it?",
@@ -1630,10 +1630,10 @@ export const packs: RevisionPack[] = [
       },
     ],
     independent: "Write three records for items on your page, each with at least three named fields, then read one field from each record.",
-    hints: ["Choose field names that say what the value is, because they are read in the code.", "Fields are reached by name rather than by position, so order does not matter.", "A missing field is reached as nothing rather than as an error."],
+    hints: ["Choose property names that say what the value is, because they are read in the code.", "Properties are reached by name rather than by position, so order does not matter.", "A property that is not on a record reads as nothing rather than as an error."],
     readiness: [
       {
-        prompt: "Which value reaches the title field of a record called item?",
+        prompt: "Which value reaches the title property of a record called item?",
         options: ["item.title", "item[0]", "item.length"],
         answer: 0,
         explanation: "A field is reached by joining the record name and the field name with a dot.",
@@ -1645,26 +1645,26 @@ export const packs: RevisionPack[] = [
     concept: "ages-13-15:ages-13-15-data:foreach-records",
     courses: ["ages-13-15"],
     title: "Walking a list of records",
-    meaning: "Walking a list of records lets one block of code build one card for each record in the list.",
+    meaning: "Calling forEach on a list runs one callback per record, so a single block of code builds one card for each of them.",
     whyItMatters: "Building a card per record is what turns a list of data into a page a visitor can read.",
-    workedExample: "The pattern is a number of steps equal to the length of the list, reaching the record at each position by name.",
+    workedExample: "The pattern is records.forEach(function (record) { ... }), where the callback receives the current record for that pass.",
     commonMistake: "Writing the card for the first record by hand and copying it, so a change to the card has to be made in several places.",
     guided: [
       {
         prompt: "A list holds twelve records and the page shows twelve cards. Which approach builds them?",
-        options: ["One card built inside a walk over the list", "Twelve cards typed by hand", "One card reused with fresh text"],
+        options: ["One card built inside the forEach callback", "Twelve cards typed by hand", "One card reused with fresh text"],
         answer: 0,
-        explanation: "A walk over the list builds one card per record without repeating the markup.",
+        explanation: "The callback runs once per record, so one card is built for each without repeating the markup.",
       },
       {
-        prompt: "The card design changes. What happens with cards built by a walk?",
+        prompt: "The card design changes. What happens when every card is built inside the callback?",
         options: ["One place changes and every card follows", "Every card has to be edited separately", "Only the first card changes"],
         answer: 0,
         explanation: "One builder means one place to change, so every card follows it.",
       },
     ],
     independent: "Take a list of three records and build the same card for each one with a single block of code.",
-    hints: ["Build one card inside the walk, so the markup is written once.", "Reach the fields of the record at each step by name.", "Test with a list of one record, because that is where the walk is easiest to read."],
+    hints: ["Build one card inside the callback, so the markup is written once.", "Reach the fields of the current record by name.", "Test with a list of one record, because that is where the callback is easiest to follow."],
     readiness: [
       {
         prompt: "Which change needs the fewest edits when a card design changes?",
@@ -1679,9 +1679,9 @@ export const packs: RevisionPack[] = [
     concept: "ages-13-15:ages-13-15-data:d-foreach",
     courses: ["ages-13-15"],
     title: "Cards built from records",
-    meaning: "A card built from a record fills each part of a template with one field of that record, so every card carries different words.",
+    meaning: "The callback receives the current record, so a card built from it carries that record's own words instead of a copy of the first one's.",
     whyItMatters: "A walk that builds every card from the same record produces a page of copies, which is a fault that looks like success.",
-    workedExample: "The pattern is to build a card from the record at the current step, so the fields of that record decide the words in it.",
+    workedExample: "The pattern is to build the card from the record the callback received, so that record's fields decide the words in it.",
     commonMistake: "Building each card from the first record, which shows the same item as many times as the list is long.",
     guided: [
       {
@@ -1691,14 +1691,14 @@ export const packs: RevisionPack[] = [
         explanation: "Reading the first record at every step produces identical cards.",
       },
       {
-        prompt: "A record is missing one of the fields the card expects. What appears on the page?",
-        options: ["An empty place where that field belongs", "The card is not built at all", "The whole list stops being read"],
+        prompt: "A record is missing one of the fields the card expects. What does reading that field give the code?",
+        options: ["Nothing, because that name is not on the record", "An error that stops the script", "A copy of the value from the first record"],
         answer: 0,
-        explanation: "A missing field is reached as nothing, so the card shows an empty place.",
+        explanation: "A missing field reads as nothing rather than as an error, so the card needs a default or a check.",
       },
     ],
     independent: "Build cards from a list of four records and check that all four cards carry different words, then remove one field from one record and see what happens.",
-    hints: ["Check that each card reads its own record rather than the first one.", "A missing field leaves an empty place rather than stopping the walk.", "Compare two cards side by side, because copies are easy to miss in a row."],
+    hints: ["Check that each card reads the record of that pass rather than the first one.", "A missing field reads as nothing, so plan a default instead of stopping.", "Compare two cards side by side, because copies are easy to miss in a row."],
     readiness: [
       {
         prompt: "Which check proves that each card uses its own record?",
@@ -1738,7 +1738,7 @@ export const packs: RevisionPack[] = [
         prompt: "Which value needs the careful treatment when a card is rendered?",
         options: ["A comment a visitor typed into a form", "The label you wrote for the card", "The class name on the card"],
         answer: 0,
-        explanation: "The visitor value is the one you did not write, so it must be written as text.",
+        explanation: "The comment came from a visitor, so it is the value that has to be written as text.",
       },
     ],
     lessonId: "ages-13-15-data-render",
@@ -1837,7 +1837,7 @@ export const packs: RevisionPack[] = [
     hints: ["Test with awkward data, because tidy data hides the faults that matter.", "Walk lists from their length, and reach records by field name.", "Render visitor values as text, then check with a value built to break the page."],
     readiness: [
       {
-        prompt: "A data checkpoint is finished when which of these holds?",
+        prompt: "Which evidence shows that the data and the rendering hold up under awkward content?",
         options: ["Lists, records and visitor values all behave with awkward data", "The page looks right with tidy data", "Every list has the same length"],
         answer: 0,
         explanation: "The checkpoint is about awkward data, because that is where the faults appear.",
@@ -1886,13 +1886,13 @@ export const packs: RevisionPack[] = [
     meaning: "An event listener runs a block of code when something happens, such as a click on a button or a submit on a form.",
     whyItMatters: "Listeners are how a page stops being a document and starts behaving, so the pairing of an event with a block of code is the core idea.",
     workedExample: "The pattern is to name the element, name the event and hand in a block of code to run when the event fires.",
-    commonMistake: "Listening for one event on many elements by writing one listener per element, which misses any element added later.",
+    commonMistake: "Listening for a click on the button instead of the submit event on the form, which misses a form sent from the keyboard.",
     guided: [
       {
-        prompt: "A list of items grows as a visitor adds more. Which listener setup still works for the new items?",
-        options: ["A listener on the list that notes which item was used", "A listener written on each original item", "A listener on the document head"],
+        prompt: "A form can be sent by clicking its button or by pressing Enter inside a field. Where should the listener go so one block of code covers both?",
+        options: ["On the form, listening for submit", "On the button, listening for click", "On each field, listening for change"],
         answer: 0,
-        explanation: "A listener on the parent catches events from items added later.",
+        explanation: "The submit event belongs to the form, so one listener covers every way the form can be sent.",
       },
       {
         prompt: "A button should add one item per click. Which event suits it?",
@@ -1902,13 +1902,13 @@ export const packs: RevisionPack[] = [
       },
     ],
     independent: "Add one listener to your page and record how many times it runs when you use the control three times in a row.",
-    hints: ["Put the listener on the parent when the children can change.", "Choose the event that matches the action, such as click for a press and submit for a form.", "Count the runs, because a listener added twice produces two results for one action."],
+    hints: ["Listen on the element that owns the action, such as the form for a submission.", "Choose the event that matches the action, such as click for a press and submit for a form.", "Count the runs, because a listener added twice produces two results for one action."],
     readiness: [
       {
-        prompt: "Which event fires when a visitor sends a form?",
+        prompt: "A listener sits on the form. Which event does it respond to when the form is sent?",
         options: ["submit", "click", "load"],
         answer: 0,
-        explanation: "The submit event belongs to the form and fires when it is sent.",
+        explanation: "The submit event belongs to the form and fires however the form was sent.",
       },
     ],
     lessonId: "ages-13-15-interaction-events",
@@ -1957,10 +1957,10 @@ export const packs: RevisionPack[] = [
     commonMistake: "Telling a visitor that the value is invalid without saying what would be accepted.",
     guided: [
       {
-        prompt: "A value fails a check. Which message helps most?",
-        options: ["A message that says what shape of value is accepted", "A message that says invalid entry", "A message that says error"],
+        prompt: "A visitor types a few spaces into a field and sends the form. What should the check do with that value?",
+        options: ["Trim it and treat it as empty", "Accept it, because the field is not literally empty", "Convert it to the number zero"],
         answer: 0,
-        explanation: "Saying what would be accepted lets a visitor repair the value on the first attempt.",
+        explanation: "Spaces on their own are not a real answer, so trimming first is what makes the empty case visible.",
       },
       {
         prompt: "A check fails on the third field of a form. Where should the message appear?",
@@ -2041,7 +2041,7 @@ export const packs: RevisionPack[] = [
     hints: ["Storage returns text, so convert a value before doing arithmetic with it.", "A preference is a good candidate for storage, and a private value never is.", "Offer a way to clear what was saved, because a visitor may share the device."],
     readiness: [
       {
-        prompt: "Which value is suitable to keep in browser storage?",
+        prompt: "Which value is a safe choice to save for the next visit?",
         options: ["The layout the visitor chose", "The visitor password", "The visitor home address"],
         answer: 0,
         explanation: "A harmless preference is the right kind of value for storage.",
@@ -2109,7 +2109,7 @@ export const packs: RevisionPack[] = [
     hints: ["Build and check one step at a time, because later faults hide earlier ones.", "Storage is for harmless preferences rather than for values a visitor typed.", "Report every result in a status region so a visitor is never left guessing."],
     readiness: [
       {
-        prompt: "A form is finished when which of these holds?",
+        prompt: "Which evidence shows that the form works from the first field to the final message?",
         options: ["Every step works and each result is reported calmly", "The form looks stylish", "Every field is required"],
         answer: 0,
         explanation: "Working behaviour and calm reporting are what finishing the form means.",
@@ -2120,7 +2120,7 @@ export const packs: RevisionPack[] = [
   {
     concept: "ages-13-15:ages-13-15-quality:debug-evidence",
     courses: ["ages-13-15"],
-    title: "Debugging with evidence",
+    title: "Evidence before a repair",
     meaning: "Debugging with evidence means writing down what happened, what you expected and the smallest change that tests one idea.",
     whyItMatters: "Changing several things at once loses the lesson of the fault, so the same fault returns later in another form.",
     workedExample: "A steady method is to reproduce the fault, write the values at the point it happens, form one guess, and change one thing.",
@@ -2263,7 +2263,7 @@ export const packs: RevisionPack[] = [
     commonMistake: "Listing every file that changed, which tells a visitor nothing about what the site does now.",
     guided: [
       {
-        prompt: "Which line belongs in a release note?",
+        prompt: "Which entry makes a release note useful to a visitor?",
         options: ["The contact form now checks the email field before sending", "The form file was edited", "Three files changed"],
         answer: 0,
         explanation: "A note describes what changed for the visitor rather than which file moved.",
