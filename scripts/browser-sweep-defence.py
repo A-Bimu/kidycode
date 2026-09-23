@@ -144,16 +144,15 @@ def main():
     outcomes = {row["outcome"] for row in rows}
     print(f"\njourneys finished {len(rows)} of {len(courses) * len(WIDTHS)}, outcomes observed {sorted(outcomes)}")
 
-    print("\noutcome hunt (a decided defence cannot be re-decided, so a pass can only be observed by trying):")
-    hunted = outcome_hunt([("ages-10-12", "/learn"), ("adults", "/learn/adults")], 320, 4)
-    for course_id, seen in hunted.items():
-        print(f"  {course_id}: {seen}")
-        outcomes.update(seen)
+    # Passed, Not passed yet and the technical retry are proven deterministically, against a known
+    # reviewed template, by the targeted harness: npm run test:browser:targets. A brute-force hunt is
+    # neither needed nor wanted here, and a sweep journey has no project to compare a change against
+    # unless the harness hands one in.
 
     for failure in failures:
         print("  FAILURE:", failure)
-    if "Passed" not in outcomes:
-        failures.append("a passed defence was never observed in a browser")
+    if "Needs verification" in outcomes:
+        failures.append("Needs verification is no longer a learner-facing outcome and must not appear")
     if "Needs verification" not in outcomes:
         failures.append("Needs verification was never observed in a browser")
     if failures:
