@@ -153,8 +153,6 @@ def main():
         print("  FAILURE:", failure)
     if "Needs verification" in outcomes:
         failures.append("Needs verification is no longer a learner-facing outcome and must not appear")
-    if "Needs verification" not in outcomes:
-        failures.append("Needs verification was never observed in a browser")
     if failures:
         print(f"\ndefence sweep FAILED with {len(failures)} problem(s)")
         raise SystemExit(1)
