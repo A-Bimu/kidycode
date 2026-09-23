@@ -138,11 +138,117 @@ function prepareCourse(learnerId, courseId) {
 }
 
 const courseId = "ages-10-12";
+const EXPLAIN_TEXT = "I put the list inside the main region so the page has one clear main area, and my headings step down one level at a time so a reader can follow the shape of the page.";
 const owner = await newLearner(kidName("DefOwner"), courseId, 11);
 prepareCourse(owner.id, courseId);
 
 let attemptId = "";
 let defence = null;
+
+/* A realistic learner project, shaped like the course's own build task: semantic regions, a
+ * heading order, a list, a fragment link, a described image, readable styling, a responsive rule
+ * and one scripted interaction. The change requirements compare against this, so the grader has a
+ * baseline to evaluate instead of an empty submission. */
+const REALISTIC_PROJECT = {
+  html: [
+    "<!doctype html>",
+    "<html lang=\"en\">",
+    "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>My club</title></head>",
+    "<body>",
+    "<header><h1>My club</h1><nav><a href=\"#news\">News</a></nav></header>",
+    "<main>",
+    "<section id=\"news\"><h2>This week</h2><p>We meet on Saturday in the hall.</p>",
+    "<ul><li>Biscuits</li><li>Badges</li><li>Photos</li></ul></section>",
+    "<section id=\"models\"><h2>Our models</h2><p role=\"status\">Ready</p></section>",
+    "</main>",
+    "<img src=\"club.webp\" alt=\"The club table with three finished models\">",
+    "<button id=\"more\" type=\"button\">Show more</button>",
+    "<footer><p>A club page by a member.</p></footer>",
+    "</body>",
+    "</html>",
+  ].join("\n"),
+  css: [
+    "body { line-height: 1.6; color: #111936; font-family: system-ui, sans-serif; }",
+    "nav { display: flex; flex-wrap: wrap; gap: 1rem; }",
+    "img { max-width: 100%; height: auto; }",
+    ".card { padding: 1rem; border: 2px solid #111936; }",
+    "a:focus-visible, button:focus-visible { outline: 3px solid #ee9d2b; outline-offset: 3px; }",
+    "@media (min-width: 600px) { .cards { grid-template-columns: repeat(3, 1fr); } }",
+  ].join("\n"),
+  javascript: [
+    "const status = document.querySelector('#models p');",
+    "const button = document.querySelector('#more');",
+    "button.addEventListener('click', function () { status.textContent = 'Showing every model'; });",
+  ].join("\n"),
+};
+
+/* The submitted code map for a final assessment: the same realistic page for the build task and
+ * for each debug task, so every requirement has something to evaluate. */
+function realisticSubmission(attemptView) {
+  const code = {};
+  const tasks = [...(attemptView.debug || [])];
+  if (attemptView.build) tasks.push(attemptView.build);
+  for (const task of tasks) code[task.itemId] = { ...REALISTIC_PROJECT };
+  return code;
+}
+
+await step("a final assessment with no usable code exhausts the tasks and returns a retryable technical response", async () => {
+  const bare = await newLearner(kidName("DefBare"), courseId, 11);
+  prepareCourse(bare.id, courseId);
+  cookie = bare.cookie;
+
+  const started = await api("/api/assessment/start", { method: "POST", body: JSON.stringify({ kind: "final" }) });
+  assert.equal(started.status, 200, `final start answered ${started.status}`);
+  const bareAttemptId = started.body.attempt.attemptId;
+  const submitted = await api("/api/assessment/submit", {
+    method: "POST",
+    body: JSON.stringify({ attemptId: bareAttemptId, answers: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], code: {} }),
+  });
+  assert.equal(submitted.status, 200, `submit answered ${submitted.status}`);
+  const before = database.prepare("SELECT outcome, needs_verification AS needs FROM assessment_attempts WHERE id = ?").get(bareAttemptId);
+
+  let technical = null;
+  const tried = [];
+  for (let round = 0; round < 5 && !technical; round += 1) {
+    const response = await api("/api/assessment/defence", {
+      method: "POST",
+      body: JSON.stringify({ attemptId: bareAttemptId, explain: EXPLAIN_TEXT, predictChoice: 0, changeCode: { css: ".card { color: #111936; }" } }),
+    });
+    const row = database.prepare("SELECT status, change_item_id AS changeItemId FROM assessment_defence WHERE attempt_id = ?").get(bareAttemptId);
+    assert.equal(row.status, "pending", "an unfinished defence recorded a decision");
+    if (response.body.technical === true) {
+      technical = response;
+      break;
+    }
+    assert.equal(response.body.retry, true, `round ${round}: the response was neither a decision nor a retry: ${JSON.stringify(response.body)}`);
+    assert.ok(!/person will review|a person needs|teacher/i.test(JSON.stringify(response.body)), "the retry mentioned a reviewer");
+    if (tried.length > 0) assert.notEqual(row.changeItemId, tried[tried.length - 1], "an equivalent task was repeated");
+    tried.push(row.changeItemId);
+  }
+
+  assert.ok(technical, "the equivalent tasks were never exhausted, so the technical response never appeared");
+  assert.equal(technical.status, 503, `the technical response answered ${technical.status}`);
+  assert.equal(technical.body.code, "defence_task_unavailable", "the technical response carried no stable machine-readable code");
+  assert.ok(String(technical.body.error).length > 20, "the technical response carried no learner-safe message");
+  assert.ok(!/person will review|a person needs|teacher/i.test(JSON.stringify(technical.body)), "the technical response mentioned a reviewer");
+  assert.ok(tried.length >= 1, "no equivalent task was offered before the tasks were exhausted");
+
+  const after = database.prepare("SELECT outcome, needs_verification AS needs FROM assessment_attempts WHERE id = ?").get(bareAttemptId);
+  assert.equal(after.outcome, before.outcome, "the unfinished defence lowered or changed the outcome");
+  assert.notEqual(after.outcome, "not_passed_yet", "the unfinished defence recorded Not passed yet");
+  /* The attempt's technical flag belongs to the assessment grading, not to the defence: what must
+   * hold is that the defence changes nothing and never exposes the internal value to the client. */
+  assert.equal(after.needs, before.needs, "the unfinished defence changed a learner-facing technical state");
+  assert.ok(!("needsVerification" in technical.body), "the internal undecidable value reached the client");
+
+  /* The unfinished defence is still there, with the learner's own words kept. */
+  const resumed = await api(`/api/assessment/defence?attemptId=${encodeURIComponent(bareAttemptId)}`);
+  assert.equal(resumed.status, 200, `the unfinished defence could not be resumed (${resumed.status})`);
+  assert.equal(resumed.body.defence.status, "pending", "the resumed defence was not still unfinished");
+  assert.equal(resumed.body.defence.explainResponse, EXPLAIN_TEXT, "the learner's explanation was not preserved");
+  assert.ok(resumed.body.defence.change.instruction.length > 10, "the resumed defence had no change task");
+  assert.ok(!("needsVerification" in resumed.body.defence), "the internal undecidable value reached the resumed defence");
+});
 
 await step("a final assessment assigns a reviewed defence from the learner's own course", async () => {
   cookie = owner.cookie;
@@ -152,10 +258,18 @@ await step("a final assessment assigns a reviewed defence from the learner's own
 
   const submitted = await api("/api/assessment/submit", {
     method: "POST",
-    body: JSON.stringify({ attemptId, answers: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], code: {} }),
+    body: JSON.stringify({
+      attemptId,
+      answers: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      code: realisticSubmission(started.body.attempt),
+    }),
   });
   assert.equal(submitted.status, 200, `submit answered ${submitted.status}`);
   assert.equal(submitted.body.defenceRequired, true, "the final assessment did not ask for a defence");
+
+  const stored = database.prepare("SELECT code_json AS codeJson FROM assessment_attempts WHERE id = ?").get(attemptId);
+  assert.ok(JSON.parse(stored.codeJson) && Object.keys(JSON.parse(stored.codeJson)).length > 0,
+    "the baseline project was not stored, so the change requirements would have nothing to compare against");
 
   const fetched = await api(`/api/assessment/defence?attemptId=${encodeURIComponent(attemptId)}`);
   assert.equal(fetched.status, 200, `the defence could not be opened (${fetched.status})`);

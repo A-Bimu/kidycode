@@ -78,7 +78,32 @@ if (!build) throw new Error(`No build task for form ${attempt.formId}`);
 const submitted = (JSON.parse(attempt.codeJson || "{}")[build.id]) || {};
 
 const changeTask = changeTaskFrom(template, build);
-const graded = CANDIDATES.map((candidate, at) => {
+
+/* Candidates derived from the learner's own submitted project. A requirement that asks for one more
+ * of something, or that the project keeps what it already has, can only be satisfied in the context
+ * of that work, so the fixture builds these from the submission exactly as a learner would edit it.
+ * Nothing here is decided by the fixture: every candidate is graded by the production checker. */
+const base = {
+  html: submitted.html || "",
+  css: submitted.css || "",
+  javascript: submitted.javascript || "",
+};
+const before = (text, marker, addition) => (text.includes(marker) ? text.replace(marker, addition + marker) : text + addition);
+const after = (text, marker, addition) => (text.includes(marker) ? text.replace(marker, marker + addition) : text + addition);
+const DERIVED = [
+  { html: before(base.html, "</ul>", "<li>Notes</li>"), css: "", javascript: "" },
+  { html: before(base.html, "</main>", "<section><h2>Diary</h2><p>Notes from the last meeting.</p></section>"), css: "", javascript: "" },
+  { html: before(base.html, "</nav>", '<a href="#models">Models</a>'), css: "", javascript: "" },
+  { html: base.html, css: after(base.css, "\n", ""), javascript: "" },
+  { html: base.html, css: `${base.css}\nh2 { margin-top: 1.5rem; }\nli { line-height: 1.6; }`, javascript: "" },
+  { html: base.html, css: base.css, javascript: `${base.javascript}\nconst note = document.createElement('p');\nnote.textContent = 'Saved';\ndocument.querySelector('main').append(note);` },
+  { html: base.html.replace("<h1", '<h1 id="top"'), css: base.css, javascript: "" },
+  { html: base.html.replace("<img", '<img loading="lazy"'), css: base.css, javascript: "" },
+  { html: base.html, css: base.css, javascript: base.javascript },
+  { html: before(base.html, "</body>", "<p>Thanks for reading.</p>"), css: "", javascript: "" },
+];
+
+const graded = [...CANDIDATES, ...DERIVED].map((candidate, at) => {
   const result = gradeChange(template, { ...submitted, ...candidate }, build, submitted);
   return { at, status: result.status, detail: result.detail, candidate };
 });

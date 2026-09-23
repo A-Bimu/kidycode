@@ -159,10 +159,22 @@ def main():
         report["screens"].append(result_screen)
         outcome = page.evaluate("(() => { const h = document.querySelector('h1'); return h ? h.innerText.trim() : ''; })()")
         report["facts"]["outcome"] = outcome
-        if outcome not in ("Passed", "Not passed yet", "Needs verification"):
+        # The defence has two educational outcomes. A change that genuinely cannot be checked is not
+        # an outcome at all: the learner sees the neutral retryable panel instead, and nothing is
+        # passed, failed, lowered or counted.
+        if outcome == "Try a different equivalent task":
+            text = page.evaluate("document.body.innerText") or ""
+            if "We could not check this change. Your work is saved." not in text:
+                raise Failure("the retry panel did not carry the neutral retryable message")
+            if "Nothing has been lost" not in text:
+                raise Failure("the retry panel did not say the learner's work is kept")
+            report["facts"]["technicalRetry"] = True
+        elif outcome not in ("Passed", "Not passed yet"):
             raise Failure(f"the defence result screen showed {outcome!r} instead of an approved outcome")
-        if result_screen["liveRegions"] < 1 and outcome == "Needs verification":
-            raise Failure("Needs verification was shown without the explanation section")
+        if "Needs verification" in outcome:
+            raise Failure("Needs verification is no longer a learner-facing outcome")
+        if result_screen["liveRegions"] < 1:
+            raise Failure("the result screen announced nothing")
 
         for screen in report["screens"]:
             check_screen(screen, screen["screen"])

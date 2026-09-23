@@ -233,6 +233,7 @@ export async function POST(request: Request) {
       if (others.length === 0) {
         return json({
           error: "We could not check this change and no equivalent task is available right now. Your work is saved.",
+          code: "defence_task_unavailable",
           retry: true,
           technical: true,
         }, 503);
@@ -246,6 +247,7 @@ export async function POST(request: Request) {
       if (alreadyTried + 1 >= allTemplates.length) {
         return json({
           error: "We could not check this change and every equivalent task has been tried. Your work is saved, nothing is recorded and nothing is lowered.",
+          code: "defence_task_unavailable",
           retry: true,
           technical: true,
         }, 503);

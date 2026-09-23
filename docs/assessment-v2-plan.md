@@ -344,9 +344,20 @@ internal event (`stage = retry`) with no private code and no integrity signal. I
 task is available the defence stays unfinished and a retryable technical error is shown, so a
 system limitation can never cost a learner their certificate eligibility.
 
-Recorded honestly for the next release: with the current reviewed content no legitimate submission
-actually reaches the undecidable branch, which is exactly why it is no longer an outcome. The
-architecture stays open for a future qualified-review workflow, and that workflow is not built.
+Recorded honestly, and corrected by evidence: the earlier note said no legitimate submission
+reached the undecidable branch. That was wrong. A final assessment submitted with no usable project
+code does reach it, because a reviewed change that adds one more of something has no baseline to
+compare against. The defence API journey proves it end to end: the route exhausts the reviewed
+equivalent tasks, keeps the stored decision `pending`, changes no score and records no Not passed
+yet, and answers with the documented retryable technical response carrying the stable code
+`defence_task_unavailable` and a learner-safe message. Each equivalent task is offered once, the
+attempt records a bounded internal marker (`stage = retry-N`), and when every equivalent task has
+been tried the defence stays unfinished and resumable with the learner's own words intact.
+
+The journey was split into two distinct tests so the two cases cannot be confused again: a technical
+retry test that submits no usable project code, and a missing-understanding test that submits a
+realistic project baseline and then fails on understanding. The browser harness accepts the retry
+panel as neither Passed nor Not passed yet, and refuses any screen that says Needs verification.
 
 ### Phase 4
 
