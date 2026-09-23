@@ -347,8 +347,17 @@ was ever started.
 
 ### Phase 5
 
-In progress. The revision library contract (`lib/assessment/revision/index.ts`) and
-`scripts/validate-assessment-revision.mjs` are committed with empty pack files; the four
-content passes that fill them are running. Remaining for this phase: the results screen with
-skill-level secure and needs-revision lists, the revision pages, the readiness check that
-unlocks a retake, and the journey tests.
+Content complete: **238 revision pages** (ages 10 to 12: 42, ages 13 to 15: 68, ages 16 to 18: 66,
+adults: 62), one for every concept any bank can mark, 8,654 lines of reviewed content. Every page
+carries meaning, why it matters, a worked example, a common mistake, two guided questions, an
+independent task, three progressive hints, a readiness check and a link to the real lesson.
+`npm run check` now includes the revision validator, which also refuses a pack whose lesson the
+course does not teach, a repeated prompt between packs, and an unreachable pack.
+
+Two real defects were fixed to get there: the validator itself could not run (it used `import type`
+in an `.mjs` file, which tsx cannot strip, so every run died before the first check), and
+`revision/index.ts` imported `CourseId` from a module that does not export it.
+
+Remaining for this phase: the results screen with skills-already-secure and skills-needing-revision
+lists, the first recommended action, the revision page interface, the readiness check that unlocks a
+retake, and the journey tests.

@@ -7,7 +7,8 @@
  * "revise more" without a page to open.
  */
 
-import type { CourseAssessment, CourseId, RevisionPack } from "@/lib/assessment/types";
+import type { CourseAssessment, RevisionPack } from "@/lib/assessment/types";
+import type { CourseId } from "@/lib/course";
 import { packs as ages10to12Packs } from "@/lib/assessment/revision/ages-10-12";
 import { packs as ages13to15Packs } from "@/lib/assessment/revision/ages-13-15";
 import { packs as ages16to18Packs } from "@/lib/assessment/revision/ages-16-18";

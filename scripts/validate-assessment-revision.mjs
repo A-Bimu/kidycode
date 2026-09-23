@@ -11,10 +11,9 @@ import assert from "node:assert/strict";
 import { courses } from "../lib/course-catalog.ts";
 import { assessmentContent } from "../lib/assessment/manifest.ts";
 import { REVISION_PACKS, assessedConcepts, revisionProblems } from "../lib/assessment/revision/index.ts";
-import type { CourseId } from "../lib/assessment/types.ts";
 
 const contents = Object.values(assessmentContent);
-const lessonsFor = (courseId: CourseId) => new Set(courses[courseId].lessons.map((lesson) => lesson.id));
+const lessonsFor = (courseId) => new Set(courses[courseId].lessons.map((lesson) => lesson.id));
 
 let checks = 0;
 const sweep = (label, body) => {
