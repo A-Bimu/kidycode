@@ -715,7 +715,7 @@ export default function AssessmentFlow({
             <h1 ref={headingRef} tabIndex={-1}>
               {decision.status === "passed" ? "Passed" : decision.status === "needs-verification" ? "Needs verification" : "Not passed yet"}
             </h1>
-            <p className={`assessment-outcome is-${decision.status === "passed" ? "passed" : decision.status === "needs-verification" ? "needs_verification" : "not_passed_yet"}`}>
+            <p className={`assessment-outcome is-passed`} role="status">
               {decision.status === "passed" ? "Your independent-understanding check is complete." : decision.status === "needs-verification" ? "This needs a person to look at it." : "This is not passed yet."}
             </p>
             {decision.reason && <p>{decision.reason}</p>}
