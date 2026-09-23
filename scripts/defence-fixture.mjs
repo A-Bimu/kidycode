@@ -96,6 +96,10 @@ const DERIVED = [
   { html: before(base.html, "</nav>", '<a href="#models">Models</a>'), css: "", javascript: "" },
   { html: base.html, css: after(base.css, "\n", ""), javascript: "" },
   { html: base.html, css: `${base.css}\nh2 { margin-top: 1.5rem; }\nli { line-height: 1.6; }`, javascript: "" },
+  /* A change that introduces a custom property and reads it back with var(), which is what a
+   * css-var-usage requirement asks for. The learner keeps their own stylesheet and adds to it. */
+  { html: "", css: `${base.css}\nbody { --brand: #ee9d2b; color: var(--brand); }`, javascript: "" },
+  { html: "", css: `${base.css}\n:root { --brand: #111936; }\nh2 { color: var(--brand); }`, javascript: "" },
   { html: base.html, css: base.css, javascript: `${base.javascript}\nconst note = document.createElement('p');\nnote.textContent = 'Saved';\ndocument.querySelector('main').append(note);` },
   { html: base.html.replace("<h1", '<h1 id="top"'), css: base.css, javascript: "" },
   { html: base.html.replace("<img", '<img loading="lazy"'), css: base.css, javascript: "" },

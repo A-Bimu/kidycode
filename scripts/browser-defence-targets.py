@@ -57,6 +57,18 @@ TECHNICAL_TARGETS = [
 # defence through the normal interface and the server still decides.
 UNDECIDABLE_TEMPLATE = "ages-10-12-defence-2"
 
+# The route assigns a template from the attempt id, so the assignment used to vary run to run. Each
+# journey now seeds a known reviewed template server-side, which is the reproducible setup the brief
+# asks for: the browser still completes the assessment, the learner still submits the defence through
+# the normal interface, and the production grader still decides the outcome.
+SEEDED_TEMPLATE = {
+    "Passed": {"ages-10-12": "ages-10-12-defence-1", "ages-13-15": "ages-13-15-defence-1",
+               "ages-16-18": "ages-16-18-defence-2", "adults": "adults-defence-1"},
+    "Not passed yet": {"ages-10-12": "ages-10-12-defence-2", "ages-13-15": "ages-13-15-defence-2",
+                       "adults": "adults-defence-1"},
+    "Technical retry": {"ages-10-12": "ages-10-12-defence-2"},
+}
+
 EXPLANATION = (
     "I put the list inside the main region so the page has one clear main area, and the headings "
     "step down one level at a time so a reader can follow the shape of the page. I kept the styles "
@@ -148,6 +160,60 @@ PROJECT = {
     ),
 }
 
+# The adults final build is a business handover page rather than a club page: it asks for a labelled
+# enquiry form, a status region, a check on the enquiry value before it is accepted, a 700 pixel
+# breakpoint and no published contact detail. Shaping the project to its own course is what makes the
+# reviewed change requirements decidable for it.
+ADULTS_PROJECT = {
+    "html": (
+        "<!doctype html>\n<html lang=\"en\">\n<head>\n"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+        "<title>Kariobangi Repairs | handover notes</title>\n"
+        "<meta name=\"description\" content=\"Handover notes and an enquiry form for the repairs shop.\">\n"
+        "</head>\n<body>\n<header><h1>Kariobangi Repairs</h1>\n"
+        "<nav><a href=\"#notes\">Notes</a><a href=\"#enquiry\">Enquiry</a></nav></header>\n<main>\n"
+        "<section id=\"notes\"><h2>Handover notes</h2>\n<ul>"
+        "<li>Tested: the enquiry form on a narrow screen</li>"
+        "<li>Tested: the status message after sending</li>"
+        "<li>Tested: the wider layout at 700 pixels</li></ul>\n</section>\n"
+        "<section id=\"enquiry\"><h2>Send an enquiry</h2>\n<form id=\"enquiry-form\">\n"
+        "<label for=\"enquiry\">What do you need</label>\n<textarea id=\"enquiry\" name=\"enquiry\"></textarea>\n"
+        "<label for=\"shop\">Which shop</label>\n<select id=\"shop\" name=\"shop\"><option>Repairs</option>"
+        "<option>Parts</option></select>\n<button type=\"submit\">Send</button>\n</form>\n"
+        "<p id=\"enquiry-status\" role=\"status\" aria-live=\"polite\">Ready</p>\n</section>\n</main>\n"
+        "<footer><p>A handover page for the shop team.</p></footer>\n</body>\n</html>"
+    ),
+    "css": (
+        "body { line-height: 1.6; color: #111936; font-family: system-ui, sans-serif; }\n"
+        "nav { display: flex; flex-wrap: wrap; gap: 1rem; }\n"
+        "a:focus-visible, button:focus-visible, textarea:focus-visible, select:focus-visible { "
+        "outline: 3px solid #ee9d2b; outline-offset: 3px; }\n"
+        "img { max-width: 100%; height: auto; }\n"
+        "@media (min-width: 700px) { main { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; } }"
+    ),
+    "javascript": (
+        "const form = document.querySelector('#enquiry-form');\n"
+        "const field = document.querySelector('#enquiry');\n"
+        "const status = document.querySelector('#enquiry-status');\n"
+        "form.addEventListener('submit', function (event) {\n"
+        "  event.preventDefault();\n"
+        "  const value = field.value.trim();\n"
+        "  if (value.length < 3) {\n"
+        "    status.textContent = 'Please write what you need before sending.';\n"
+        "    return;\n"
+        "  }\n"
+        "  status.textContent = 'Thank you. The shop team will reply.';\n"
+        "});"
+    ),
+}
+
+PROJECT_BY_COURSE = {"adults": ADULTS_PROJECT}
+
+
+def project_for(course_id):
+    return PROJECT_BY_COURSE.get(course_id, PROJECT)
+
+
 TYPE_PROJECT = r"""
 ((project) => {
   const editors = [...document.querySelectorAll("textarea")];
@@ -169,8 +235,25 @@ TYPE_PROJECT = r"""
 """
 
 
-def type_project(page):
-    return json.loads(page.evaluate(TYPE_PROJECT % json.dumps(PROJECT)))
+def type_project(page, project):
+    return json.loads(page.evaluate(TYPE_PROJECT % json.dumps(project)))
+
+
+CLEAR_CHANGE = r"""
+(() => {
+  const els = [...document.querySelectorAll('textarea[id^="defence-change-"]')];
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set;
+  for (const el of els) {
+    setter.call(el, "");
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  return JSON.stringify({ cleared: els.length, empty: els.every((el) => el.value === "") });
+})()
+"""
+
+
+def clear_change(page):
+    return json.loads(page.evaluate(CLEAR_CHANGE))
 
 
 def run_target(dj, sw, course_id, route, width, expect, attempts=1):
@@ -191,15 +274,15 @@ def run_once(dj, sw, course_id, route, width, expect, attempt_index):
 
     cookie, seed_data = sw.seed(course_id, width, f"t{width}{expect[:2]}{attempt_index}")
     seeded_attempt = None
-    if expect == "Technical retry":
+    wanted = SEEDED_TEMPLATE.get(expect, {}).get(course_id)
+    if wanted:
         seeded = subprocess.run(
             ["node", "--import", "tsx", "--no-warnings", "scripts/defence-verify-seed.mjs",
-             course_id, UNDECIDABLE_TEMPLATE, f"Tech{width}Retry"],
+             course_id, wanted, f"{expect[:2]}{width}{attempt_index}"],
             capture_output=True, text=True, check=False,
         )
         if seeded.returncode != 0:
-            raise SystemExit(f"HARNESS: {course_id} has no undecidable-by-design change template: "
-                             f"{seeded.stderr.strip()[:240]}")
+            raise SystemExit(f"HARNESS: {course_id} has no template {wanted}: {seeded.stderr.strip()[:240]}")
         seeded_attempt = json.loads(seeded.stdout.strip().splitlines()[-1])
         cookie = seeded_attempt["cookie"]
         seed_data = {"learnerId": seeded_attempt["learnerId"]}
@@ -240,7 +323,7 @@ def run_once(dj, sw, course_id, route, width, expect, attempt_index):
     typed_project = None
     for _ in range(3):
         if expect != "Technical retry":
-            typed_project = type_project(page)
+            typed_project = type_project(page, project_for(course_id))
         page.click("Next task")
     page.click("Review before submitting")
     page.click("Submit for marking")
@@ -274,6 +357,11 @@ def run_once(dj, sw, course_id, route, width, expect, attempt_index):
         for filename, code in (facts["satisfyingChange"] or {}).items():
             if code:
                 dj.type_into(page, f"#defence-change-{filename}", code)
+    else:
+        # The live-change editor is prefilled with the learner's own project, so a journey that wants
+        # to prove the undecidable case must hand in an empty change rather than the prefilled text.
+        report_facts = clear_change(page)
+        print(f"    cleared the change editors: {report_facts}")
     page.click("Save and continue")
 
     tabs = bj.tab_through(page, 3)
