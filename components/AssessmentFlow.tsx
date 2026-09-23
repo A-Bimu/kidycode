@@ -395,15 +395,15 @@ export default function AssessmentFlow({
       changeCode,
     });
     setBusy(false);
-    if (response.status !== 200 || (!response.body.decision && response.body.retry !== true)) {
-      setMessage(typeof response.body.error === "string" ? response.body.error : "That defence could not be submitted. Your work is still on screen.");
+    /* A change that could not be checked is not an outcome, and a temporary technical error is not a
+     * failure: both keep the learner's work, count no attempt and offer a way forward. */
+    if (response.body.retry === true && !response.body.decision) {
+      setDefenceRetry(String(response.body.message || response.body.error || DEFENCE_RETRY));
+      setDefenceStep(6);
       return;
     }
-    /* A technical retry is not an outcome: the learner is neither passed nor failed, nothing is
-     * lowered, and their own work stays on screen. */
-    if (response.body.retry === true && !response.body.decision) {
-      setDefenceRetry(String(response.body.message || DEFENCE_RETRY));
-      setDefenceStep(6);
+    if (response.status !== 200 || !response.body.decision) {
+      setMessage(typeof response.body.error === "string" ? response.body.error : "That defence could not be submitted. Your work is still on screen.");
       return;
     }
     setDefenceRetry(null);
