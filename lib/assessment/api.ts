@@ -16,13 +16,16 @@ import { z } from "zod";
 import { courses } from "@/lib/course-catalog";
 import {
   finalFormOf,
+  firstRevisionAction,
   moduleFormOf,
   revisionConceptsFrom,
   scoreAttempt,
+  secureConceptsFrom,
   toClientKnowledge,
   toClientTask,
   ASSESSMENT_RULES,
   type ClientAssessment,
+  type SecureConcept,
 } from "@/lib/assessment/engine";
 import { gradeCodeTask, gradeKnowledge } from "@/lib/assessment/engine";
 import { lessonByConcept } from "@/lib/assessment/manifest";
@@ -274,7 +277,9 @@ export type ResultPayload = {
   };
   corrections: ReturnType<typeof correctionPayload>;
   requirements: Record<string, PublicRequirement[]>;
+  secure: SecureConcept[];
   revision: Array<{ concept: string; label: string; lessonId: string; mandatory: string | null }>;
+  firstAction: { concept: string; label: string; lessonId: string } | null;
   defenceRequired: boolean;
 };
 
@@ -306,12 +311,17 @@ export function resultPayload(
     },
     corrections: correctionPayload(graded.results),
     requirements: publicRequirements(graded.results),
+    secure: secureConceptsFrom(graded.results, lessonByConcept(content)),
     revision: graded.revision.map((entry) => ({
       concept: entry.concept,
       label: entry.label,
       lessonId: entry.lessonId,
       mandatory: entry.mandatory,
     })),
+    firstAction: (() => {
+      const first = firstRevisionAction(graded.revision);
+      return first ? { concept: first.concept, label: first.label, lessonId: first.lessonId } : null;
+    })(),
     defenceRequired: attempt.kind === "final",
   };
 }

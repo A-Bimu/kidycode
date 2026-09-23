@@ -16,10 +16,15 @@ import {
   defenceComplete,
   escalatedDefence,
   gradeCodeTask,
+  gradePractice,
+  gradeReadiness,
   gradeKnowledge,
   revisionConceptsFrom,
   scoreAttempt,
   selectForm,
+  secureConceptsFrom,
+  firstRevisionAction,
+  toClientRevisionPack,
   toClientKnowledge,
   toClientTask,
   submissionFrom,
@@ -356,6 +361,83 @@ stepSync("a real project passes every requirement of a realistic brief", () => {
   assert.ok(bad.awarded < 30, `a weak project must not reach the build floor, scored ${bad.awarded}`);
   assert.equal(bad.requirements[4].status, "unmet");
   assert.equal(bad.requirements[4].mandatory, "privacy");
+});
+
+await sweep("secure skills, the first action and readiness follow the product rules", async () => {
+  const lessonMap = { "a:one": "lesson-one", "a:two": "lesson-two" };
+  const metKnowledge = { itemId: "k1", itemType: "knowledge", formVariant: "A", concept: "a:one", status: "met", awarded: 2, available: 2, requirements: [] };
+  const missedKnowledge = { ...metKnowledge, itemId: "k2", concept: "a:two", status: "unmet", awarded: 0 };
+  const mixedTask = {
+    itemId: "p1",
+    itemType: "practical",
+    formVariant: "A",
+    concept: "a:one",
+    status: "unmet",
+    awarded: 2,
+    available: 5,
+    requirements: [
+      { requirementId: "r1", label: "Kept", status: "met", awarded: 1, available: 1, concept: "a:one", mandatory: null, detail: "" },
+      { requirementId: "r2", label: "Missed", status: "unmet", awarded: 0, available: 1, concept: "a:two", mandatory: "privacy", detail: "" },
+    ],
+  };
+
+  const secure = secureConceptsFrom([metKnowledge, missedKnowledge, mixedTask], lessonMap);
+  check("a met skill is secure and a missed one is not", () =>
+    assert.deepEqual(secure.map((entry) => entry.concept), ["a:one"]));
+  check("a secure skill carries its lesson", () =>
+    assert.equal(secure[0].lessonId, "lesson-one"));
+
+  const plan = revisionConceptsFrom([mixedTask], lessonMap);
+  check("the first action is a mandatory unmet concept before any other", () =>
+    assert.equal(firstRevisionAction(plan)?.concept, "a:two"));
+  check("the first action is nothing when the plan is empty", () =>
+    assert.equal(firstRevisionAction([]), null));
+
+  const pack = {
+    concept: "a:two",
+    courses: ["ages-10-12"],
+    title: "A worked example",
+    meaning: "What the concept means, in words a young learner reads easily.",
+    whyItMatters: "It matters because the project shows it on the page.",
+    workedExample: "A short example.",
+    commonMistake: "A mistake that looks right at first.",
+    guided: [
+      { prompt: "A guided question about the concept", options: ["right", "wrong", "also wrong"], answer: 0, explanation: "Because it is the correct one." },
+      { prompt: "A second guided question about it", options: ["wrong", "right too", "wrong"], answer: 1, explanation: "Because that option is the correct one." },
+    ],
+    independent: "A task the learner can finish on their own with what the course taught.",
+    hints: ["A nudge.", "A closer nudge.", "Almost the answer."],
+    readiness: [
+      { prompt: "A readiness question about it", options: ["no", "yes", "no"], answer: 1, explanation: "Because that is right." },
+    ],
+    lessonId: "lesson-two",
+  };
+
+  check("readiness passes only when every question is right", () => {
+    assert.equal(gradeReadiness(pack, [1]).passed, true);
+    assert.equal(gradeReadiness(pack, [0]).passed, false);
+    assert.equal(gradeReadiness(pack, []).passed, false);
+  });
+  check("readiness explains each answer it marks", () => {
+    const graded = gradeReadiness(pack, [0]);
+    assert.equal(graded.results[0].correct, false);
+    assert.equal(graded.results[0].correctAnswer, 1);
+    assert.ok(graded.results[0].explanation.length > 10);
+  });
+  check("guided practice is marked without touching any stored mark", () => {
+    const graded = gradePractice(pack, [0, 1]);
+    assert.deepEqual(graded.map((entry) => entry.correct), [true, true]);
+    assert.deepEqual(graded.map((entry) => entry.available ?? 0), [0, 0].map(() => 0));
+  });
+  check("a revision page never carries an answer index", () => {
+    const view = toClientRevisionPack(pack, "2026-01-01T00:00:00.000Z");
+    const serialised = JSON.stringify(view);
+    assert.ok(!/"answer"/.test(serialised), "the client view leaked an answer index");
+    assert.ok(!/"explanation"/.test(serialised), "the client view leaked an explanation");
+    assert.equal(view.guided.length, 2);
+    assert.equal(view.hints.length, 3);
+    assert.equal(view.readinessPassedAt, "2026-01-01T00:00:00.000Z");
+  });
 });
 
 await sweep("engine sweep", async () => {

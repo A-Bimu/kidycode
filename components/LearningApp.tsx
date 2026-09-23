@@ -798,7 +798,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
   }
   if (view === "exam") return <ExamPanel course={course} onBack={() => setView("course")} />;
   if (view === "assessment") {
-    return <AssessmentFlow course={course} completedActivityIds={[...completed]} onExit={() => setView("course")} />;
+    return <AssessmentFlow course={course} completedActivityIds={[...completed]} onExit={() => setView("course")} onOpenLesson={openActivityById} />;
   }
 
   return (

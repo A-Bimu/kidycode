@@ -19,6 +19,7 @@ import {
   type ModuleForm,
   type FinalForm,
   type Outcome,
+  type RevisionPack,
   type ScoreBreakdown,
   type Submission,
 } from "@/lib/assessment/types";
@@ -409,6 +410,121 @@ export function revisionConceptsFrom(results: ItemResult[], lessonByConcept: Rec
     }
   }
   return [...concepts.values()];
+}
+
+/* ------------------------------------------------------------------- secure --- */
+
+export type SecureConcept = { concept: string; label: string; lessonId: string };
+
+/*
+ * The skills the learner already has. A skill counts as secure when the item that
+ * marks it was met and every requirement on it was met. An unsuccessful attempt never
+ * removes a secure skill, and the results screen shows these beside the weak ones so a
+ * learner can see what they keep.
+ */
+export function secureConceptsFrom(results: ItemResult[], lessonByConcept: Record<string, string>): SecureConcept[] {
+  const secure = new Map<string, SecureConcept>();
+  const remember = (concept: string, label: string) => {
+    if (!concept || secure.has(concept)) return;
+    secure.set(concept, { concept, label, lessonId: lessonByConcept[concept] || "" });
+  };
+  for (const result of results) {
+    if (result.itemType === "knowledge") {
+      if (result.status === "met") remember(result.concept, result.concept);
+      continue;
+    }
+    if (result.status !== "met") continue;
+    for (const requirement of result.requirements) {
+      if (requirement.status === "met") remember(requirement.concept, requirement.label);
+    }
+  }
+  return [...secure.values()];
+}
+
+/*
+ * The single action to take first. A mandatory concept that was not met comes before any
+ * other weak concept, and the plan's own order decides the rest, so the recommendation is
+ * always a specific concept with a page behind it rather than general advice.
+ */
+export function firstRevisionAction(revision: RevisionConcept[]): RevisionConcept | null {
+  if (revision.length === 0) return null;
+  return revision.find((entry) => entry.mandatory) ?? revision[0];
+}
+
+export type ClientRevisionPack = {
+  concept: string;
+  title: string;
+  meaning: string;
+  whyItMatters: string;
+  workedExample: string;
+  commonMistake: string;
+  independent: string;
+  hints: string[];
+  lessonId: string;
+  guided: Array<{ prompt: string; options: string[] }>;
+  readiness: Array<{ prompt: string; options: string[] }>;
+  readinessPassedAt: string | null;
+};
+
+/*
+ * A revision page as the learner sees it. The answer indices never leave the server: the
+ * learner answers, the server marks, and only then does the page learn what was right, so
+ * a revision page cannot be scraped for answers either.
+ */
+export function toClientRevisionPack(pack: RevisionPack, readinessPassedAt: string | null): ClientRevisionPack {
+  const questions = (entries: RevisionPack["guided"]) => entries.map((question) => ({
+    prompt: question.prompt,
+    options: [...question.options],
+  }));
+  return {
+    concept: pack.concept,
+    title: pack.title,
+    meaning: pack.meaning,
+    whyItMatters: pack.whyItMatters,
+    workedExample: pack.workedExample,
+    commonMistake: pack.commonMistake,
+    independent: pack.independent,
+    hints: [...pack.hints],
+    lessonId: pack.lessonId,
+    guided: questions(pack.guided),
+    readiness: questions(pack.readiness),
+    readinessPassedAt,
+  };
+}
+
+export type GradedPracticeQuestion = {
+  index: number;
+  correct: boolean;
+  correctAnswer: number;
+  explanation: string;
+};
+
+/* Marking for revision practice. Formative only: nothing here can change a stored mark. */
+export function gradePractice(pack: RevisionPack, answers: number[]): GradedPracticeQuestion[] {
+  return pack.guided.map((question, index) => ({
+    index,
+    correct: answers[index] === question.answer,
+    correctAnswer: question.answer,
+    explanation: question.explanation,
+  }));
+}
+
+/*
+ * Readiness for a concept. Every readiness question must be answered correctly, which is
+ * the whole of the gate: no waiting period, no attempt limit, and a concept once marked
+ * ready is never unlearned by a later attempt.
+ */
+export function gradeReadiness(
+  pack: RevisionPack,
+  answers: number[],
+): { passed: boolean; results: GradedPracticeQuestion[] } {
+  const results = pack.readiness.map((question, index) => ({
+    index,
+    correct: answers[index] === question.answer,
+    correctAnswer: question.answer,
+    explanation: question.explanation,
+  }));
+  return { passed: results.length > 0 && results.every((result) => result.correct), results };
 }
 
 /* ------------------------------------------------------------------ defence --- */

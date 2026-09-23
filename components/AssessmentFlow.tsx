@@ -44,6 +44,7 @@ type ResultPayload = {
   attempt: {
     id: string;
     kind: string;
+    moduleId: string | null;
     moduleTitle: string;
     outcome: string;
     mark: { awarded: number; available: number };
@@ -59,9 +60,26 @@ type ResultPayload = {
   };
   corrections: Array<{ itemId: string; correct: boolean; correctAnswer: number | null; explanation: string; chosen: number | null; misconception: string | null }>;
   requirements: Record<string, Array<{ label: string; status: string; awarded: number; available: number; mandatory: string | null; detail: string }>>;
+  secure: Array<{ concept: string; label: string; lessonId: string }>;
   revision: Array<{ concept: string; label: string; lessonId: string; mandatory: string | null }>;
+  firstAction: { concept: string; label: string; lessonId: string } | null;
   defenceRequired: boolean;
 };
+type RevisionPackView = {
+  concept: string;
+  title: string;
+  meaning: string;
+  whyItMatters: string;
+  workedExample: string;
+  commonMistake: string;
+  independent: string;
+  hints: string[];
+  lessonId: string;
+  guided: Array<{ prompt: string; options: string[] }>;
+  readiness: Array<{ prompt: string; options: string[] }>;
+  readinessPassedAt: string | null;
+};
+type GradedQuestion = { index: number; correct: boolean; correctAnswer: number; explanation: string };
 type ReferenceSheet = { rules: string[]; sections: Array<{ id: string; title: string; note: string; lines: string[] }> };
 
 const OUTCOME_LABELS: Record<string, string> = {
@@ -70,16 +88,18 @@ const OUTCOME_LABELS: Record<string, string> = {
   needs_verification: "Needs verification",
 };
 
-type Screen = "choose" | "overview" | "knowledge" | "practical" | "review" | "reference" | "result";
+type Screen = "choose" | "overview" | "knowledge" | "practical" | "review" | "reference" | "result" | "revision";
 
 export default function AssessmentFlow({
   course,
   completedActivityIds,
   onExit,
+  onOpenLesson,
 }: {
   course: CourseBundle;
   completedActivityIds: string[];
   onExit: () => void;
+  onOpenLesson?: (lessonId: string) => void;
 }) {
   const [screen, setScreen] = useState<Screen>("choose");
   const [attempt, setAttempt] = useState<ClientAssessment | null>(null);
@@ -92,6 +112,14 @@ export default function AssessmentFlow({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const [busy, setBusy] = useState(false);
   const [reference, setReference] = useState<ReferenceSheet | null>(null);
+  const [pack, setPack] = useState<RevisionPackView | null>(null);
+  const [practiceAnswers, setPracticeAnswers] = useState<number[]>([]);
+  const [practiceResult, setPracticeResult] = useState<GradedQuestion[] | null>(null);
+  const [readinessAnswers, setReadinessAnswers] = useState<number[]>([]);
+  const [readinessResult, setReadinessResult] = useState<GradedQuestion[] | null>(null);
+  const [readyAt, setReadyAt] = useState<string | null>(null);
+  const [hintLevel, setHintLevel] = useState(0);
+  const [pending, setPending] = useState<Array<{ concept: string; label: string }>>([]);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const signals = useRef({ visibilityChanges: 0, pasteEvents: 0, largestPasteChars: 0 });
   const completed = useMemo(() => new Set(completedActivityIds), [completedActivityIds]);
@@ -151,8 +179,13 @@ export default function AssessmentFlow({
     setBusy(false);
     if (response.status !== 200) {
       setMessage(typeof response.body.error === "string" ? response.body.error : "That assessment could not be opened.");
+      const listed = response.body.revision;
+      setPending(Array.isArray(listed)
+        ? (listed as Array<{ concept: string; label: string }>).filter((entry) => entry && typeof entry.concept === "string")
+        : []);
       return;
     }
+    setPending([]);
     const next = response.body.attempt as ClientAssessment;
     const draft = (response.body.draft || {}) as { answers?: number[]; code?: Record<string, Record<string, string>> };
     setAttempt(next);
@@ -206,6 +239,49 @@ export default function AssessmentFlow({
     if (data) setReference(data as ReferenceSheet);
     setScreen("reference");
   }, [reference]);
+
+  /* Open one revision page. The page arrives without answers, so the learner answers and
+   * the server marks: nothing on the page can be scraped for a correct option. */
+  const openRevision = useCallback(async (concept: string) => {
+    setBusy(true);
+    setMessage("");
+    const response = await fetch(`/api/assessment/revision?concept=${encodeURIComponent(concept)}`);
+    const data = await response.json().catch(() => null);
+    setBusy(false);
+    if (!data || !data.pack) {
+      setMessage("That revision page could not be opened.");
+      return;
+    }
+    const opened = data.pack as RevisionPackView;
+    setPack(opened);
+    setReadyAt(opened.readinessPassedAt);
+    setPracticeAnswers([]);
+    setPracticeResult(null);
+    setReadinessAnswers([]);
+    setReadinessResult(null);
+    setHintLevel(0);
+    setScreen("revision");
+  }, []);
+
+  const gradeRevision = useCallback(async (kind: "practice" | "readiness") => {
+    if (!pack || busy) return;
+    setBusy(true);
+    setMessage("");
+    const answers = kind === "practice" ? practiceAnswers : readinessAnswers;
+    const response = await post("/api/assessment/revision", { concept: pack.concept, kind, answers });
+    setBusy(false);
+    if (response.status !== 200) {
+      setMessage("Those answers could not be checked. Try again in a moment.");
+      return;
+    }
+    const graded = (kind === "practice" ? response.body.practice : response.body.readiness) as GradedQuestion[];
+    if (kind === "practice") {
+      setPracticeResult(graded);
+      return;
+    }
+    setReadinessResult(graded);
+    if (response.body.passed === true) setReadyAt(String(response.body.readinessPassedAt ?? "ready"));
+  }, [busy, pack, post, practiceAnswers, readinessAnswers]);
 
   if (screen === "choose") {
     return (
@@ -266,6 +342,123 @@ export default function AssessmentFlow({
     );
   }
 
+  if (screen === "revision" && pack) {
+    const hintsShown = pack.hints.slice(0, hintLevel);
+    return (
+      <main className="assessment-page">
+        <h1 ref={headingRef} tabIndex={-1}>{pack.title}</h1>
+        {readyAt && <p className="assessment-outcome is-passed">This concept is marked ready.</p>}
+
+        <section aria-label="What this means">
+          <h2>What it means</h2>
+          <p>{pack.meaning}</p>
+        </section>
+        <section aria-label="Why it matters">
+          <h2>Why it matters in your project</h2>
+          <p>{pack.whyItMatters}</p>
+        </section>
+        <section aria-label="Worked example">
+          <h2>A worked example</h2>
+          <pre>{pack.workedExample}</pre>
+        </section>
+        <section aria-label="Common mistake">
+          <h2>A common mistake</h2>
+          <p>{pack.commonMistake}</p>
+        </section>
+
+        <section aria-label="Hints">
+          <h2>Hints</h2>
+          <p>Hints open one at a time. Try the task first, then take the next one.</p>
+          {hintsShown.map((hint, index) => <p key={hint} className="assessment-rule">Hint {index + 1}: {hint}</p>)}
+          {hintLevel < pack.hints.length && (
+            <button className="primary-button" type="button" onClick={() => setHintLevel((level) => level + 1)}>
+              Show hint {hintLevel + 1} of {pack.hints.length}
+            </button>
+          )}
+        </section>
+
+        <section aria-label="Independent practice">
+          <h2>Your own practice task</h2>
+          <p>{pack.independent}</p>
+        </section>
+
+        <section aria-label="Guided practice">
+          <h2>Guided practice</h2>
+          {pack.guided.map((question, index) => (
+            <fieldset key={question.prompt} className="assessment-question">
+              <legend>{question.prompt}</legend>
+              {question.options.map((option, optionIndex) => (
+                <label key={option}>
+                  <input
+                    type="radio"
+                    name={`practice-${index}`}
+                    checked={practiceAnswers[index] === optionIndex}
+                    onChange={() => setPracticeAnswers((current) => current.map((value, at) => (at === index ? optionIndex : value)))}
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+              {practiceResult?.[index] && (
+                <p className={practiceResult[index].correct ? "is-correct" : "is-wrong"}>
+                  {practiceResult[index].correct ? "Correct." : "Not yet."} {practiceResult[index].explanation}
+                </p>
+              )}
+            </fieldset>
+          ))}
+          <button className="primary-button" type="button" disabled={busy} onClick={() => void gradeRevision("practice")}>
+            {busy ? "Checking..." : "Check my answers"}
+          </button>
+        </section>
+
+        <section aria-label="Readiness check">
+          <h2>Readiness check</h2>
+          <p>Answer every question correctly to mark this concept ready.</p>
+          {pack.readiness.map((question, index) => (
+            <fieldset key={question.prompt} className="assessment-question">
+              <legend>{question.prompt}</legend>
+              {question.options.map((option, optionIndex) => (
+                <label key={option}>
+                  <input
+                    type="radio"
+                    name={`readiness-${index}`}
+                    checked={readinessAnswers[index] === optionIndex}
+                    onChange={() => setReadinessAnswers((current) => current.map((value, at) => (at === index ? optionIndex : value)))}
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+              {readinessResult?.[index] && (
+                <p className={readinessResult[index].correct ? "is-correct" : "is-wrong"}>
+                  {readinessResult[index].correct ? "Correct." : "Not yet."} {readinessResult[index].explanation}
+                </p>
+              )}
+            </fieldset>
+          ))}
+          <button className="primary-button" type="button" disabled={busy} onClick={() => void gradeRevision("readiness")}>
+            {busy ? "Checking..." : "Check readiness"}
+          </button>
+        </section>
+
+        {message && <p className="form-message is-error" role="alert">{message}</p>}
+
+        <button className="primary-button" type="button" disabled={busy} onClick={() => {
+          setAttempt(null);
+          setResult(null);
+          void start(attempt?.kind ?? "module", attempt?.moduleId ?? undefined);
+        }}>
+          Start a fresh assessment
+        </button>
+        {pack.lessonId && onOpenLesson && (
+          <button className="text-button" type="button" onClick={() => onOpenLesson(pack.lessonId)}>
+            Revisit the full lesson
+          </button>
+        )}
+        <button className="text-button" type="button" onClick={() => setScreen("choose")}>Back to the assessments</button>
+        <button className="text-button" type="button" onClick={onExit}>Return to the course</button>
+      </main>
+    );
+  }
+
   if (screen === "result" && result) {
     const outcome = OUTCOME_LABELS[result.attempt.outcome] ?? result.attempt.outcome;
     return (
@@ -287,6 +480,56 @@ export default function AssessmentFlow({
           {result.attempt.reasons.map((reason) => <p key={reason}>{reason}</p>)}
           {result.attempt.nextStep && <p className="assessment-next">{result.attempt.nextStep}</p>}
         </section>
+        <section aria-label="Skills already secure">
+          <h2>Skills you already have</h2>
+          {result.secure.length === 0
+            ? <p>No skill is recorded as secure from this attempt yet.</p>
+            : <ul className="assessment-review">{result.secure.map((entry) => <li key={entry.concept}>{entry.label}</li>)}</ul>}
+        </section>
+        <section aria-label="Skills needing revision">
+          <h2>Skills needing another look</h2>
+          {result.revision.length === 0 ? (
+            <p>Nothing needs revision from this attempt.</p>
+          ) : (
+            <>
+              {result.firstAction && (
+                <p className="assessment-next">
+                  Start with: {result.firstAction.label}.
+                  <button className="text-button" type="button" onClick={() => void openRevision(result.firstAction!.concept)}>
+                    Open the revision page for {result.firstAction.label}
+                  </button>
+                </p>
+              )}
+              <ul className="assessment-review">
+                {result.revision.map((entry) => (
+                  <li key={entry.concept}>
+                    {entry.label}{entry.mandatory ? ` (required: ${entry.mandatory})` : ""}{" "}
+                    <button className="text-button" type="button" onClick={() => void openRevision(entry.concept)}>
+                      Open the revision page
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+        {pending.length > 0 && (
+          <section aria-label="Before a fresh attempt">
+            <h2>Before a fresh attempt</h2>
+            <p>Pass the readiness check on each of these first. There is no waiting period.</p>
+            <ul className="assessment-review">
+              {pending.map((entry) => (
+                <li key={entry.concept}>
+                  {entry.label}{" "}
+                  <button className="text-button" type="button" onClick={() => void openRevision(entry.concept)}>
+                    Open the revision page
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {message && <p className="form-message is-error" role="alert">{message}</p>}
         <section aria-label="Your answers">
           <h2>Your answers</h2>
           {result.corrections.map((correction, index) => {
@@ -305,6 +548,11 @@ export default function AssessmentFlow({
         <button className="primary-button" type="button" onClick={() => { setAttempt(null); setResult(null); setScreen("choose"); }}>
           Back to the assessments
         </button>
+        {result.attempt.kind !== "final" && (
+          <button className="primary-button" type="button" disabled={busy} onClick={() => { setMessage(""); void start("module", result.attempt.moduleId ?? undefined); }}>
+            Take a fresh form for this module
+          </button>
+        )}
         <button className="text-button" type="button" onClick={onExit}>Return to the course</button>
       </main>
     );
