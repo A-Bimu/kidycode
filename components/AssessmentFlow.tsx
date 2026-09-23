@@ -207,15 +207,6 @@ export default function AssessmentFlow({
     setScreen("reference");
   }, [reference]);
 
-  if (!attempt) {
-    return (
-      <main className="assessment-page">
-        <h1 ref={headingRef} tabIndex={-1}>Opening your assessment</h1>
-        <p role="status">Loading your assessment and your saved work.</p>
-      </main>
-    );
-  }
-
   if (screen === "choose") {
     return (
       <main className="assessment-page">
@@ -323,7 +314,8 @@ export default function AssessmentFlow({
     return (
       <main className="assessment-page">
         <h1 ref={headingRef} tabIndex={-1}>Opening your assessment</h1>
-        <p role="status">Loading your assessment and your saved work.</p>
+        <p role="status">{message || "Loading your assessment and your saved work."}</p>
+        <button className="text-button" type="button" onClick={onExit}>Return to the course</button>
       </main>
     );
   }
