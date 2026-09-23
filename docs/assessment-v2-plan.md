@@ -396,3 +396,84 @@ in an `.mjs` file, which tsx cannot strip, so every run died before the first ch
 Remaining for this phase: the results screen with skills-already-secure and skills-needing-revision
 lists, the first recommended action, the revision page interface, the readiness check that unlocks a
 retake, and the journey tests.
+
+### Phase 7
+
+Complete. `docs/assessment-v2-plan.md` records it here; the release report is Phase 8.
+
+**The exact eligibility rule.** A learner is eligible for the certificate only when all five
+conditions hold **on one submitted final attempt**, because a high score on one attempt and a passed
+defence on another is not a certified learner:
+
+1. the existing course completion record is complete (every activity, a saved project version for
+   every module, and a passed course final check)
+2. the stored Assessment V2 result is at least 70 out of 100
+3. the stored independent build is at least 30 out of 50
+4. every mandatory practical requirement passed
+5. the stored code-defence outcome is `Passed`
+
+`Not passed yet` is not eligible. A retryable technical defence result leaves certification
+undecided rather than denied, and can never issue or permanently deny a credential. A course with no
+reviewed level fails closed. Historical V1 learners keep their completion record and are never
+certified retroactively: an old completion alone issues nothing.
+
+**One calculation.** `deriveCertification` lives only in `lib/certification.ts`. The learner's
+progress page, the Skills Passport, the certificate, the guardian summary and the tests all read
+`lib/progress-view.ts`, which builds the summary once. The validator asserts that no other file
+under `lib/` or `app/` compares against 70 or 30.
+
+**Levels.** Ages 10 to 12 Web Creator, ages 13 to 15 Web Builder, ages 16 to 18 Web Application
+Builder, adults Business Website Builder. The level is looked up from the learner's assigned course.
+
+**Credential issuance.** The existing `assessment_credentials` table and `loadCredential` are reused;
+no migration was added and migration `0007` is untouched and still local-only. `issueCredential`
+writes with `ON CONFLICT (learner_id, course_id) DO NOTHING` against the existing unique index, so a
+repeat or a concurrent request returns one row with one id and one issue date. The id is generated
+from 16 cryptographically secure random bytes into an alphabet without easily confused characters,
+is opaque, non-sequential and safe to print.
+
+**The interface.** `components/SkillsPassport.tsx` takes the learner from My progress to Skills
+Passport to Certificate to Print. The passport lists each skill as demonstrated or still to
+demonstrate, with the evidence behind it and the module or project source, the assessment and
+defence states in plain language, and exactly one next action while certification is incomplete. The
+certificate sheet prints only the allowed fields, and `Print my certificate` uses the print
+stylesheet in `app/globals.css`: the app shell and every other screen are removed from layout, so the
+sheet prints on one page, in colour and in grayscale. The copy never claims an accreditation.
+
+**Guardian boundary.** `toGuardianCertificate` adds a certificate section to the existing strict
+allow list: certificate name, level, status label, course completion, project title, issue date and
+a short demonstrated-skills summary. No marks, no attempt, no credential id, no code and no defence
+response crosses that boundary, and the whole summary is built through the same calculation.
+
+**Test totals at the end of this phase.**
+
+| Suite | Result |
+| --- | --- |
+| `npm run check` (types, all validators, engine, grading, satisfiability, certification) | 0 |
+| `npm run lint` | 0, zero warnings |
+| `npm run build` | 0 |
+| `tests/certification/certification.test.mjs` | 18 checks, 0 failed |
+| `scripts/validate-certification.mjs` | 10 rules, 0 failing |
+| `scripts/e2e-certification.mjs` | 17 checks, 0 failed |
+| `npm run test:browser:certificate` | 15 of 15 journeys, 4 of 4 courses certified, 12 of 12 one-page print proofs, 12 of 12 distinct credential ids |
+| `npm run test:e2e` (all eight journeys) | 0 |
+
+**Real defects found and fixed while verifying.**
+
+- The certificate printed on **two pages**. The hidden screens were still reserving height, so the
+  sheet was paginated; the print rules now remove the app shell from layout and cap the sheet. The
+  harness measures the real PDF page tree and the print-media layout, so the fix is aimed rather
+  than guessed, and it fails loudly if the page count and the page objects ever disagree.
+- The passport and certificate styles were written into the **marketing stylesheet** `styles.css`,
+  which the learner interface does not load. They now live in `app/globals.css`, and the validator
+  asserts the print contract against the file the app actually loads.
+- That mistake also **desynchronised the `public/styles.css` twin**, which `validate-static.mjs`
+  requires to be byte-identical; both files were restored.
+- The certification fixture **never passed the course final check**, so completion was genuinely
+  incomplete and every issue attempt was correctly refused. The fixture was wrong, not the product.
+- The browser harness compared uppercase needles against lowercased page text, because
+  `text-transform: uppercase` changes what `innerText` returns.
+- The harness treated a negative overflow measurement as a failure; that value is the scrollbar, not
+  a page that is too wide.
+
+**Next.** Phase 8: the full regression, the leak sweep and `docs/assessment-v2-release-report.md`.

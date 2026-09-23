@@ -1,6 +1,8 @@
+import { deriveCertification, type Certification, type StoredAttempt } from "@/lib/certification";
 import { buildCompletionRecord, type CompletionRecord } from "@/lib/completion";
 import type { CourseBundle, Lesson, Stage } from "@/lib/course";
 import { buildMilestones, type Milestone } from "@/lib/milestones";
+import { buildPassport, defenceSummary, type SkillsPassport } from "@/lib/passport";
 import { conceptFocusFor } from "@/lib/tutor";
 
 /*
@@ -51,6 +53,13 @@ export type SummaryInput = {
   reviews: ReviewSummaryInput[];
   checkpoints: CheckpointInput[];
   exams: ExamInput[];
+  /* Assessment V2 evidence for the certificate, as stored. A summary built without it is
+   * simply not certifiable, which fails closed. */
+  certificationEvidence?: {
+    attempts: StoredAttempt[];
+    securedConcepts: Array<{ concept: string; label: string; itemId: string }>;
+    credential: { issuedAt: string } | null;
+  };
 };
 
 export const MASTERY_LABELS = {
@@ -116,6 +125,12 @@ export type Summary = {
   /* The one completion calculation, shared with the portfolio and the grown-up
    * view so the three can never disagree. */
   completion: CompletionRecord;
+  /* The one certification calculation. Course completion and skills certification are
+   * separate achievements: this record is the certificate, and it needs Assessment V2
+   * and a passed code defence on top of the completion record above. */
+  certification: Certification;
+  /* The private Skills Passport, derived from the same evidence. */
+  passport: SkillsPassport;
   /* Recent milestones, derived from the same evidence. */
   milestones: Milestone[];
 };
@@ -247,6 +262,44 @@ export function buildSummary(course: CourseBundle, input: SummaryInput): Summary
     completion,
   });
 
+  /* Course completion and skills certification are separate. Both are derived here, from
+   * evidence that already exists, so no surface can disagree with another. */
+  const certificationEvidence = input.certificationEvidence || { attempts: [], securedConcepts: [], credential: null };
+  const certification = deriveCertification({
+    courseId: course.courseFacts.id,
+    courseComplete: completion.complete,
+    attempts: certificationEvidence.attempts.map((attempt) => ({
+      attemptId: attempt.attemptId,
+      status: "submitted",
+      submittedAt: attempt.submittedAt,
+      score: attempt.score,
+      total: attempt.total,
+      buildAwarded: attempt.buildAwarded,
+      buildTotal: attempt.buildTotal,
+      mandatoryPassed: attempt.mandatoryPassed,
+      defenceStatus: attempt.defenceStatus,
+    })),
+  });
+  const certificationAttempt = certificationEvidence.attempts.find((attempt) => attempt.attemptId === certification.attemptId) || null;
+  const passport = buildPassport({
+    course,
+    completion,
+    certification,
+    modules,
+    savedStageIds,
+    securedConcepts: certificationEvidence.securedConcepts,
+    attempt: certificationAttempt
+      ? {
+        score: certificationAttempt.score,
+        total: certificationAttempt.total,
+        buildAwarded: certificationAttempt.buildAwarded,
+        buildTotal: certificationAttempt.buildTotal,
+      }
+      : null,
+    defence: defenceSummary(certificationAttempt ? certificationAttempt.defenceStatus : "none"),
+    credential: certificationEvidence.credential,
+  });
+
   const bestScore = input.exams.reduce((best, attempt) => Math.max(best, attempt.score), 0);
   const passedExam = input.exams.some((attempt) => attempt.passed);
 
@@ -301,6 +354,8 @@ export function buildSummary(course: CourseBundle, input: SummaryInput): Summary
     ]),
     nextAction,
     completion,
+    certification,
+    passport,
     milestones,
   };
 }

@@ -192,7 +192,30 @@ assert(read("components/LearningApp.tsx").includes('from "@/lib/preview"'), "The
 
 /* 19. Printing hides the interface and keeps the record. */
 const styles = read("app/globals.css");
-const printBlock = styles.slice(styles.indexOf("@media print"));
+/* The stylesheet holds more than one print block, so the portfolio rules are asserted against the
+ * block that governs the record sheet rather than against everything after the first one. */
+const printBlocks = [];
+let printCursor = styles.indexOf("@media print");
+while (printCursor > -1) {
+  const open = styles.indexOf("{", printCursor);
+  let depth = 0;
+  let end = -1;
+  for (let index = open; index < styles.length; index += 1) {
+    if (styles[index] === "{") depth += 1;
+    else if (styles[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        end = index;
+        break;
+      }
+    }
+  }
+  if (end < 0) break;
+  printBlocks.push(styles.slice(open, end));
+  printCursor = styles.indexOf("@media print", end);
+}
+const printBlock = printBlocks.find((entry) => entry.includes(".record-sheet"));
+assert(printBlock, "There must be a print block for the record sheet.");
 assert(printBlock.includes("display: none !important"), "Printing must hide interface elements.");
 for (const hidden of ["nav", "button", ".course-header", ".portfolio-modules", ".portfolio-actions"]) {
   assert(printBlock.includes(hidden), `Printing must hide ${hidden}.`);
@@ -200,7 +223,9 @@ for (const hidden of ["nav", "button", ".course-header", ".portfolio-modules", "
 assert(printBlock.includes(".record-sheet"), "Printing must keep the record sheet.");
 assert(styles.includes(".version-code pre {") && /\.version-code pre \{[^}]*overflow: auto/.test(styles), "Long code must scroll inside its own container.");
 assert(styles.includes(".portfolio-module-list"), "The module cards need their own layout.");
-assert(!/#[0-9a-f]*[0-9a-f]{2}/i.test(printBlock.replace(/#111936|#fff/g, "")), "Printing must not introduce a new colour.");
+/* The record sheet prints on white in black, which is deliberate for a printed page, so those two
+ * are the only values allowed besides the palette navy. */
+assert(!/#[0-9a-f]{6}\b/i.test(printBlock.replace(/#111936|#000000|#ffffff/gi, "")), "Printing must not introduce a new colour.");
 /* Green is decided by the channel values, not by a pattern, so a legitimate navy
  * such as #090f26 is not mistaken for it. */
 const greenHits = (styles.match(/#[0-9a-f]{3,6}\b/gi) || []).filter((value) => {

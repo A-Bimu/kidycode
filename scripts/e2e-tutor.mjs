@@ -702,6 +702,10 @@ await step("the guardian summary is complete and allow listed", async () => {
     "completion", "courseTitle", "projectTitle", "required", "completedAt",
     /* Recent milestones: wording and a date. */
     "milestones", "at",
+    /* The certificate: its name, the level, the plain status, whether the course is
+     * complete, the project it was earned on, the issue date and the demonstrated
+     * skills. No marks, no attempt and no credential id. */
+    "certificate", "certificateName", "level", "statusLabel", "courseComplete", "issuedAt", "skills",
   ]);
   const seen = new Set();
   (function walk(value) {

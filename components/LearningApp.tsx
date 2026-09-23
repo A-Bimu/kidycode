@@ -15,6 +15,7 @@ import {
 import { ExamPanel } from "@/components/ExamPanel";
 import AssessmentFlow from "@/components/AssessmentFlow";
 import { ProgressPage } from "@/components/ProgressPage";
+import { SkillsPassport } from "@/components/SkillsPassport";
 import {
   languageGuidance,
   termDefinitions,
@@ -228,7 +229,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
-  const [view, setView] = useState<"course" | "project" | "exam" | "progress" | "assessment">("course");
+  const [view, setView] = useState<"course" | "project" | "exam" | "progress" | "assessment" | "passport">("course");
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [pendingCheckpoint, setPendingCheckpoint] = useState<string | null>(null);
   const [evidence, setEvidence] = useState<Record<string, TutorEvidence>>({});
@@ -823,7 +824,13 @@ export function LearningApp({ course }: { course: CourseBundle }) {
         <div className={`learner-name${courseFacts.id === "adults" ? " is-adult" : ""}`}><span>{courseFacts.id === "adults" ? "Adult" : session.learner.age}</span>{session.learner.nickname}</div>
       </header>
 
-      {view === "progress" ? (
+      {view === "passport" ? (
+        <SkillsPassport
+          onBack={() => setView("progress")}
+          onOpenAssessment={() => setView("assessment")}
+          onOpenNext={(lessonId) => { if (lessonId) openActivityById(lessonId); else setView("course"); }}
+        />
+      ) : view === "progress" ? (
         <ProgressPage
           course={course}
           summary={summary}
@@ -832,6 +839,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
           onRetry={() => { setSummary(null); setSummaryError(""); setSummaryReload((count) => count + 1); }}
           onBack={() => setView("course")}
           onOpenNext={openActivityById}
+          onOpenPassport={() => setView("passport")}
         />
       ) : view === "project" ? (
         <PortfolioPage onContinue={() => setView("course")} />

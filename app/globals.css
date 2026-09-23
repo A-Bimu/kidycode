@@ -879,6 +879,80 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .assessment-page { max-width: 52rem; padding-top: 2.5rem; }
 }
 
+/* Skills Passport and the printable certificate. The application stylesheet, which is what the
+ * learner interface loads: the marketing styles.css is a different file with a public/ twin. */
+
+.passport-page { min-height: 60vh; display: grid; align-content: start; gap: clamp(1.2rem, 3vw, 2rem); width: min(100%, 62rem); margin: 0 auto; padding: clamp(1.2rem, 4vw, 3rem) clamp(1rem, 4vw, 3.5rem) 5rem; background: var(--paper); color: var(--navy); }
+.passport-page h1 { margin: 0; font: 500 clamp(2.1rem, 5vw, 3.2rem)/1.05 Georgia, serif; letter-spacing: -.03em; }
+.passport-lede { margin: 0; color: var(--ink-soft); font-size: 1.05rem; line-height: 1.6; }
+.passport-lede:empty { display: none; }
+.passport-page h2 { margin: 0 0 .8rem; font: 500 clamp(1.35rem, 3vw, 1.75rem)/1.2 Georgia, serif; }
+.passport-page h3 { margin: 1.4rem 0 .5rem; font: 500 1.15rem/1.25 Georgia, serif; }
+.passport-status, .passport-skills, .passport-actions { min-width: 0; padding: 1.5rem; background: var(--white); border-top: 3px solid var(--purple); }
+.passport-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem 2rem; margin: 0; }
+.passport-figures > div { display: grid; gap: .25rem; padding-bottom: .7rem; border-bottom: 1px solid var(--line); }
+.passport-figures dt { color: var(--ink-soft); font-size: .78rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.passport-figures dd { margin: 0; font-size: 1.02rem; font-weight: 750; overflow-wrap: anywhere; }
+.passport-skills ul { display: grid; gap: .7rem; margin: 0; padding: 0 0 0 1.1rem; line-height: 1.6; }
+.passport-skills li { padding-left: .3rem; border-left: 3px solid var(--amber); }
+.passport-evidence { display: block; color: var(--ink-soft); font-size: .88rem; }
+.passport-remaining { display: grid; gap: .6rem; margin: 0 0 1rem; padding: 0 0 0 1.1rem; line-height: 1.6; }
+.passport-remaining li { padding-left: .3rem; border-left: 3px solid var(--amber); }
+.passport-actions p { margin: 0 0 1rem; line-height: 1.6; }
+.passport-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem; }
+@media (max-width: 560px) {
+  /* A row of buttons must stack on a phone, or the widest label widens the page. */
+  .passport-buttons { flex-direction: column; align-items: stretch; }
+}
+
+/* The printable certificate. One page, readable in colour and in grayscale: every line is
+ * separated by a border or a weight change rather than by colour alone. */
+.certificate-sheet { min-width: 0; overflow: hidden; max-width: 48rem; margin: 0 auto; padding: clamp(1.4rem, 4vw, 2.6rem); color: var(--navy); background: var(--white); border: 3px double var(--navy); }
+.certificate-brand { margin: 0; color: var(--purple); font-size: .78rem; font-weight: 900; letter-spacing: .3em; text-transform: uppercase; }
+.certificate-sheet h2 { margin: .8rem 0 .2rem; font: 500 clamp(1.5rem, 4vw, 1.95rem)/1.15 Georgia, serif; }
+.certificate-name { margin: .6rem 0 1.2rem; padding-bottom: .6rem; border-bottom: 2px solid var(--amber); font: 500 1.45rem/1.2 Georgia, serif; overflow-wrap: anywhere; }
+.certificate-course, .certificate-level, .certificate-project { margin: .25rem 0; line-height: 1.5; }
+.certificate-sheet h3 { margin: 1.3rem 0 .5rem; font-size: 1rem; letter-spacing: .02em; }
+.certificate-skills { display: grid; gap: .3rem; margin: 0; padding: 0 0 0 1.1rem; line-height: 1.5; }
+.certificate-statement { margin: 1.2rem 0 0; padding-top: .9rem; border-top: 1px solid var(--line); line-height: 1.6; }
+.certificate-meta { margin: .8rem 0 0; color: var(--ink-soft); font-size: .82rem; overflow-wrap: anywhere; }
+
+@page { size: A4 portrait; margin: 10mm; }
+
+@media print {
+  /* Only the certificate prints: the app shell, navigation, buttons and every other screen stay
+   * on screen. The shell is removed from layout rather than merely hidden, because hidden content
+   * still reserves height and that height is what paginated the certificate onto a second page. */
+  body { background: var(--white); }
+  body > *:not(:has(.certificate-sheet)) { display: none !important; }
+  body * { visibility: hidden; }
+  .certificate-sheet, .certificate-sheet * { visibility: visible; }
+  main.passport-page { padding: 0 !important; }
+  main.passport-page > *:not(.certificate-sheet) { display: none !important; }
+  .certificate-sheet {
+    position: static;
+    max-width: none;
+    max-height: 250mm;
+    overflow: hidden;
+    padding: 0;
+    color: #000000;
+    background: #ffffff;
+    border: 2px solid #000000;
+    font-size: 10.5pt;
+    line-height: 1.35;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .certificate-brand { color: #000000; }
+  .certificate-name { margin: .35rem 0 .7rem; padding-bottom: .35rem; border-bottom-color: #000000; font-size: 13pt; }
+  .certificate-sheet h2 { margin: .4rem 0 .1rem; font-size: 17pt; }
+  .certificate-sheet h3 { margin: .8rem 0 .3rem; font-size: 10.5pt; }
+  .certificate-skills { gap: .1rem; }
+  .certificate-statement { margin-top: .8rem; padding-top: .5rem; }
+  .certificate-meta { margin-top: .5rem; }
+  .no-print, .passport-buttons { display: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .assessment-page *, .reference-section * { transition: none !important; animation: none !important; }
 }

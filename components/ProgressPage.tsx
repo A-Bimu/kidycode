@@ -43,6 +43,7 @@ export function ProgressPage({
   onRetry,
   onBack,
   onOpenNext,
+  onOpenPassport,
 }: {
   course: CourseBundle;
   summary: Summary | null;
@@ -51,6 +52,7 @@ export function ProgressPage({
   onRetry: () => void;
   onBack: () => void;
   onOpenNext: (lessonId: string) => void;
+  onOpenPassport: () => void;
 }) {
   if (loading) {
     return (
@@ -91,6 +93,7 @@ export function ProgressPage({
           Everything here comes from the work you have already done in {summary.course.title}.
         </p>
         <div className="progress-actions">
+          <button className="primary-button" type="button" onClick={onOpenPassport}>Open my Skills Passport</button>
           <button className="text-button" type="button" onClick={onBack}>Back to learning</button>
         </div>
       </section>

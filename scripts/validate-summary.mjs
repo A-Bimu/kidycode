@@ -222,17 +222,22 @@ assert(route.includes("authenticateLearner(request)"), "The summary must authent
 assert(/if \(!learner\) return unauthorized\(\)/.test(route), "The summary must refuse an unauthenticated request.");
 assert(route.includes('parsed.data.learnerId !== learner.id'), "A request for another learner must be rejected.");
 assert(route.includes("{ status: 403 }"), "A request for another learner must be refused, not silently emptied.");
-assert(route.includes("WHERE learner_id = ?"), "Every query must be scoped to the authenticated learner.");
-assert(route.includes("courseLessonIds.has(row.lessonId)"), "Progress and evidence must be filtered to the learner course.");
-assert(route.includes("courseStageIds.has(row.stageId)"), "Checkpoints must be filtered to the learner course.");
+assert(route.includes("loadLearnerSummary("), "The summary must be built by the one shared loader.");
+/* The one loader is where the queries live, so the scoping rules are asserted there and the route
+ * is asserted to have no second copy of them. */
+const progressView = read("lib/progress-view.ts");
+assert(progressView.includes("WHERE learner_id = ?"), "Every query must be scoped to the authenticated learner.");
+assert(progressView.includes("courseLessonIds.has(row.lessonId)"), "Progress and evidence must be filtered to the learner course.");
+assert(progressView.includes("courseStageIds.has(row.stageId)"), "Checkpoints must be filtered to the learner course.");
+assert(progressView.includes("storedCourseId(row.answersJson) === learner.courseId"), "Final attempts must belong to the learner course.");
+assert(!route.includes("FROM course_progress"), "The route must not keep a second copy of the learner queries.");
 assert(route.includes("z.string().min(1).max(64).optional()"), "The learner id input must be bounded.");
-assert(route.includes("storedCourseId(row.answersJson) === learner.courseId"), "Final attempts must belong to the learner course.");
-assert(route.includes("SELECT score, total, passed, created_at AS createdAt, answers_json AS answersJson"), "Only the score and outcome may be read from an attempt.");
+assert(progressView.includes("SELECT score, total, passed, created_at AS createdAt, answers_json AS answersJson"), "Only the score and outcome may be read from an attempt.");
 assert.equal(route.includes("practical_json"), false, "The summary must never read stored code.");
 assert.equal(route.includes("workspace"), false, "The summary must never read saved drafts.");
 assert.equal(route.includes("kidycode_session"), false, "The summary must never touch session data.");
 assert(route.includes("Response.json({ summary })"), "The response must carry the derived summary and nothing else.");
-assert(route.includes("passed: Boolean(row.passed), createdAt: row.createdAt }))"),
+assert(progressView.includes("passed: Boolean(row.passed), createdAt: row.createdAt }))"),
   "Only the score and outcome of an attempt may reach the summary.");
 
 /* Phase 3 added no migration of its own, because no new durable data is

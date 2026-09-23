@@ -1,5 +1,7 @@
+import { toGuardianCertificate, type GuardianCertificate } from "@/lib/certification";
 import { toGuardianCompletion, type GuardianCompletionRecord } from "@/lib/completion";
 import { toGuardianMilestones, type GuardianMilestone } from "@/lib/milestones";
+import { demonstratedSkills } from "@/lib/passport";
 import type { Summary } from "@/lib/summary";
 
 /*
@@ -24,6 +26,10 @@ export type GuardianSummary = {
   /* The completion record, reduced to the facts a grown-up may read. It names no
    * code, no reflection, no answer and no identifier. */
   completion: GuardianCompletionRecord;
+  /* The certificate, reduced to the facts a grown-up may read: the level, whether it has been
+   * earned, the project it was earned on and the demonstrated skills. No marks, no attempt, no
+   * credential internals and no code cross this boundary. */
+  certificate: GuardianCertificate;
   /* Recent milestones: plain wording and a date, nothing more. */
   milestones: GuardianMilestone[];
 };
@@ -69,6 +75,11 @@ export function toGuardianSummary(summary: Summary, learner: GuardianLearnerFact
       moduleNumber: summary.nextAction.moduleNumber,
     },
     completion: toGuardianCompletion(summary.completion),
+    certificate: toGuardianCertificate(summary.certification, {
+      projectTitle: summary.completion.projectTitle,
+      issuedAt: summary.passport.issuedAt,
+      skills: demonstratedSkills(summary.passport),
+    }),
     milestones: toGuardianMilestones(summary.milestones),
   };
 }
@@ -86,6 +97,7 @@ export const GUARDIAN_SUMMARY_KEYS = [
   "lastActivityAt",
   "nextLesson",
   "completion",
+  "certificate",
   "milestones",
 ] as const;
 

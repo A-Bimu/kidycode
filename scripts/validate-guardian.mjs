@@ -166,6 +166,10 @@ const allowed = new Set([
   /* The completion record's own leaves. It names the course and the project, the
    * counts and the completion date, and nothing else. */
   "courseTitle", "projectTitle", "required", "completedAt",
+  /* The certificate: its name, the level, the plain status, whether the course is complete,
+   * the project it was earned on, the issue date and the demonstrated skills. No marks, no
+   * attempt and no credential id. */
+  "certificate", "certificateName", "level", "statusLabel", "courseComplete", "issuedAt", "skills",
   /* Recent milestones: wording and a date. */
   "milestones", "at",
 ]);

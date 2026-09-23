@@ -695,3 +695,101 @@ export async function issueCredential(
     .run();
   return loadCredential(database, learnerId, credential.courseId);
 }
+
+/* --------------------------------------------------------- certification -- */
+
+export type StoredFinalAttempt = {
+  attemptId: string;
+  /* Always "submitted": an unfinished attempt is never evidence for a certificate. */
+  status: string;
+  submittedAt: string | null;
+  score: number;
+  total: number;
+  buildAwarded: number;
+  buildTotal: number;
+  mandatoryPassed: boolean;
+  defenceStatus: "passed" | "not_passed" | "pending" | "none";
+};
+
+/* Every submitted final attempt for this learner and this course, newest first, with the
+ * defence status that belongs to that attempt. Only figures the server wrote are selected:
+ * no answers, no repaired code and no integrity signal leaves the database here. */
+export async function loadFinalAttemptEvidence(
+  database: D1Database,
+  learnerId: string,
+  courseId: string,
+): Promise<StoredFinalAttempt[]> {
+  const rows = await database
+    .prepare(`SELECT a.id AS attemptId, a.status, a.submitted_at AS submittedAt,
+        a.total_awarded AS score, a.total_available AS total,
+        a.build_awarded AS buildAwarded, a.build_total AS buildTotal,
+        a.mandatory_passed AS mandatoryPassed, a.defence_passed AS defencePassed,
+        a.outcome, d.status AS defenceStatus
+      FROM assessment_attempts a
+      LEFT JOIN assessment_defence d ON d.attempt_id = a.id AND d.learner_id = a.learner_id
+      WHERE a.learner_id = ? AND a.course_id = ? AND a.kind = 'final'
+      ORDER BY a.started_at DESC`)
+    .bind(learnerId, courseId)
+    .all<{
+      attemptId: string;
+      status: string;
+      submittedAt: string | null;
+      score: number;
+      total: number;
+      buildAwarded: number;
+      buildTotal: number;
+      mandatoryPassed: number;
+      defencePassed: number;
+      outcome: string | null;
+      defenceStatus: string | null;
+    }>();
+  return (rows.results || [])
+    .filter((row) => row.status === "submitted")
+    .map((row) => ({
+      attemptId: row.attemptId,
+      status: "submitted",
+      submittedAt: row.submittedAt,
+      score: row.score,
+      total: row.total,
+      buildAwarded: row.buildAwarded,
+      buildTotal: row.buildTotal,
+      mandatoryPassed: Boolean(row.mandatoryPassed),
+      /* The attempt's own flag is authoritative, because the server wrote it when it decided
+       * the defence. The defence row supplies the unfinished and not-passed states, so a
+       * retryable technical result stays visible as unfinished rather than as a failure. */
+      defenceStatus: Boolean(row.defencePassed)
+        ? "passed"
+        : row.defenceStatus === "pending" || row.defenceStatus === "not_passed" || row.defenceStatus === "passed"
+          ? row.defenceStatus
+          : row.outcome === "not_passed_yet"
+            ? "not_passed"
+            : "none",
+    }));
+}
+
+/* The reviewed concepts the learner has actually secured, with the plain wording of the
+ * revision plan where the assessment recorded one. A concept is returned once. */
+export async function loadSecuredConcepts(
+  database: D1Database,
+  learnerId: string,
+  courseId: string,
+): Promise<Array<{ concept: string; label: string; itemId: string }>> {
+  const rows = await database
+    .prepare(`SELECT r.concept, r.item_id AS itemId, COALESCE(v.label, r.concept) AS label
+      FROM assessment_item_results r
+      JOIN assessment_attempts a ON a.id = r.attempt_id
+      LEFT JOIN assessment_revision_items v
+        ON v.learner_id = r.learner_id AND v.course_id = a.course_id AND v.concept = r.concept
+      WHERE r.learner_id = ? AND a.course_id = ? AND r.status = 'met' AND r.concept <> ''
+      ORDER BY r.created_at DESC`)
+    .bind(learnerId, courseId)
+    .all<{ concept: string; itemId: string; label: string }>();
+  const seen = new Set<string>();
+  const secured: Array<{ concept: string; label: string; itemId: string }> = [];
+  for (const row of rows.results || []) {
+    if (seen.has(row.concept)) continue;
+    seen.add(row.concept);
+    secured.push({ concept: row.concept, label: row.label, itemId: row.itemId });
+  }
+  return secured;
+}
