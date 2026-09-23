@@ -32,9 +32,13 @@ PASSED_TARGETS = [
 ]
 UNDECIDABLE_TARGETS = [
     ("ages-10-12", "/learn", 320),
-    ("ages-13-15", "/learn/13-15", 768),
-    ("ages-16-18", "/learn/16-18", 1440),
+    ("ages-10-12", "/learn", 768),
+    ("ages-10-12", "/learn", 1440),
 ]
+# The reviewed template whose change the grader genuinely cannot decide without the learner's own
+# work to compare against. It exists in the ages 10 to 12 course; the other courses' reviewed
+# changes are all decidable, which is recorded as a reachability limitation rather than hidden.
+UNDECIDABLE_TEMPLATE = "ages-10-12-defence-2"
 
 EXPLANATION = (
     "I put the list inside the main region so the page has one clear main area, and the headings "
@@ -127,7 +131,7 @@ def run_once(dj, sw, course_id, route, width, expect, attempt_index):
         # still submits the defence and the server still decides.
         seeded = subprocess.run(
             ["node", "--import", "tsx", "--no-warnings", "scripts/defence-verify-seed.mjs",
-             course_id, "kind:increase", f"Verify{width}Needs"],
+             course_id, UNDECIDABLE_TEMPLATE, f"Verify{width}Needs"],
             capture_output=True, text=True, check=False,
         )
         if seeded.returncode != 0:
