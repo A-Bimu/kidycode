@@ -324,6 +324,30 @@ Deviations recorded honestly: courses 2 and 3 of this phase landed in one commit
 manifest that merges a module bank with its final bank is a single shared change and splitting it
 would have left one commit whose bank was not wired in.
 
+### Phase 6 outcome change: Needs verification removed as a learner-facing outcome
+
+Product decision, and the reason: a Needs verification outcome requires a qualified human-review
+workflow. KidyCode has no teacher or reviewer queue, and a connected guardian cannot be assumed to
+understand code, so a learner told "a person will check this" would be waiting for a service that
+does not exist.
+
+The defence therefore has two educational outcomes: **Passed** and **Not passed yet**. The
+requirement-level `undecidable` mechanism stays in the engine, because requirement grading depends
+on it, but it is never exposed as a learner result or a certificate status.
+
+When a submitted change cannot be decided the learner is neither passed nor failed, nothing is
+lowered, no result is recorded, and no attempt is counted. Their explanation, prediction, code and
+progress are preserved, they are given a **different reviewed equivalent change task** (the one
+that could not be decided is never repeated), and they see the neutral message *"We could not check
+this change. Your work is saved. Try a different equivalent task."* The attempt records a bounded
+internal event (`stage = retry`) with no private code and no integrity signal. If no equivalent
+task is available the defence stays unfinished and a retryable technical error is shown, so a
+system limitation can never cost a learner their certificate eligibility.
+
+Recorded honestly for the next release: with the current reviewed content no legitimate submission
+actually reaches the undecidable branch, which is exactly why it is no longer an outcome. The
+architecture stays open for a future qualified-review workflow, and that workflow is not built.
+
 ### Phase 4
 
 Complete and verified in a real browser. `scripts/browser-journey.py` drives an isolated

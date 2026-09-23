@@ -95,20 +95,27 @@ type DefenceView = {
   nextStep?: string;
 };
 type DefenceDecisionView = {
-  status: string;
+  status: "passed" | "not_passed";
+  retry: boolean;
   predictCorrect: boolean;
   changeStatus: string;
   reason: string;
   nextStep: string;
   changeDetail?: string;
+  message?: string;
 };
 type ReferenceSheet = { rules: string[]; sections: Array<{ id: string; title: string; note: string; lines: string[] }> };
 
 const OUTCOME_LABELS: Record<string, string> = {
   passed: "Passed",
   not_passed_yet: "Not passed yet",
-  needs_verification: "Needs verification",
+  /* A result that could not be finished being checked is never shown as an outcome, and it never
+   * claims that a person will review the work. */
+  needs_verification: "Not checked yet",
 };
+
+/* The neutral, retryable message for a change that could not be checked. */
+const DEFENCE_RETRY = "We could not check this change. Your work is saved. Try a different equivalent task.";
 
 type Screen = "choose" | "overview" | "knowledge" | "practical" | "review" | "reference" | "result" | "revision" | "defence";
 
@@ -159,6 +166,7 @@ export default function AssessmentFlow({
   const [changeCode, setChangeCode] = useState<{ html: string; css: string; javascript: string }>({ html: "", css: "", javascript: "" });
   const [decision, setDecision] = useState<DefenceDecisionView | null>(null);
   const [defenceSave, setDefenceSave] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [defenceRetry, setDefenceRetry] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const signals = useRef({ visibilityChanges: 0, pasteEvents: 0, largestPasteChars: 0 });
   const completed = useMemo(() => new Set(completedActivityIds), [completedActivityIds]);
@@ -341,9 +349,11 @@ export default function AssessmentFlow({
     setPredictChoice(view.predictChoice);
     setChangeCode({ html: "", css: "", javascript: "" });
     setDefenceSave("idle");
-    if (["passed", "not_passed", "needs-verification"].includes(view.status)) {
+    setDefenceRetry(null);
+    if (view.status === "passed" || view.status === "not_passed") {
       setDecision({
-        status: view.status,
+        status: view.status === "passed" ? "passed" : "not_passed",
+        retry: false,
         predictCorrect: false,
         changeStatus: "",
         reason: view.reason || "",
@@ -385,10 +395,18 @@ export default function AssessmentFlow({
       changeCode,
     });
     setBusy(false);
-    if (response.status !== 200 || !response.body.decision) {
+    if (response.status !== 200 || (!response.body.decision && response.body.retry !== true)) {
       setMessage(typeof response.body.error === "string" ? response.body.error : "That defence could not be submitted. Your work is still on screen.");
       return;
     }
+    /* A technical retry is not an outcome: the learner is neither passed nor failed, nothing is
+     * lowered, and their own work stays on screen. */
+    if (response.body.retry === true && !response.body.decision) {
+      setDefenceRetry(String(response.body.message || DEFENCE_RETRY));
+      setDefenceStep(6);
+      return;
+    }
+    setDefenceRetry(null);
     setDecision(response.body.decision as unknown as DefenceDecisionView);
     setDefenceStep(6);
   }, [busy, changeCode, defence, explain, post, predictChoice]);
@@ -710,24 +728,39 @@ export default function AssessmentFlow({
           </>
         )}
 
-        {defenceStep === 6 && decision && (
+        {defenceStep === 6 && defenceRetry && (
           <>
-            <h1 ref={headingRef} tabIndex={-1}>
-              {decision.status === "passed" ? "Passed" : decision.status === "needs-verification" ? "Needs verification" : "Not passed yet"}
-            </h1>
-            <p className={`assessment-outcome is-passed`} role="status">
-              {decision.status === "passed" ? "Your independent-understanding check is complete." : decision.status === "needs-verification" ? "This needs a person to look at it." : "This is not passed yet."}
+            <h1 ref={headingRef} tabIndex={-1}>Try a different equivalent task</h1>
+            <p className="assessment-outcome is-needs_verification" role="status">{defenceRetry}</p>
+            <p>Nothing has been lost: your explanation, your prediction and your change are saved.</p>
+            <p>This is not counted as an attempt and your result is unchanged.</p>
+            <button className="primary-button" type="button" disabled={busy} onClick={() => void openDefence(defence.attemptId)}>
+              Open the different task
+            </button>
+            <button className="text-button" type="button" onClick={onExit}>Return to the course</button>
+          </>
+        )}
+
+        {defenceStep === 6 && !defenceRetry && decision && (
+          <>
+            <h1 ref={headingRef} tabIndex={-1}>{decision.status === "passed" ? "Passed" : "Not passed yet"}</h1>
+            <p className="assessment-outcome is-passed" role="status">
+              {decision.status === "passed" ? "Your independent-understanding check is complete." : "This is not passed yet."}
             </p>
             {decision.reason && <p>{decision.reason}</p>}
             {decision.changeDetail && <p>{decision.changeDetail}</p>}
-            {decision.status === "needs-verification" && (
-              <section aria-label="What Needs verification means">
-                <h2>What Needs verification means</h2>
-                <p>
-                  Nothing is wrong and nothing is taken away. KidyCode could not confirm your change on its own, so a
-                  grown-up or a teacher checks it with you. Your marks stay exactly as they are, and your project keeps
-                  every skill it already earned.
-                </p>
+            {decision.status !== "passed" && (
+              <section aria-label="What needs another look">
+                <h2>What needs another look</h2>
+                <ul className="assessment-review">
+                  {decision.predictCorrect !== true && <li>The prediction: read the snippet again and work out what each line does.</li>}
+                  <li>The change: make it do exactly what the task asked for.</li>
+                  <li>Your explanation: say why you made the decision, not just that it works.</li>
+                </ul>
+                <p>The revision pages for this module cover each of these, and you can attempt a fresh equivalent defence afterwards.</p>
+                <button className="text-button" type="button" onClick={() => setScreen("choose")}>
+                  Open the revision pages
+                </button>
               </section>
             )}
             {decision.nextStep && <p className="assessment-next">{decision.nextStep}</p>}

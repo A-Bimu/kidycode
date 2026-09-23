@@ -611,6 +611,28 @@ export async function updateAttemptOutcome(
     .run();
 }
 
+/* A change that could not be decided is swapped for a different reviewed equivalent, and the
+ * attempt records a bounded internal event. Nothing about the decision, the marks or the outcome
+ * is written here: a technical retry is not an assessment attempt. */
+export async function switchDefenceTask(
+  database: D1Database,
+  learnerId: string,
+  attemptId: string,
+  next: { templateId: string; changeItemId: string; changePrompt: string; stage: string },
+  now: string,
+): Promise<void> {
+  await database
+    .prepare(`UPDATE assessment_defence SET template_id = ?, change_item_id = ?, change_prompt = ?,
+      change_status = 'pending', status = 'pending', updated_at = ?
+      WHERE attempt_id = ? AND learner_id = ?`)
+    .bind(next.templateId.slice(0, 80), next.changeItemId.slice(0, 120), next.changePrompt.slice(0, 600), now, attemptId, learnerId)
+    .run();
+  await database
+    .prepare("UPDATE assessment_attempts SET stage = ?, saved_at = ? WHERE id = ? AND learner_id = ?")
+    .bind(next.stage.slice(0, 24), now, attemptId, learnerId)
+    .run();
+}
+
 /* --------------------------------------------------------------- credentials -- */
 
 export type CredentialRow = {

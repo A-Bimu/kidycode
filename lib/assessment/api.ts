@@ -269,7 +269,6 @@ export type ResultPayload = {
     debug: AttemptOutcome["debug"];
     build: AttemptOutcome["build"];
     mandatoryPassed: boolean;
-    needsVerification: boolean;
     reasons: string[];
     nextStep: string;
     submittedAt: string | null;
@@ -303,7 +302,6 @@ export function resultPayload(
       debug: graded.outcome.debug,
       build: graded.outcome.build,
       mandatoryPassed: Boolean(attempt.mandatoryPassed),
-      needsVerification: Boolean(attempt.needsVerification),
       reasons: graded.outcome.reasons,
       nextStep: graded.outcome.nextStep,
       submittedAt: attempt.submittedAt,

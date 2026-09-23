@@ -128,10 +128,6 @@ export function gradeCodeTask(
 
 /* -------------------------------------------------------------------- outcome -- */
 
-function outcomeLabel(outcome: Outcome): string {
-  return outcome === "passed" ? "Passed" : outcome === "needs_verification" ? "Needs verification" : "Not passed yet";
-}
-
 export type OutcomeInput = {
   knowledge: ItemResult[];
   practical?: ItemResult[];
@@ -262,8 +258,17 @@ export function scoreAttempt(kind: "module" | "final", input: OutcomeInput): Att
   };
 }
 
+/* Learner-facing wording for an attempt. Only two educational outcomes exist: an attempt that
+ * could not be finished being checked is not shown as an outcome at all, and it never claims that
+ * a person will review the work, because no review service exists. */
 export function markWord(outcome: Outcome): string {
   return outcomeLabel(outcome);
+}
+
+export function outcomeLabel(outcome: Outcome): string {
+  if (outcome === "passed") return "Passed";
+  if (outcome === "not_passed_yet") return "Not passed yet";
+  return "Not checked yet";
 }
 
 /* --------------------------------------------------------------- form rotation */
@@ -583,18 +588,23 @@ export function gradeChange(template: DefenceTemplate, files: Partial<CodeFiles>
 }
 
 export type DefenceDecision = {
-  status: "passed" | "not_passed" | "needs-verification";
+  /* The two educational outcomes. A technical retry is not an outcome: it is flagged separately
+   * so nothing can record it as a result or count it as an attempt. */
+  status: "passed" | "not_passed";
+  retry: boolean;
   predictCorrect: boolean;
   changeStatus: string;
   reason: string;
   nextStep: string;
 };
 
+export const DEFENCE_RETRY_MESSAGE = "We could not check this change. Your work is saved. Try a different equivalent task.";
+
 /*
- * The decision itself. A learner passes when their own words are long enough to be evidence,
- * their prediction is right and their live change satisfies the new requirement. An
- * undecidable change is never guessed at in either direction: it becomes Needs verification
- * with a plain explanation of what happens next.
+ * The decision itself. A learner passes when their own words are long enough to be evidence, their
+ * prediction is right and their live change satisfies the new requirement. When the change cannot
+ * be decided the learner is neither passed nor failed and nothing is lowered: the decision asks for
+ * a different equivalent task instead, so nobody is left waiting for a reviewer who does not exist.
  */
 export function decideDefence(input: {
   explain: string;
@@ -606,16 +616,18 @@ export function decideDefence(input: {
 
   if (input.changeStatus === "needs-verification") {
     return {
-      status: "needs-verification",
+      status: "not_passed",
+      retry: true,
       predictCorrect: input.predictionCorrect,
       changeStatus: input.changeStatus,
-      reason: "The change you made could not be checked automatically, so a person needs to look at it.",
-      nextStep: "Keep your project as it is and ask your connected grown-up or your teacher to check the change with you.",
+      reason: DEFENCE_RETRY_MESSAGE,
+      nextStep: "Nothing is lost and nothing is lowered. Open the defence again to be given a different equivalent change task.",
     };
   }
   if (!enoughWords) {
     return {
       status: "not_passed",
+      retry: false,
       predictCorrect: input.predictionCorrect,
       changeStatus: input.changeStatus,
       reason: "The explanation was too short to show how the work was made.",
@@ -625,6 +637,7 @@ export function decideDefence(input: {
   if (!input.predictionCorrect) {
     return {
       status: "not_passed",
+      retry: false,
       predictCorrect: false,
       changeStatus: input.changeStatus,
       reason: "The prediction did not match what the code does.",
@@ -634,6 +647,7 @@ export function decideDefence(input: {
   if (input.changeStatus !== "met") {
     return {
       status: "not_passed",
+      retry: false,
       predictCorrect: true,
       changeStatus: input.changeStatus,
       reason: "The small change did not yet do what the task asked.",
@@ -642,6 +656,7 @@ export function decideDefence(input: {
   }
   return {
     status: "passed",
+    retry: false,
     predictCorrect: true,
     changeStatus: input.changeStatus,
     reason: "The explanation, the prediction and the live change all hold together.",

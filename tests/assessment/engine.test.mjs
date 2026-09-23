@@ -13,8 +13,10 @@ import {
   FINAL_PASS_MARK,
   MODULE_PASS_MARK,
   MODULE_PRACTICAL_MIN,
+  DEFENCE_RETRY_MESSAGE,
   defenceComplete,
   escalatedDefence,
+  outcomeLabel,
   gradeCodeTask,
   gradePractice,
   gradeReadiness,
@@ -460,10 +462,25 @@ await sweep("the code defence decision follows the product rules", async () => {
   check("an unmet change never passes", () => {
     assert.equal(decideDefence({ explain: long, predictionCorrect: true, changeStatus: "unmet" }).status, "not_passed");
   });
-  check("an undecidable change becomes Needs verification, never a guess", () => {
+  check("an undecidable change asks for a different task instead of an outcome", () => {
     const decision = decideDefence({ explain: long, predictionCorrect: true, changeStatus: "needs-verification" });
-    assert.equal(decision.status, "needs-verification");
-    assert.ok(/person/.test(decision.nextStep), "the learner was not told a person will look at it");
+    assert.equal(decision.retry, true, "an undecidable change did not ask for a retry");
+    assert.equal(decision.status, "not_passed", "an undecidable change must never report Passed");
+    assert.equal(decision.reason, DEFENCE_RETRY_MESSAGE, "the learner did not get the neutral retry message");
+    assert.ok(!/person will review|a person needs/i.test(decision.reason + decision.nextStep),
+      "the learner was told a person will review the work");
+  });
+  check("a decided defence never carries the retry flag", () => {
+    for (const changeStatus of ["met", "unmet"]) {
+      const decision = decideDefence({ explain: long, predictionCorrect: true, changeStatus });
+      assert.equal(decision.retry, false, `${changeStatus} asked for a retry`);
+    }
+  });
+  check("only two educational outcomes exist in learner-facing wording", () => {
+    assert.equal(outcomeLabel("passed"), "Passed");
+    assert.equal(outcomeLabel("not_passed_yet"), "Not passed yet");
+    assert.equal(outcomeLabel("needs_verification"), "Not checked yet");
+    assert.ok(!/needs verification/i.test(outcomeLabel("needs_verification")), "the internal value leaked as an outcome");
   });
   check("the prediction is decided against the reviewed index, not the client", () => {
     const task = { id: "t", courseId: "ages-10-12", kind: "predict", prompt: "A prediction task with enough words.", snippet: "x", options: ["a", "b", "c", "d"], answer: 2, explanation: "Because that is what the code does.", objectives: ["o"], revision: "r" };

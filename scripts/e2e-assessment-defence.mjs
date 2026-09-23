@@ -67,6 +67,42 @@ async function api(path, options = {}) {
   return { status: response.status, body, text };
 }
 
+/* Posts the defence until it is decided. A change that cannot be decided is not an outcome: it must
+ * record nothing, return the neutral message, and hand back a different equivalent task. The
+ * undecidable task must never be repeated. */
+let lastChangeItemId = null;
+async function settleDefence(explain, predictChoice, changeCode, limit = 4) {
+  const retries = [];
+  let code = changeCode;
+  for (let round = 0; round < limit; round += 1) {
+    const response = await api("/api/assessment/defence", {
+      method: "POST",
+      body: JSON.stringify({ attemptId, explain, predictChoice, changeCode: code }),
+    });
+    if (response.body.decision) return { response, retries };
+    if (response.body.technical === true) {
+      /* Every equivalent task has been tried, so the defence stays unfinished with a retryable
+       * technical error. Nothing was recorded and nothing was lowered. */
+      const row = database.prepare("SELECT status FROM assessment_defence WHERE attempt_id = ?").get(attemptId);
+      assert.equal(row.status, "pending", "an exhausted defence recorded a decision");
+      assert.ok(!/person will review|a person needs|teacher/i.test(JSON.stringify(response.body)), "the technical error mentioned a reviewer");
+      return { response, retries, technical: true };
+    }
+    if (response.body.retry !== true) throw new Error(`the defence neither decided nor asked for a retry: ${JSON.stringify(response.body)}`);
+
+    const row = database.prepare("SELECT status, change_item_id AS changeItemId FROM assessment_defence WHERE attempt_id = ?").get(attemptId);
+    assert.equal(row.status, "pending", "a technical retry recorded a decision");
+    assert.ok(!/person will review|a person needs|teacher/i.test(JSON.stringify(response.body)), "the retry mentioned a reviewer");
+    assert.ok(String(response.body.message).includes("We could not check this change"), "the neutral message was not returned");
+    if (lastChangeItemId !== null) assert.notEqual(row.changeItemId, lastChangeItemId, "the undecidable task was repeated");
+    lastChangeItemId = row.changeItemId;
+    retries.push({ message: response.body.message, changeItemId: row.changeItemId });
+    /* The learner is given a different equivalent task, so the next round answers that one. */
+    code = { html: "", css: ".card { color: #ee9d2b; }\nbody { color: #111936; }", javascript: "" };
+  }
+  throw new Error("the defence never settled on a decision");
+}
+
 function kidName(prefix) {
   return `${prefix}${Date.now() % 1000000}${Math.floor(Math.random() * 1000)}`;
 }
@@ -136,27 +172,21 @@ await step("the defence never sends the answer to the prediction", async () => {
 });
 
 await step("a wrong prediction with a thin explanation does not pass", async () => {
-  const wrong = await api("/api/assessment/defence", {
-    method: "POST",
-    body: JSON.stringify({ attemptId, explain: "I chose it.", predictChoice: 0, changeCode: {} }),
-  });
-  assert.equal(wrong.status, 200, `the defence answered ${wrong.status}`);
-  assert.notEqual(wrong.body.decision.status, "passed", "a thin explanation passed the defence");
-  assert.ok(wrong.body.decision.nextStep.length > 10, "no next step was offered");
+  const { response, retries } = await settleDefence("I chose it.", 0, {});
+  assert.equal(response.status, 200, `the defence answered ${response.status}`);
+  assert.notEqual(response.body.decision.status, "passed", "a thin explanation passed the defence");
+  assert.ok(response.body.decision.nextStep.length > 10, "no next step was offered");
+  if (retries.length > 0) console.log(`       (a technical retry happened first: ${retries[0].message})`);
 });
 
 await step("copied output with no understanding cannot pass", async () => {
-  const copied = await api("/api/assessment/defence", {
-    method: "POST",
-    body: JSON.stringify({
-      attemptId,
-      explain: "It works because it works and it is correct and it does the thing it does.",
-      predictChoice: (defence.predict.options.length + 1) % 4,
-      changeCode: { html: defence.change.snippet || "", css: "", javascript: "" },
-    }),
-  });
-  assert.equal(copied.status, 200, `the defence answered ${copied.status}`);
-  assert.notEqual(copied.body.decision.status, "passed", "a wrong prediction passed the defence");
+  const { response } = await settleDefence(
+    "It works because it works and it is correct and it does the thing it does.",
+    (defence.predict.options.length + 1) % 4,
+    { html: defence.change.snippet || "", css: "", javascript: "" },
+  );
+  assert.equal(response.status, 200, `the defence answered ${response.status}`);
+  assert.notEqual(response.body.decision.status, "passed", "a wrong prediction passed the defence");
 });
 
 await step("the decision is always explicit and the attempt agrees with it", async () => {
@@ -170,14 +200,11 @@ await step("the decision is always explicit and the attempt agrees with it", asy
    * approved words and it must agree with what the attempt row records. */
   let decision = null;
   for (let option = 0; option < options && !decision; option += 1) {
-    const attempt = await api("/api/assessment/defence", {
-      method: "POST",
-      body: JSON.stringify({ attemptId, explain: realExplain, predictChoice: option, changeCode }),
-    });
-    if (attempt.body.decision) decision = attempt.body.decision;
+    const settled = await settleDefence(realExplain, option, changeCode);
+    if (settled.response.body.decision) decision = settled.response.body.decision;
   }
   assert.ok(decision, "the defence returned no decision");
-  assert.ok(["passed", "not_passed", "needs-verification"].includes(decision.status), `unknown outcome ${decision.status}`);
+  assert.ok(["passed", "not_passed"].includes(decision.status), `unknown outcome ${decision.status}`);
   assert.ok(decision.nextStep.length > 10, "the decision offered no next step");
 
   const row = database.prepare("SELECT status, predict_correct AS predictCorrect, change_status AS changeStatus, explain_response AS explain FROM assessment_defence WHERE attempt_id = ?").get(attemptId);
@@ -190,12 +217,11 @@ await step("the decision is always explicit and the attempt agrees with it", asy
   if (decision.status === "passed") {
     assert.equal(attempt.passed, 1, "a passed defence was not recorded on the attempt");
     assert.equal(attempt.outcome, "passed", "a passed defence did not make the attempt passed");
-  } else if (decision.status === "needs-verification") {
-    assert.equal(attempt.needs, 1, "a Needs verification defence did not mark the attempt");
-    assert.equal(attempt.outcome, "needs_verification", "a Needs verification defence did not set the outcome");
   } else {
     assert.notEqual(attempt.outcome, "passed", "a refused defence left the attempt passed");
+    assert.equal(attempt.needs, 0, "a refused defence marked the attempt as needing verification");
   }
+  assert.equal(attempt.needs, 0, "the internal undecidable value was recorded as a learner-facing state");
 });
 
 await step("a repeated submission is answered with the decision already stored", async () => {

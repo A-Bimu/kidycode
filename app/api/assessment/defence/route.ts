@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { boundedCode, json, notReady, readJson } from "@/lib/assessment/api";
-import { decideDefence, finalFormOf, gradeChange, predictionCorrect } from "@/lib/assessment/engine";
+import { decideDefence, DEFENCE_RETRY_MESSAGE, finalFormOf, gradeChange, predictionCorrect } from "@/lib/assessment/engine";
 import { contentFor } from "@/lib/assessment/manifest";
 import { defenceTemplateById, templatesFor } from "@/lib/assessment/defence";
 import {
@@ -9,6 +9,7 @@ import {
   loadDefence,
   loadSignals,
   insertDefence,
+  switchDefenceTask,
   updateAttemptOutcome,
   updateDefence,
 } from "@/lib/assessment/store";
@@ -105,18 +106,13 @@ function safeFiles(codeJson: string, taskId: string) {
 }
 
 /* The words that go with a stored decision, so a resumed defence explains itself even though
- * nothing is decided twice. */
+ * nothing is decided twice. A technical retry is never a stored decision: it asks for a different
+ * equivalent task and claims nothing about a reviewer. */
 function decisionCopy(status: string): { reason: string; nextStep: string } {
   if (status === "passed") {
     return {
       reason: "The explanation, the prediction and the live change all hold together.",
       nextStep: "Your independent-understanding check is complete for this assessment.",
-    };
-  }
-  if (status === "needs-verification") {
-    return {
-      reason: "The change you made could not be checked automatically, so a person needs to look at it.",
-      nextStep: "Keep your project as it is and ask your connected grown-up or your teacher to check the change with you.",
     };
   }
   return {
@@ -226,6 +222,56 @@ export async function POST(request: Request) {
     });
 
     const now = new Date().toISOString();
+
+    /* A technical retry is not an assessment attempt. Nothing is passed, nothing is failed,
+     * nothing is lowered, no result is recorded, and the learner's own work is preserved. They are
+     * given a different reviewed equivalent change task, and the one that could not be decided is
+     * never repeated. */
+    if (decision.retry) {
+      const allTemplates = templatesFor(base.learner.courseId as CourseId);
+      const others = allTemplates.filter((entry) => entry.id !== template.id && entry.change.id !== template.change.id);
+      if (others.length === 0) {
+        return json({
+          error: "We could not check this change and no equivalent task is available right now. Your work is saved.",
+          retry: true,
+          technical: true,
+        }, 503);
+      }
+      const chosen = [...attempt.id].reduce((total, letter) => total + letter.charCodeAt(0), 0) % others.length;
+      const next = others[chosen];
+      /* Every equivalent task is tried at most once. When they are all used up the defence stays
+       * unfinished and the learner sees a retryable technical error, so a system limitation can
+       * never cost them eligibility. */
+      const alreadyTried = Number((attempt.stage.match(/^retry-(\d+)$/) || [])[1] || 0);
+      if (alreadyTried + 1 >= allTemplates.length) {
+        return json({
+          error: "We could not check this change and every equivalent task has been tried. Your work is saved, nothing is recorded and nothing is lowered.",
+          retry: true,
+          technical: true,
+        }, 503);
+      }
+      await updateDefence(database, base.learner.id, parsed.data.attemptId, {
+        explainResponse: parsed.data.explain,
+        predictResponse: String(parsed.data.predictChoice ?? ""),
+        changeCodeJson: JSON.stringify(parsed.data.changeCode || {}),
+        predictCorrect: false,
+        changeStatus: "pending",
+        status: "pending",
+      }, now);
+      await switchDefenceTask(database, base.learner.id, parsed.data.attemptId, {
+        templateId: next.id,
+        changeItemId: next.change.id,
+        changePrompt: (next.change.changeInstruction || next.change.prompt).slice(0, 600),
+        stage: `retry-${alreadyTried + 1}`,
+      }, now);
+      return json({
+        retry: true,
+        message: DEFENCE_RETRY_MESSAGE,
+        nextStep: "Open the defence again to be given the different equivalent task. Nothing you wrote has been lost.",
+        changeItemId: next.change.id,
+      });
+    }
+
     await updateDefence(database, base.learner.id, parsed.data.attemptId, {
       explainResponse: parsed.data.explain,
       predictResponse: String(parsed.data.predictChoice ?? ""),
@@ -239,8 +285,8 @@ export async function POST(request: Request) {
     /* The stored marks never move: only the outcome and its verification state are
      * recomputed, because passing the defence is part of passing the final assessment. */
     await updateAttemptOutcome(database, base.learner.id, parsed.data.attemptId, {
-      outcome: decision.status === "passed" ? "passed" : decision.status === "needs-verification" ? "needs_verification" : "not_passed_yet",
-      needsVerification: decision.status === "needs-verification",
+      outcome: decision.status === "passed" ? "passed" : "not_passed_yet",
+      needsVerification: false,
       stage: decision.status === "passed" ? "done" : "review",
     });
 
