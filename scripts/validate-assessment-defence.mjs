@@ -74,7 +74,7 @@ sweep("a task pointing at an untaught lesson is refused", () => {
 
 for (const content of contents) {
   const owned = DEFENCE_TEMPLATES.filter((template) => template.courseId === content.courseId);
-  const tasks = owned.reduce((total, template) => total + 4, 0);
+  const tasks = owned.length * 4;
   console.log(`  ok   ${content.courseId}: ${owned.length} defence templates, ${tasks} reviewed tasks`);
 }
 
