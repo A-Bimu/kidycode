@@ -2,6 +2,43 @@
 
 KidyCode is a self-paced coding platform for learners aged 10 and above. It teaches real HTML, CSS and JavaScript through focused notes, worked examples, typed code, automatic checks, short assessments and one website that grows throughout each course.
 
+## Start here: project review
+
+KidyCode addresses a practical learning problem: how can a beginner move from reading an explanation to writing working code, while keeping evidence of what they have learned?
+
+The product combines a repeatable lesson flow with one website that develops throughout the course. The following map connects product decisions to the implementation so reviewers can inspect both the interface and the engineering behind it.
+
+| Problem addressed | Product approach | Code to inspect |
+| --- | --- | --- |
+| Reading alone does not demonstrate a coding skill | Notes, typed practice, code checks and project checkpoints | [Learning interface](components/LearningApp.tsx), [checkpoint API](app/api/checkpoints/route.ts) |
+| A learner gets stuck without knowing what to change | Support based on recorded attempts and failed requirements | [Tutor logic](lib/tutor.ts), [tutor API](app/api/tutor/route.ts) |
+| Progress is hard to understand across many activities | A summary derived from saved learning evidence | [Progress interface](components/ProgressPage.tsx), [summary logic](lib/summary.ts) |
+| Finished exercises do not show how a project developed | Saved module versions and a course completion record | [Portfolio interface](components/PortfolioPage.tsx), [completion rules](lib/completion.ts) |
+| Moving devices can separate a learner from saved work | A one-time transfer code and session rotation | [Transfer interface](components/TransferPage.tsx), [transfer logic](lib/transfer-codes.ts) |
+
+### Suggested hands-on review
+
+Use a running instance with its database configured; see [Local setup and checks](#local-setup-and-checks). Use a disposable learner profile when reviewing.
+
+1. Open `/learn`, choose a project and begin the first available activity.
+2. Read the notes, type code and run it. Compare the preview with the stated requirements.
+3. Try an incomplete answer, inspect the feedback, then correct it. Notice whether the next action is clear.
+4. Complete the activity and inspect **My progress**. Reload to check that saved progress persists.
+5. Continue to a module checkpoint and inspect **My website** to review the saved project version.
+
+For a UI/UX review, also try a narrow viewport and keyboard navigation through the main learning flow. Record any focus, readability or feedback issues as findings; this guide is not an accessibility certification.
+
+### Engineering evidence
+
+The repository includes checks for learning content, grading, persistence and account flows:
+
+- [Assessment engine tests](tests/assessment/engine.test.mjs) and [grading tests](tests/assessment/grading.test.mjs).
+- [Tutor end-to-end checks](scripts/e2e-tutor.mjs).
+- [Portfolio end-to-end checks](scripts/e2e-portfolio.mjs).
+- [Transfer race checks](scripts/e2e-transfer-races.mjs).
+
+See [package.json](package.json) for the current check commands. Test files show what is covered; they do not by themselves prove that a particular deployment has passed. When sharing a review, include the commit, environment, commands run and observed results.
+
 ## Complete learning paths
 
 | Path | Course | Project outcome |
