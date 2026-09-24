@@ -16,4 +16,5 @@ node --import tsx --no-warnings scripts/e2e-transfer-races.mjs
 node --import tsx --no-warnings scripts/e2e-assessment-api.mjs
 node --import tsx --no-warnings scripts/e2e-assessment-revision.mjs
 node --import tsx --no-warnings scripts/e2e-assessment-defence.mjs
+node --import tsx --no-warnings scripts/e2e-payload-leak.mjs
 node --import tsx --no-warnings scripts/e2e-certification.mjs

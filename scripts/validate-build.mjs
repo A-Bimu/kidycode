@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -9,19 +9,31 @@ const requiredFiles = [
   "dist/client/styles.css",
   "dist/client/app.js",
   "dist/.openai/hosting.json",
-  "dist/.openai/drizzle/0000_breezy_psylocke.sql",
-  "dist/.openai/drizzle/0001_regular_shotgun.sql",
-  "dist/.openai/drizzle/0002_good_master_mold.sql",
-  /* Every migration must reach the deployment artifact, or a published site
-   * would run against a schema it does not have. */
-  "dist/.openai/drizzle/0003_closed_winter_soldier.sql",
-  "dist/.openai/drizzle/0004_light_solo.sql",
-  "dist/.openai/drizzle/0005_slimy_xorn.sql",
-  "dist/.openai/drizzle/0006_high_tomas.sql",
 ];
 
 for (const relativePath of requiredFiles) {
   assert(existsSync(resolve(root, relativePath)), `The production build is missing ${relativePath}.`);
+}
+
+/*
+ * Every migration must reach the deployment artifact, or a published site would run against a
+ * schema it does not have. The set is compared rather than listed, so a migration added later
+ * cannot be forgotten here: that is exactly how the list fell one file behind at 0007.
+ */
+const sourceMigrations = readdirSync(resolve(root, "drizzle"))
+  .filter((name) => name.endsWith(".sql"))
+  .sort();
+const packagedDirectory = resolve(root, "dist/.openai/drizzle");
+assert(existsSync(packagedDirectory), "The production build is missing the packaged migrations directory.");
+const packagedMigrations = readdirSync(packagedDirectory)
+  .filter((name) => name.endsWith(".sql"))
+  .sort();
+assert.deepEqual(packagedMigrations, sourceMigrations, "The packaged migrations must be exactly the migrations in the repository, in order.");
+assert.ok(sourceMigrations.length >= 8, `Expected at least eight migrations, found ${sourceMigrations.length}.`);
+for (const name of packagedMigrations) {
+  const source = readFileSync(resolve(root, "drizzle", name), "utf8");
+  const packaged = readFileSync(resolve(packagedDirectory, name), "utf8");
+  assert.equal(packaged, source, `${name} was altered on its way into the production build.`);
 }
 
 const sourceHosting = readFileSync(resolve(root, ".openai/hosting.json"), "utf8");

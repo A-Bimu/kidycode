@@ -123,15 +123,15 @@ validator and the browser sweep both assert these.
 
 | Phase | Scope | Gate | Status |
 | --- | --- | --- | --- |
-| 0 | Audit, contract, safe scaffolding | Type check, lint, production build, all pre-existing tests | in progress |
-| 1 | Engine, additive migration, secure persistence, server selection, idempotency | Schema and pure scoring tests, API authorisation and tamper tests, concurrency, deletion cascade, type check, lint, build | pending |
-| 2 | Three equivalent module forms for all 32 modules, course by course | Content validation, answer verification, coverage report, assessment tests (one commit and push per course) | pending |
-| 3 | Three equivalent final forms and three build briefs per course, safe grading, mandatory checks | Content validation, grading fixtures, cross-form equivalence, no answer leakage (one commit and push per course) | in progress |
-| 4 | Learner assessment interface: overview, reference, question, editor, review, submit, resume | Browser tests at 320/768/1440 for all four courses, keyboard, semantics, overflow, brand rules | pending |
-| 5 | Results, revision packs, readiness, retakes | Failing and passing journeys per course, weak-topic mapping, form rotation, no immediate repeat, history privacy, mobile browser tests | pending |
-| 6 | Independent-understanding check | Copied-output simulation, genuine change pass, failed change becomes Needs verification, no detector, no unsafe execution, privacy and browser tests | pending |
-| 7 | Completion, certificate, private Skills Passport, strict guardian summary | Eligibility matrix, V1 compatibility, guardian authorisation, print layout, allow-list tests, deletion tests, viewport tests | pending |
-| 8 | Whole-product regression and release candidate | Every validator, type check, lint with zero warnings, build, API, database, race and browser suites, payload leakage inspection, migration packaging, clean tree, remote equals local | pending |
+| 0 | Audit, contract, safe scaffolding | Type check, lint, production build, all pre-existing tests | complete (`6aadc8c`) |
+| 1 | Engine, additive migration, secure persistence, server selection, idempotency | Schema and pure scoring tests, API authorisation and tamper tests, concurrency, deletion cascade, type check, lint, build | complete |
+| 2 | Three equivalent module forms for all 32 modules, course by course | Content validation, answer verification, coverage report, assessment tests | complete (96 forms, 480 questions, 480 requirements) |
+| 3 | Three equivalent final forms and three build briefs per course, safe grading, mandatory checks | Content validation, grading fixtures, cross-form equivalence, no answer leakage | complete (12 final forms, 120 questions, 300 requirements) |
+| 4 | Learner assessment interface: overview, reference, question, editor, review, submit, resume | Browser tests at 320/768/1440 for all four courses, keyboard, semantics, overflow, brand rules | complete (`34a1b03`, `c29f4e2`, one real defect fixed) |
+| 5 | Results, revision packs, readiness, retakes | Failing and passing journeys per course, weak-topic mapping, form rotation, no immediate repeat, history privacy, mobile browser tests | complete (`1a39376`, `8937e5a`; 238 revision pages) |
+| 6 | Independent-understanding check | Copied-output simulation, genuine change pass, undecidable change becomes a neutral retry, no detector, no unsafe execution, privacy and browser tests | complete (`8c552ad` to `bdc4cdd`) |
+| 7 | Completion, certificate, private Skills Passport, strict guardian summary | Eligibility matrix, V1 compatibility, guardian authorisation, print layout, allow-list tests, deletion tests, viewport tests | complete (`87e4b06`) |
+| 8 | Whole-product regression and release candidate | Every validator, type check, lint with zero warnings, build, API, database, race and browser suites, payload leakage inspection, migration packaging, clean tree, remote equals local | complete, see `docs/assessment-v2-release-report.md` |
 
 ## 8. Phase records
 
@@ -476,4 +476,48 @@ response crosses that boundary, and the whole summary is built through the same 
 - The harness treated a negative overflow measurement as a failure; that value is the scrollbar, not
   a page that is too wide.
 
-**Next.** Phase 8: the full regression, the leak sweep and `docs/assessment-v2-release-report.md`.
+**Next.** None in this tree: Phase 8 is the last phase of Assessment V2. The remaining work is the
+live release order, which is documented in `docs/assessment-v2-release-report.md` section 10 and
+deliberately not executed.
+
+### Phase 8
+
+Complete. The full report is `docs/assessment-v2-release-report.md`; this is the record the plan
+file keeps.
+
+Starting SHA `87e4b06`, working tree clean, local `main` equal to `origin/main`, all three
+confirmed before anything changed. Phase 6 and Phase 7 were left exactly as they were.
+
+Three audits were added, because the phase brief asks for three things the repository could not
+previously prove:
+
+- `scripts/audit-database.mjs` (10 checks) applies `0000` through `0007` in order to a fresh
+  throwaway store, upgrades a representative pre-Assessment-V2 store through `0007` and compares
+  every V1 row before and after, walks the foreign key graph to prove every learner-owned table
+  cascades, proves the attempt-level cascade, and proves the unique constraints the concurrency
+  rules depend on. It never opens the deployed database.
+- `scripts/validate-release-static.mjs` (11 checks) checks 600 reviewed explanations against every
+  file in the production client bundle, bans the capabilities that would let the product watch a
+  learner, and proves the one permitted clipboard read is a length measurement.
+- `scripts/e2e-payload-leak.mjs` (12 checks) starts a real reviewed assessment as a real learner and
+  reads every response as raw text: the item's key set, the absence of an unassigned form's
+  questions, the correction scope, the refusal of client-supplied authority, and the refusal of a
+  module from another course.
+
+Totals at the end of this phase: `npm run check` exit 0 with 611 passing checks, `npm run lint`
+exit 0 with zero warnings, `npm run build` exit 0 with all eight migrations packaged,
+`npm run test:e2e` exit 0 with 177 checks, the whole-product browser sweep 120 screens with zero
+findings, the defence sweep 12 journeys and 120 screens with zero findings, the targeted defence
+journeys 10 of 10, and the certificate sweep 15 of 15 journeys with 12 of 12 one-page print proofs.
+
+Seven defects were found and fixed, each recorded with the check that caught it. Two were in the
+product's packaging and gate surface: the build validator's migration list had stopped at `0006`,
+so the new migration could have been left out of the deployment artifact unnoticed; and the
+whole-product browser sweep had no command in `package.json` and could not be run at all. Three
+were in the new audits themselves. Two were wrong fixtures. No product assertion was weakened and
+no migration was edited; `0007_violet_praxagora.sql` still hashes to
+`7590e9813422c73d21f1d8c6a828e142ba0604d65324d3dc34ad459ef5dce574`.
+
+Honest limits: the live site is behind a ChatGPT sign-in wall, so the live smoke test did not
+happen and the four browser gates ran against the local development server; migration `0007`
+remains local-only; and print verification used Chromium's own PDF pipeline only.
