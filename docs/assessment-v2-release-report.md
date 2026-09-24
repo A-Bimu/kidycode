@@ -5,7 +5,7 @@ Phase 8: whole-product regression and release-candidate preparation.
 | | |
 | --- | --- |
 | Starting SHA | `87e4b068c3f0ed6389613064db69d552e6641adb` (local `main` equalled `origin/main`, working tree clean) |
-| Phase 8 commit | `PHASE8_COMMIT` |
+| Phase 8 commit | `805c8afbfc7d2d467778cd28d79f9de38d62aee7` (the audit, the fixes and this report). The SHA was recorded in the follow-up commit that changed only this line |
 | Remote | `origin/main`, confirmed equal to local HEAD after the push |
 | Scope | Audit and repair. No new feature, no schema change, no migration edited, nothing deployed |
 | Live database | Not touched. Every database statement in this phase ran against throwaway stores in the operating system's temporary directory |
