@@ -20,7 +20,13 @@ $remote = ((& git -C $Repo remote get-url origin) | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $remote -notmatch '(^https://github\.com/|^git@github\.com:)A-Bimu/kidycode(\.git)?$') { throw "Refusing unexpected repository: $remote" }
 $dirty = ((& git -C $Repo status --porcelain) | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $dirty) { throw "Working tree has uncommitted changes. Stop without changes: $dirty" }
-Write-Host "Verified local KidyCode repository: $Repo" -ForegroundColor Green
+$branch = ((& git -C $Repo branch --show-current) | Out-String).Trim()
+if ($branch -ne 'main') { throw "Expected local main branch, found: $branch" }
+& git -C $Repo fetch origin main
+if ($LASTEXITCODE -ne 0) { throw 'Could not fetch GitHub main. Check internet and Git authentication.' }
+& git -C $Repo merge --ff-only origin/main
+if ($LASTEXITCODE -ne 0) { throw 'Local branch diverged; refusing to merge. Inspect manually.' }
+Write-Host "Verified and fast-forwarded local KidyCode repository: $Repo" -ForegroundColor Green
 $boards = H @('kanban','boards','list')
 if ($boards -notmatch '(?im)\bkidycode-v2\b') {
   H @('kanban','boards','create',$board,'--name','KidyCode V2','--description','72-hour course expansion and release dry-run') | Out-Host
@@ -48,7 +54,7 @@ foreach ($phase in $phases) {
     Write-Host "Existing task: $id" -ForegroundColor Yellow
   } else {
     $body = "ONLY A-Bimu/kidycode ($Repo). Follow docs/72-hour-v2-execution.md. Preserve V1. Work in isolated Git worktree and a feature branch. Do not touch ALIA/Eureka/KOVU, production data, live publishing or children data. No university co-branding without written approval. Budget policy: KidyCode allocation USD 20, not programmatically enforced; avoid runaway paid agent loops. If blocked, record precise evidence and stop. " + $phase.desc
-    $args = @('kanban','--board',$board,'create',$phase.title,'--body',$body,'--workspace',"worktree:$Repo",'--branch','kidycode-v2-work','--idempotency-key',$phase.key,'--max-runtime','2h','--max-retries','1','--json')
+    $args = @('kanban','--board',$board,'create',$phase.title,'--body',$body,'--workspace',"worktree:$Repo",'--idempotency-key',$phase.key,'--max-runtime','2h','--max-retries','1','--json')
     if ($parent) { $args += @('--parent',$parent) }
     $raw = H $args
     $parsed = $raw | ConvertFrom-Json
