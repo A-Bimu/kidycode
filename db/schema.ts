@@ -436,3 +436,134 @@ export const assessmentRevisionItems = sqliteTable(
     index("assessment_revision_items_learner_idx").on(table.learnerId, table.courseId, table.readinessPassedAt),
   ],
 );
+
+/* ---------------------------------------------------------------------------------
+ * Day 1 contracts: signed-in LMS accounts, learner linking and persistent enrolments.
+ *
+ * An organisation owns cohorts and the grown-ups who work in them. Cohorts hold
+ * enrolments, and an enrolment is the durable link between one learner and one
+ * cohort: it is removed with the learner and it is the only place a learner is
+ * attached to an institution.
+ *
+ * Two boundaries live in this shape rather than in a route:
+ *
+ *   1. Organisation data is outside the learner cascade, because an institution
+ *      outlives any one learner. Only the enrolment and the academic review carry a
+ *      learner identifier, so deleting a learner removes their institutional rows and
+ *      nothing about the organisation, its members or its cohorts.
+ *   2. An academic review never stores learner code. It stores the scope that was
+ *      reviewed, an outcome, and a compact JSON summary of requirement-level evidence,
+ *      so a reviewer can decide without a copy of the learner's work.
+ * ------------------------------------------------------------------------------- */
+
+export const organisations = sqliteTable(
+  "organisations",
+  {
+    id: text("id").primaryKey(),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind").notNull().default("school"),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [uniqueIndex("organisations_slug_unique").on(table.slug)],
+);
+
+/* A signed-in grown-up inside one organisation, identified by the platform identity
+ * headers and never by a value the browser chooses. The same person may hold a role
+ * in more than one organisation, so the unique pair is the platform identity and the
+ * organisation, not the platform identity alone. */
+export const organisationMembers = sqliteTable(
+  "organisation_members",
+  {
+    id: text("id").primaryKey(),
+    organisationId: text("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    platformUserId: text("platform_user_id").notNull(),
+    email: text("email").notNull(),
+    displayName: text("display_name"),
+    role: text("role").notNull(),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull(),
+    lastSeenAt: text("last_seen_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("organisation_members_identity_unique").on(table.platformUserId, table.organisationId),
+    index("organisation_members_org_role_idx").on(table.organisationId, table.role, table.status),
+  ],
+);
+
+/* A cohort is one teaching group inside one organisation, on one course. The code is
+ * unique inside the organisation so a coordinator can name a group the way the school
+ * already does. */
+export const cohorts = sqliteTable(
+  "cohorts",
+  {
+    id: text("id").primaryKey(),
+    organisationId: text("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    code: text("code").notNull(),
+    name: text("name").notNull(),
+    courseId: text("course_id").notNull(),
+    status: text("status").notNull().default("active"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("cohorts_organisation_code_unique").on(table.organisationId, table.code),
+    index("cohorts_organisation_course_idx").on(table.organisationId, table.courseId, table.status),
+  ],
+);
+
+/* The persistent enrolment. One row per learner and cohort, kept after a revoke so the
+ * history survives and a later re-enrolment updates the same row. It follows the learner
+ * and it follows the cohort, so neither a deleted learner nor a closed cohort leaves an
+ * orphan behind. */
+export const cohortEnrolments = sqliteTable(
+  "cohort_enrolments",
+  {
+    id: text("id").primaryKey(),
+    cohortId: text("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("active"),
+    enrolledBy: text("enrolled_by").notNull().default("organisation"),
+    enrolledAt: text("enrolled_at").notNull(),
+    revokedAt: text("revoked_at"),
+  },
+  (table) => [
+    uniqueIndex("cohort_enrolments_pair_unique").on(table.cohortId, table.learnerId),
+    index("cohort_enrolments_learner_idx").on(table.learnerId, table.status),
+  ],
+);
+
+/* The academic review record. It carries requirement-level evidence only: a scope, an
+ * outcome and a compact JSON summary. It never holds learner code, and the reviewer
+ * reference is nullable so a review outlives the reviewer leaving the organisation. */
+export const academicReviews = sqliteTable(
+  "academic_reviews",
+  {
+    id: text("id").primaryKey(),
+    cohortId: text("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+    learnerId: text("learner_id")
+      .notNull()
+      .references(() => learnerProfiles.id, { onDelete: "cascade" }),
+    reviewerMemberId: text("reviewer_member_id").references(() => organisationMembers.id, { onDelete: "set null" }),
+    scope: text("scope").notNull(),
+    outcome: text("outcome").notNull().default("pending"),
+    evidenceJson: text("evidence_json").notNull().default("{}"),
+    notes: text("notes").notNull().default(""),
+    createdAt: text("created_at").notNull(),
+    decidedAt: text("decided_at"),
+  },
+  (table) => [
+    uniqueIndex("academic_reviews_cohort_learner_scope_unique").on(table.cohortId, table.learnerId, table.scope),
+    index("academic_reviews_reviewer_idx").on(table.reviewerMemberId, table.outcome),
+  ],
+);

@@ -57,6 +57,13 @@
       "when": 1790104406757,
       "tag": "0007_violet_praxagora",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792778736385,
+      "tag": "0008_ancient_centennial",
+      "breakpoints": true
     }
   ]
 }

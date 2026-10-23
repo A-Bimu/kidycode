@@ -77,7 +77,11 @@ function apply(database, tags) {
 }
 
 const allTags = entries.map((entry) => entry.tag);
-const preV2Tags = allTags.filter((tag) => !tag.startsWith("0007"));
+/* The store a learner was already using before Assessment V2 (0007) and before the Day 1
+ * institution contracts (0008). Each upgrade is proved on its own, so a failure names the
+ * migration that caused it. */
+const preV2Tags = allTags.filter((tag) => !tag.startsWith("0007") && !tag.startsWith("0008"));
+const preDay1Tags = allTags.filter((tag) => !tag.startsWith("0008"));
 
 step("the journal and the migration files agree, in order and one for one", () => {
   assert.equal(journal.dialect, "sqlite", "the journal must describe a SQLite database.");
@@ -88,18 +92,18 @@ step("the journal and the migration files agree, in order and one for one", () =
     files,
     "the journal order must be the file order, so a fresh database migrates deterministically.",
   );
-  assert.equal(allTags[allTags.length - 1], "0007_violet_praxagora", "0007 must still be the newest migration.");
+  assert.equal(allTags[allTags.length - 1], "0008_ancient_centennial", "0008 must still be the newest migration.");
 });
 
 step("no migration is missing, duplicated or renumbered", () => {
   const prefixes = allTags.map((tag) => tag.slice(0, 4));
-  assert.deepEqual(prefixes, ["0000", "0001", "0002", "0003", "0004", "0005", "0006", "0007"], "the migration sequence must be complete.");
+  assert.deepEqual(prefixes, ["0000", "0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008"], "the migration sequence must be complete.");
   assert.equal(new Set(allTags).size, allTags.length, "a migration may not be listed twice.");
 });
 
 /* ------------------------------------------------------- a fresh database ----- */
 
-step("a fresh local database reaches the current schema from 0000 through 0007", () => {
+step("a fresh local database reaches the current schema from 0000 through 0008", () => {
   const database = open("fresh");
   try {
     for (const tag of allTags) {
@@ -128,10 +132,15 @@ step("a fresh local database reaches the current schema from 0000 through 0007",
       "assessment_signals",
       "assessment_credentials",
       "assessment_revision_items",
+      "organisations",
+      "organisation_members",
+      "cohorts",
+      "cohort_enrolments",
+      "academic_reviews",
     ]) {
       assert(tables.includes(table), `the fresh schema is missing ${table}.`);
     }
-    assert.equal(tables.length, 18, `the fresh schema should hold exactly eighteen tables, found ${tables.length}.`);
+    assert.equal(tables.length, 23, `the fresh schema should hold exactly twenty three tables, found ${tables.length}.`);
     assert.equal(database.prepare("PRAGMA foreign_keys").get().foreign_keys, 1, "foreign keys must be enforced on this store.");
   } finally {
     database.close();
@@ -152,6 +161,32 @@ step("exactly one migration creates the assessment tables, and it is purely addi
   }
   const digest = createHash("sha256").update(migration).digest("hex");
   console.log(`  ..   0007_violet_praxagora.sql sha256 ${digest}`);
+});
+
+step("exactly one migration creates the Day 1 institution tables, and it is purely additive", () => {
+  const creators = files.filter((name) => read(`drizzle/${name}`).includes("CREATE TABLE `organisations`"));
+  assert.deepEqual(creators, ["0008_ancient_centennial.sql"], "exactly one migration may create the institution tables.");
+  const migration = read("drizzle/0008_ancient_centennial.sql");
+  assert.equal((migration.match(/CREATE TABLE/g) || []).length, 5, "0008 adds five tables and nothing else.");
+  assert.equal((migration.match(/CREATE (?:UNIQUE )?INDEX/g) || []).length, 9, "0008 adds nine indexes for its five tables.");
+  const statements = migration.split("--> statement-breakpoint").map((part) => part.trim()).filter(Boolean);
+  for (const statement of statements) {
+    assert(/^CREATE\s+(TABLE|(UNIQUE\s+)?INDEX)\b/i.test(statement), `0008 must only create tables and indexes, found: ${statement.slice(0, 40)}`);
+  }
+  for (const forbidden of ["DROP TABLE", "ALTER TABLE", "INSERT INTO", "DELETE FROM"]) {
+    assert(!migration.toUpperCase().includes(forbidden), `0008 must not ${forbidden.toLowerCase()}: an upgrade has to be additive.`);
+  }
+  /* The learner link is the only institutional row that carries a learner, and it follows
+   * the learner. The institution itself is deliberately outside that cascade. */
+  const enrolment = migration.slice(migration.indexOf("CREATE TABLE `cohort_enrolments`"), migration.indexOf("CREATE TABLE `cohorts`"));
+  assert(enrolment.includes("FOREIGN KEY (`learner_id`) REFERENCES `learner_profiles`(`id`) ON UPDATE no action ON DELETE cascade"), "the learner link must follow the learner.");
+  for (const table of ["organisations", "organisation_members", "cohorts"]) {
+    const body = migration.slice(migration.indexOf(`CREATE TABLE \`${table}\``));
+    const end = body.indexOf("--> statement-breakpoint");
+    assert(!(body.slice(0, end).includes("learner_id")), `${table} must hold no learner data.`);
+  }
+  const digest = createHash("sha256").update(migration).digest("hex");
+  console.log(`  ..   0008_ancient_centennial.sql sha256 ${digest}`);
 });
 
 /* ------------------------------------------------- who owns what, in the schema- */
@@ -206,11 +241,12 @@ step("every learner-owned table cascades from the learner, directly or through a
         }
       }
     }
-    /* Two tables are deliberately not learner-scoped and are named here rather than
+    /* Five tables are deliberately not learner-scoped and are named here rather than
      * excluded silently: guardian_accounts belongs to a grown-up's platform identity and
-     * must outlive one learner, and transfer_claim_limits is a coarse bound keyed by a
-     * hashed source address, holding no learner data at all. */
-    const outside = ["guardian_accounts", "transfer_claim_limits"];
+     * must outlive one learner, transfer_claim_limits is a coarse bound keyed by a hashed
+     * source address holding no learner data at all, and an organisation, its members and
+     * its cohorts are institutional records that outlive any cohort of learners. */
+    const outside = ["guardian_accounts", "transfer_claim_limits", "organisations", "organisation_members", "cohorts"];
     const unexpected = tables.filter((table) => !owned.has(table) && !outside.includes(table));
     assert.deepEqual(unexpected, [], `these tables are outside the learner cascade: ${unexpected.join(", ")}`);
     for (const table of outside) {
@@ -232,6 +268,8 @@ step("every learner-owned table cascades from the learner, directly or through a
 /* ----------------------------------------------------------- the cascade ------- */
 
 const learnerOwnedTables = [
+  "cohort_enrolments",
+  "academic_reviews",
   "course_progress",
   "lesson_evidence",
   "project_checkpoints",
@@ -300,8 +338,30 @@ function seedAssessmentRows(database, learnerId, suffix = "") {
   return attemptId;
 }
 
+/* The Day 1 institutional rows a learner can own: one durable learner link and one
+ * academic review. The organisation, its member and its cohort are created alongside so
+ * the enrolment has a real parent, and they are deliberately not learner-owned. */
+function seedDay1Rows(database, learnerId, suffix = "") {
+  database
+    .prepare("INSERT INTO organisations (id, slug, name, created_at) VALUES (?, ?, ?, ?)")
+    .run(`org-${learnerId}`, `org-${learnerId}`, "Example School", now);
+  database
+    .prepare("INSERT INTO organisation_members (id, organisation_id, platform_user_id, email, role, created_at, last_seen_at) VALUES (?, ?, ?, ?, 'cohort_lead', ?, ?)")
+    .run(`om-${learnerId}`, `org-${learnerId}`, `platform-${learnerId}`, "lead@example.test", now, now);
+  database
+    .prepare("INSERT INTO cohorts (id, organisation_id, code, name, course_id, created_at) VALUES (?, ?, ?, ?, 'ages-10-12', ?)")
+    .run(`cohort-${learnerId}`, `org-${learnerId}`, `C-${learnerId}`, "Class A", now);
+  database
+    .prepare("INSERT INTO cohort_enrolments (id, cohort_id, learner_id, enrolled_at) VALUES (?, ?, ?, ?)")
+    .run(`ce-${learnerId}${suffix}`, `cohort-${learnerId}`, learnerId, now);
+  database
+    .prepare("INSERT INTO academic_reviews (id, cohort_id, learner_id, reviewer_member_id, scope, created_at) VALUES (?, ?, ?, ?, 'module-1', ?)")
+    .run(`ar-${learnerId}${suffix}`, `cohort-${learnerId}`, learnerId, `om-${learnerId}`, now);
+}
+
 function seedOwnedRows(database, learnerId, suffix = "") {
   seedV1Rows(database, learnerId, suffix);
+  seedDay1Rows(database, learnerId, suffix);
   return seedAssessmentRows(database, learnerId, suffix);
 }
 
@@ -491,6 +551,55 @@ step("a pre-Assessment-V2 database upgrades through 0007 with its V1 rows intact
     database.prepare("DELETE FROM learner_profiles WHERE id = 'learner-v1'").run();
     assert.equal(database.prepare("SELECT COUNT(*) AS total FROM exam_attempts").get().total, 0, "the V1 evidence must still be removed with the learner.");
     assert.equal(database.prepare("SELECT COUNT(*) AS total FROM guardian_links").get().total, 0, "the guardian link must still cascade.");
+  } finally {
+    database.close();
+  }
+});
+
+step("a store from before Day 1 upgrades through 0008 with its rows intact", () => {
+  const database = open("day1-upgrade");
+  try {
+    apply(database, preDay1Tags);
+    const before = tablesOf(database);
+    assert(!before.includes("organisations"), "the pre-Day-1 store must not already hold the institution tables.");
+
+    seedLearner(database, "learner-day1");
+    seedV1Rows(database, "learner-day1", "-day1");
+    seedAssessmentRows(database, "learner-day1", "-day1");
+
+    const snapshot = {};
+    for (const table of before) snapshot[table] = database.prepare(`SELECT * FROM ${table}`).all();
+    const attempt = database.prepare("SELECT * FROM assessment_attempts WHERE learner_id = 'learner-day1'").get();
+    assert.equal(attempt.course_id, "ages-10-12", "the historical attempt must keep its values.");
+
+    /* The upgrade. */
+    apply(database, ["0008_ancient_centennial"]);
+
+    for (const table of before) {
+      assert.deepEqual(database.prepare(`SELECT * FROM ${table}`).all(), snapshot[table], `${table} changed during the Day 1 upgrade.`);
+    }
+    const after = tablesOf(database);
+    assert.equal(after.length, before.length + 5, "the Day 1 upgrade must add exactly the five institution tables.");
+    for (const table of ["organisations", "organisation_members", "cohorts", "cohort_enrolments", "academic_reviews"]) {
+      assert.equal(database.prepare(`SELECT COUNT(*) AS total FROM ${table}`).get().total, 0, `${table} must arrive empty.`);
+    }
+
+    /* A learner who existed before the upgrade can be enrolled, and the institution
+     * outlives that learner while the learner link does not. */
+    database.prepare("INSERT INTO organisations (id, slug, name, created_at) VALUES ('org-day1', 'day1', 'Example School', ?)").run(now);
+    database.prepare("INSERT INTO organisation_members (id, organisation_id, platform_user_id, email, role, created_at, last_seen_at) VALUES ('om-day1', 'org-day1', 'platform-day1', 'lead@example.test', 'cohort_lead', ?, ?)").run(now, now);
+    database.prepare("INSERT INTO cohorts (id, organisation_id, code, name, course_id, created_at) VALUES ('cohort-day1', 'org-day1', 'A', 'Class A', 'ages-10-12', ?)").run(now);
+    database.prepare("INSERT INTO cohort_enrolments (id, cohort_id, learner_id, enrolled_at) VALUES ('ce-day1', 'cohort-day1', 'learner-day1', ?)").run(now);
+    database
+      .prepare("INSERT INTO academic_reviews (id, cohort_id, learner_id, reviewer_member_id, scope, created_at) VALUES ('ar-day1', 'cohort-day1', 'learner-day1', 'om-day1', 'module-1', ?)")
+      .run(now);
+
+    database.prepare("DELETE FROM learner_profiles WHERE id = 'learner-day1'").run();
+    assert.equal(database.prepare("SELECT COUNT(*) AS total FROM cohort_enrolments").get().total, 0, "the learner link must follow the learner.");
+    assert.equal(database.prepare("SELECT COUNT(*) AS total FROM academic_reviews").get().total, 0, "the review must follow the learner.");
+    assert.equal(database.prepare("SELECT COUNT(*) AS total FROM organisations").get().total, 1, "the organisation must outlive the learner.");
+    assert.equal(database.prepare("SELECT COUNT(*) AS total FROM cohorts").get().total, 1, "the cohort must outlive the learner.");
+    assert.equal(database.prepare("SELECT COUNT(*) AS total FROM organisation_members").get().total, 1, "the member must outlive the learner.");
   } finally {
     database.close();
   }
