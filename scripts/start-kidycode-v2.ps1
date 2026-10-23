@@ -4,7 +4,7 @@
 param([string]$Repo = (Join-Path $HOME 'kidycode'), [switch]$QueueOnly)
 $ErrorActionPreference = 'Stop'
 $board = 'kidycode-v2'
-function H([string[]]$argv) {
+function Invoke-HermesCli([string[]]$argv) {
   Write-Host ('> hermes ' + ($argv -join ' ')) -ForegroundColor Cyan
   $lines = & hermes @argv 2>&1
   $code = $LASTEXITCODE
@@ -27,11 +27,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not fetch GitHub main. Check internet an
 & git -C $Repo merge --ff-only origin/main
 if ($LASTEXITCODE -ne 0) { throw 'Local branch diverged; refusing to merge. Inspect manually.' }
 Write-Host "Verified and fast-forwarded local KidyCode repository: $Repo" -ForegroundColor Green
-$boards = H @('kanban','boards','list')
+$boards = Invoke-HermesCli @('kanban','boards','list')
 if ($boards -notmatch '(?im)\bkidycode-v2\b') {
-  H @('kanban','boards','create',$board,'--name','KidyCode V2','--description','72-hour course expansion and release dry-run') | Out-Host
+  Invoke-HermesCli @('kanban','boards','create',$board,'--name','KidyCode V2','--description','72-hour course expansion and release dry-run') | Out-Host
 }
-$existing = H @('kanban','--board',$board,'list','--json')
+$existing = Invoke-HermesCli @('kanban','--board',$board,'list','--json')
 $items = @()
 try {
   $decoded = $existing | ConvertFrom-Json
@@ -54,9 +54,9 @@ foreach ($phase in $phases) {
     Write-Host "Existing task: $id" -ForegroundColor Yellow
   } else {
     $body = "ONLY A-Bimu/kidycode ($Repo). Follow docs/72-hour-v2-execution.md. Preserve V1. Work in isolated Git worktree and a feature branch. Do not touch ALIA/Eureka/KOVU, production data, live publishing or children data. No university co-branding without written approval. Budget policy: KidyCode allocation USD 20, not programmatically enforced; avoid runaway paid agent loops. If blocked, record precise evidence and stop. " + $phase.desc
-    $args = @('kanban','--board',$board,'create',$phase.title,'--body',$body,'--workspace',"worktree:$Repo",'--idempotency-key',$phase.key,'--max-runtime','2h','--max-retries','1','--json')
+    $args = @('kanban','--board',$board,'create',$phase.title,'--assignee','default','--body',$body,'--workspace',"worktree:$Repo",'--idempotency-key',$phase.key,'--max-runtime','2h','--max-retries','1','--json')
     if ($parent) { $args += @('--parent',$parent) }
-    $raw = H $args
+    $raw = Invoke-HermesCli $args
     $parsed = $raw | ConvertFrom-Json
     $id = if ($parsed.task_id) { [string]$parsed.task_id } elseif ($parsed.id) { [string]$parsed.id } elseif ($parsed.task.id) { [string]$parsed.task.id } else { '' }
     if (-not $id) { throw "Task created but ID not parsed. Inspect board before retrying: $raw" }
@@ -66,8 +66,8 @@ foreach ($phase in $phases) {
   $created += $id
 }
 Write-Host "Phase sequence: $($created -join ' -> ')" -ForegroundColor Green
-H @('kanban','--board',$board,'diagnostics') | Out-Host
-H @('kanban','--board',$board,'dispatch','--dry-run','--max','1') | Out-Host
+Invoke-HermesCli @('kanban','--board',$board,'diagnostics') | Out-Host
+Invoke-HermesCli @('kanban','--board',$board,'dispatch','--dry-run','--max','1') | Out-Host
 if (-not $QueueOnly) {
   try {
     Resolve-DnsName 'openrouter.ai' -ErrorAction Stop | Out-Null
@@ -78,8 +78,8 @@ if (-not $QueueOnly) {
 }
 if (-not $QueueOnly) {
   Write-Host 'Dispatching first phase. This may incur model/API charges.' -ForegroundColor Yellow
-  H @('kanban','--board',$board,'dispatch','--max','1') | Out-Host
+  Invoke-HermesCli @('kanban','--board',$board,'dispatch','--max','1') | Out-Host
 } else { Write-Host 'Queue-only mode: no paid worker started.' -ForegroundColor Yellow }
-H @('kanban','--board',$board,'list') | Out-Host
+Invoke-HermesCli @('kanban','--board',$board,'list') | Out-Host
 Write-Host 'Review task runs with: hermes kanban --board kidycode-v2 runs TASK_ID' -ForegroundColor Green
 Write-Host 'No production publishing or ALIA actions performed by this bootstrap.' -ForegroundColor Green
