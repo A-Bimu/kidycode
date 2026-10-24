@@ -12,7 +12,10 @@ import { TRANSFER_TTL_MINUTES, sourceScope } from "../lib/transfer-codes.ts";
  * ever leaves in a JSON body.
  */
 
-const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+/* A checkout on Windows may carry CRLF line endings, so the source is normalised before
+ * any multi-line assertion is made against it. The product text is identical; only the
+ * line terminator is normalised, so the same assertion holds on every platform. */
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
 
 /* Shared primitives, not a second implementation. */
 const transferModule = read("lib/transfer-codes.ts");
