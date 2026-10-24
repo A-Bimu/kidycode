@@ -14,6 +14,11 @@ if ($Uninstall) {
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 Invoke-WebRequest -Uri $source -OutFile $target -UseBasicParsing -TimeoutSec 30
 if (-not (Test-Path $target)) { throw 'Recovery script was not downloaded.' }
+# Validate PowerShell syntax before dry-running or installing the task.
+$tokens = $null
+$parseErrors = $null
+[System.Management.Automation.Language.Parser]::ParseFile($target, [ref]$tokens, [ref]$parseErrors) | Out-Null
+if ($parseErrors.Count -gt 0) { throw ('Recovery script syntax invalid: ' + (($parseErrors | ForEach-Object { $_.Message }) -join '; ')) }
 # Test without making changes before scheduling.
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $target -DryRun
 if ($LASTEXITCODE -ne 0) { throw 'Recovery dry-run failed. No task installed.' }
