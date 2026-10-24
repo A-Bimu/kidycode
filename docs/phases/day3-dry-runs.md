@@ -154,3 +154,25 @@ No severity-one defect was found in the four-pathway journeys themselves.
   deployed. The branch is a release candidate for human review only.
 - The dry runs are simulation, not evidence from children. Human pilot evidence remains
   gated behind guardian consent and controlled beta access.
+
+## Release notes for this run
+
+Verified on branch `wt/t_51d1c845` at the commit this document landed with, against a local
+vite server on `http://localhost:3002` and the local D1 store it creates under `.wrangler`:
+
+| Gate | Result |
+| --- | --- |
+| `npm ci` | 676 packages installed, exit 0 (30 advisory warnings from transitive dependencies, unchanged by this branch) |
+| `npm run check` | exit 0: typecheck clean, every contract passes, Day 3 contract 43 checks 0 failed, database audit 12 checks 0 failed, assessment satisfiability 433 checks, certification 18 checks |
+| `npm run lint` | exit 0, no problems |
+| `npm run build` | exit 0, every route classified |
+| `npm run test:e2e` | exit 0, every journey passes: tutor 74, guardian 14, portfolio 14, lifecycle 9, transfer races 6, assessment API 13, revision 8, defence 10, payload leak 12, certification 17, dry runs 32 |
+| `npm run test:browser:experiences` | 24 measurements over 8 routes at 320, 768 and 1440 pixels, 0 failed |
+| `npm run test:browser:product` | 120 screens over four courses at three widths, 0 findings |
+
+One further note on the runs themselves: the end-to-end suite bounds transfer claim attempts
+per source address for ten minutes, so repeated full runs from one machine inside that window
+rate-limit the next run. Two intermediate runs in this session failed for that reason and
+were re-run after the local claim-limit rows were cleared. The suite passes cleanly on a
+quiet local store, and no product behaviour was changed to make it pass.
+
