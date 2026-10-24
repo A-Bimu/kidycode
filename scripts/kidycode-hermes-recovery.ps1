@@ -93,9 +93,9 @@ try {
     Log "Saved recovery snapshot for $id at $backup."
     # A later manual approval can reset the state, but this watchdog will never keep cycling.
     $unblock = CLI @('kanban','--board',$board,'unblock',$id)
-    Log ("Unblocked $id: " + $unblock.Trim())
+    Log ("Unblocked ${id}: " + $unblock.Trim())
     $dispatch = CLI @('kanban','--board',$board,'dispatch','--max','1')
-    Log ("Single dispatch for $id: " + $dispatch.Trim())
+    Log ("Single dispatch for ${id}: " + $dispatch.Trim())
     exit 0
   }
   Log 'No eligible worker-crash recovery needed.'
