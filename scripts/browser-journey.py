@@ -29,7 +29,7 @@ import websocket
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 PROFILE = os.path.join(os.environ["LOCALAPPDATA"], "Temp", "kidy-sweep-profile")
 PORT = 9333
-BASE = "http://localhost:3001"
+BASE = os.environ.get("KIDYCODE_E2E_URL", "http://localhost:3001").rstrip("/")
 
 AUDIT = r"""
 (() => {

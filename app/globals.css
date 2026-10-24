@@ -956,3 +956,65 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (prefers-reduced-motion: reduce) {
   .assessment-page *, .reference-section * { transition: none !important; animation: none !important; }
 }
+
+/* Day 2 experiences: dashboard, catalogue, notes, practice, design, build outside,
+ * curriculum and the institution pilot workspace. Uses only the existing palette
+ * variables and adds no print block. */
+
+.kc-page { width: min(100% - 2rem, 74rem); margin-inline: auto; padding: 1.5rem 0 3rem; display: grid; gap: 1.25rem; }
+.kc-crumb { display: flex; gap: .5rem; align-items: center; font-size: .85rem; font-weight: 800; color: var(--ink-soft); }
+.kc-crumb a { color: var(--purple); text-decoration: none; }
+.kc-head { display: grid; gap: .5rem; }
+.kc-head h1 { margin: 0; font: 700 clamp(1.7rem, 5vw, 2.6rem)/1.1 Georgia, serif; }
+.kc-lede { margin: 0; max-width: 62ch; color: var(--navy-soft); }
+.kc-nav { display: flex; flex-wrap: wrap; gap: .5rem; }
+.kc-nav a { padding: .45rem .8rem; border: 2px solid var(--line); background: var(--white); color: var(--navy); text-decoration: none; font-weight: 800; font-size: .9rem; }
+.kc-nav a[aria-current="page"] { border-color: var(--purple); background: var(--purple-pale); }
+.kc-nav a:hover { background: var(--amber-pale); }
+.kc-section { display: grid; gap: .75rem; }
+.kc-section > h2 { margin: 0; font: 700 clamp(1.2rem, 3.4vw, 1.6rem)/1.2 Georgia, serif; }
+.kc-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.kc-card { display: grid; gap: .5rem; padding: 1rem; border: 2px solid var(--line); background: var(--white); border-radius: .6rem; }
+.kc-card h2, .kc-card h3, .kc-card h4 { margin: 0; font-size: 1.05rem; }
+.kc-card-top { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
+.kc-badge { padding: .2rem .55rem; border: 2px solid var(--navy); background: var(--paper-deep); font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.kc-badge-real { border-color: var(--purple); background: var(--purple-pale); }
+.kc-badge-demo { border-color: var(--amber); background: var(--amber-pale); }
+.kc-badge-pending { border-color: var(--coral); background: var(--paper); }
+.kc-facts { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin: 0; }
+.kc-facts-wide { grid-template-columns: 1fr; }
+.kc-facts > div { display: grid; gap: .15rem; }
+.kc-facts dt { font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); }
+.kc-facts dd { margin: 0; }
+.kc-muted { color: var(--ink-soft); font-size: .86rem; }
+.kc-note, .kc-req { margin: 0; }
+.kc-safety { margin: 0; color: var(--purple-dark); font-weight: 700; }
+.kc-banner { margin: 0; padding: .7rem .9rem; border: 2px solid var(--line); background: var(--white); font-weight: 700; }
+.kc-banner-demo { border-color: var(--amber); background: var(--amber-pale); }
+.kc-banner-pending { border-color: var(--coral); }
+.kc-details { border: 2px solid var(--line); background: var(--white); padding: .5rem .75rem; }
+.kc-details summary { cursor: pointer; font-weight: 850; }
+.kc-note-card { padding: .75rem 0; border-bottom: 1px solid var(--line); display: grid; gap: .4rem; }
+.kc-note-card h3 { margin: 0; font-size: 1rem; }
+.kc-objective { margin: 0; font-weight: 700; color: var(--purple-dark); }
+.kc-terms { margin: 0; font-size: .9rem; }
+.kc-links { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+.kc-links a { color: var(--purple); font-weight: 800; }
+.kc-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .6rem; }
+.kc-chips li { padding: .4rem .7rem; border: 2px solid var(--line); background: var(--white); }
+.kc-stations { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.kc-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.kc-table th, .kc-table td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.kc-evidence { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.kc-evidence-item { display: grid; gap: .3rem; }
+.kc-foot { color: var(--ink-soft); font-size: .86rem; }
+.kc-workspace { display: grid; gap: .75rem; }
+.kc-workspace h2, .kc-workspace h3 { margin: 0; }
+.kc-workspace ul { margin: 0; }
+
+@media (min-width: 720px) {
+  .kc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kc-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .kc-facts-wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kc-page { padding-top: 2.5rem; }
+}
