@@ -4,7 +4,7 @@ param([switch]$Uninstall)
 $ErrorActionPreference = 'Stop'
 $name = 'KidyCode-Hermes-Recovery'
 $root = Join-Path $env:LOCALAPPDATA 'KidyCode\hermes-recovery'
-$source = 'https://raw.githubusercontent.com/A-Bimu/kidycode/main/scripts/kidycode-hermes-recovery.ps1'
+$source = 'https://raw.githubusercontent.com/A-Bimu/kidycode/a9153d1185517028fc9c481da9233738a279c659/scripts/kidycode-hermes-recovery.ps1'
 $target = Join-Path $root 'kidycode-hermes-recovery.ps1'
 if ($Uninstall) {
   Unregister-ScheduledTask -TaskName $name -Confirm:$false -ErrorAction SilentlyContinue
@@ -14,6 +14,8 @@ if ($Uninstall) {
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 Invoke-WebRequest -Uri $source -OutFile $target -UseBasicParsing -TimeoutSec 30
 if (-not (Test-Path $target)) { throw 'Recovery script was not downloaded.' }
+$downloaded = Get-Content -LiteralPath $target -Raw
+if ($downloaded.Contains('$id: ') -or -not $downloaded.Contains('${id}: ')) { throw 'Downloaded script is stale or invalid. Refusing installation.' }
 # Validate PowerShell syntax before dry-running or installing the task.
 $tokens = $null
 $parseErrors = $null
