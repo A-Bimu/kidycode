@@ -14,7 +14,7 @@ function Log([string]$message) {
   Add-Content -LiteralPath $logPath -Value $line -Encoding UTF8
   Write-Output $line
 }
-function CLI([string[]]$arguments) {
+function Invoke-KidycodeHermes([string[]]$arguments) {
   $result = & hermes @arguments 2>&1 | Out-String
   if ($LASTEXITCODE -ne 0) { throw "Hermes failed: $result" }
   return $result
@@ -35,7 +35,7 @@ try {
       foreach ($p in $data.retried.PSObject.Properties) { $state.retried[$p.Name] = $p.Value }
     }
   }
-  $raw = CLI @('kanban','--board',$board,'list','--json')
+  $raw = Invoke-KidycodeHermes @('kanban','--board',$board,'list','--json')
   $parsed = $raw | ConvertFrom-Json
   if ($parsed -is [array]) { $tasks = @($parsed) }
   elseif ($parsed.tasks) { $tasks = @($parsed.tasks) }
@@ -50,8 +50,8 @@ try {
     if (-not $id -or $id -notmatch '^t_[a-z0-9]+$') { continue }
     if ($task.status -ne 'blocked') { continue }
     if ($state.retried.ContainsKey($id)) { Log "Already recovered $id once. Leaving blocked for review."; continue }
-    $show = CLI @('kanban','--board',$board,'show',$id)
-    $runs = CLI @('kanban','--board',$board,'runs',$id)
+    $show = Invoke-KidycodeHermes @('kanban','--board',$board,'show',$id)
+    $runs = Invoke-KidycodeHermes @('kanban','--board',$board,'runs',$id)
     # Only a worker death plus exhausted retry is eligible. Human blocks and validation errors are never reset.
     if ($show -notmatch 'gave_up' -or $show -notmatch 'pid .+ not alive' -or $runs -notmatch '(?m)\bcrashed\b') {
       Log "Task $id is blocked without a confirmed worker crash; leaving it untouched."
@@ -92,9 +92,9 @@ try {
     $state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $statePath -Encoding UTF8
     Log "Saved recovery snapshot for $id at $backup."
     # A later manual approval can reset the state, but this watchdog will never keep cycling.
-    $unblock = CLI @('kanban','--board',$board,'unblock',$id)
+    $unblock = Invoke-KidycodeHermes @('kanban','--board',$board,'unblock',$id)
     Log ("Unblocked ${id}: " + $unblock.Trim())
-    $dispatch = CLI @('kanban','--board',$board,'dispatch','--max','1')
+    $dispatch = Invoke-KidycodeHermes @('kanban','--board',$board,'dispatch','--max','1')
     Log ("Single dispatch for ${id}: " + $dispatch.Trim())
     exit 0
   }
