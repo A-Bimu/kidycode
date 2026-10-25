@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isInstitutionRole } from "@/lib/institution-roles";
-import { planEnrolment, readLmsIdentity, resolveMembership, withCohorts } from "@/lib/lms-accounts";
+import { planEnrolment, readLmsIdentity, resolveMembership } from "@/lib/lms-accounts";
 import { databaseError, getDatabase } from "@/lib/server-database";
 
 /*
@@ -46,12 +46,14 @@ export async function POST(request: Request) {
       return Response.json({ error: "This identity holds no active membership in that organisation." }, { status: 403 });
     }
 
-    /* The cohort must belong to the named organisation, and the role must work in it. */
-    const cohortIds = await database
-      .prepare("SELECT id FROM cohorts WHERE organisation_id = ? AND status = 'active'")
-      .bind(parsed.data.organisationId)
-      .all<{ id: string }>();
-    const scoped = withCohorts(membership, (cohortIds.results ?? []).map((row) => row.id));
+    /* Verify the target cohort is active and belongs to the member's organisation.
+     * Cohort-scoped users remain denied until explicit membership assignments exist. */
+    const cohort = await database
+      .prepare("SELECT id FROM cohorts WHERE id = ? AND organisation_id = ? AND status = 'active'")
+      .bind(parsed.data.cohortId, parsed.data.organisationId)
+      .first<{ id: string }>();
+    if (!cohort) return Response.json({ error: "No active cohort in this organisation." }, { status: 403 });
+    const scoped = membership;
 
     const current = await database
       .prepare("SELECT cohort_id AS cohortId, learner_id AS learnerId, status FROM cohort_enrolments WHERE cohort_id = ? AND learner_id = ?")
