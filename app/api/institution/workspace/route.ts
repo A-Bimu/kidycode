@@ -9,7 +9,7 @@ import {
   type PilotReview,
   type PilotWorkspaceInput,
 } from "@/lib/pilot-workspace";
-import { resolveMembership, withCohorts } from "@/lib/lms-accounts";
+import { resolveMembership } from "@/lib/lms-accounts";
 import { databaseError, getDatabase } from "@/lib/server-database";
 
 /*
@@ -76,14 +76,8 @@ export async function GET(request: Request) {
       .all<PilotCohort>();
     const cohorts = cohortRows.results ?? [];
 
-    /* A cohort-scoped grown-up works inside the cohorts of their own organisation. The
-     * pilot derives those cohorts from the organisation while the member-to-cohort
-     * assignment is still an open contract, and the scope test in canRead/canActOn still
-     * applies per cohort, so a lead never reaches a cohort outside their organisation. */
-    const scoped = membership.cohortIds.length > 0 || membership.role === "cohort_lead" || membership.role === "instructor" || membership.role === "academic_reviewer"
-      ? withCohorts(membership, cohorts.map((cohort) => cohort.id))
-      : membership;
-
+    /* Cohort-scoped roles have no persisted assignments yet. Never grant every\n     * cohort in an organisation just because the member belongs to it. */
+    const scoped = membership;
     const cohortIds = scoped.cohortIds;
     const enrolmentRows = cohortIds.length
       ? await database
