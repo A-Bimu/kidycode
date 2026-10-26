@@ -8,6 +8,7 @@ import {
   type GuidanceMode,
   type LessonScript,
 } from "@/lib/lesson-scripts";
+import { appendPreviewError, evaluateMasteryChecks, masteryEditorFiles, masteryResultSummary, visibleRequirements } from "@/lib/lesson-journey";
 import { buildPreview } from "@/lib/preview";
 
 /*
@@ -133,9 +134,7 @@ export function JourneyPractice({
   const build = stageLead(script, "build", mode);
   const check = stageLead(script, "check", mode);
   const transfer = stageLead(script, "transfer", mode);
-  const failed = results.filter((result) => !result.passed).map((result) => result.label);
-  const firstUnmet = requirements.find((requirement) => failed.includes(requirement)) || requirements[0];
-  const visibleRequirements = mode === "guided" ? [firstUnmet].filter(Boolean) : requirements;
+  const nextRequirements = visibleRequirements(requirements, results, mode);
   return (
     <section className="journey-card journey-practice" aria-labelledby="journey-practice-heading">
       <p className="section-label">BUILD AND CHECK</p>
@@ -144,7 +143,7 @@ export function JourneyPractice({
       <div className="journey-requirements">
         <h3>{mode === "guided" ? "Your next requirement" : "What the code must do"}</h3>
         <ul>
-          {visibleRequirements.map((requirement) => {
+          {nextRequirements.map((requirement) => {
             const result = results.find((item) => item.label === requirement);
             return (
               <li key={requirement} className={result ? (result.passed ? "is-pass" : "is-fail") : ""}>
@@ -175,7 +174,7 @@ export function JourneyMastery({
 }) {
   const mastery = script.mastery;
   const [workspace, setWorkspace] = useState<WorkspaceFiles>(mastery.starterFiles);
-  const [activeFile, setActiveFile] = useState<CodeFile>(mastery.editableFiles[0] || "html");
+  const [activeFile, setActiveFile] = useState<CodeFile>(() => masteryEditorFiles(mastery.editableFiles)[0]);
   const [results, setResults] = useState<JourneyCheckResult[]>([]);
   const [checked, setChecked] = useState(false);
   const [preview, setPreview] = useState(() => buildPreview(mastery.starterFiles));
@@ -191,14 +190,14 @@ export function JourneyMastery({
       if (event.source !== iframeRef.current?.contentWindow) return;
       const data = event.data as { source?: string; kind?: string; value?: string } | null;
       if (!data || data.source !== "kidycode-preview" || data.kind !== "error" || !data.value) return;
-      setPreviewErrors((current) => (current.includes(data.value!) ? current : [...current, data.value!].slice(-4)));
+      setPreviewErrors((current) => appendPreviewError(current, data.value!));
     }
     window.addEventListener("message", receivePreviewMessage);
     return () => window.removeEventListener("message", receivePreviewMessage);
   }, []);
 
   const passed = checked && results.length > 0 && results.every((result) => result.passed);
-  const activeFiles = mastery.editableFiles;
+  const activeFiles = masteryEditorFiles(mastery.editableFiles);
 
   function updateFile(value: string) {
     setWorkspace((current) => ({ ...current, [activeFile]: value }));
@@ -208,15 +207,7 @@ export function JourneyMastery({
   }
 
   function checkTask() {
-    const next = mastery.checks.map((check) => {
-      let pass = false;
-      try {
-        pass = new RegExp(check.pattern, "i").test(workspace[check.file]);
-      } catch {
-        pass = false;
-      }
-      return { label: check.label, passed: pass };
-    });
+    const next = evaluateMasteryChecks(mastery.checks, workspace);
     setResults(next);
     setChecked(true);
     onPassedChange(next.every((result) => result.passed));
@@ -272,7 +263,7 @@ export function JourneyMastery({
       </div>
       {checked && (
         <div className="mastery-results" aria-live="polite">
-          <b>{passed ? "The fresh task passes. Explain it in your own words to finish." : "Not there yet. Repair one requirement and check again."}</b>
+          <b>{masteryResultSummary(checked, results)}</b>
           <ul>
             {results.map((result) => (
               <li key={result.label} className={result.passed ? "is-pass" : "is-fail"}><span>{result.passed ? "Done" : "Not yet"}</span>{result.label}</li>

@@ -17,7 +17,7 @@ import AssessmentFlow from "@/components/AssessmentFlow";
 import { ProgressPage } from "@/components/ProgressPage";
 import { SkillsPassport } from "@/components/SkillsPassport";
 import { LessonJourney } from "@/components/LessonJourney";
-import { journeyEnabledFor, initialGuidance, writeGuidanceOverride } from "@/lib/lesson-journey";
+import { completionButtonReady, completionGate, hintGateOpen, initialGuidance, journeyEnabledFor, nextHintIndex, writeGuidanceOverride } from "@/lib/lesson-journey";
 import { scriptFor, type GuidanceMode } from "@/lib/lesson-scripts";
 import {
   languageGuidance,
@@ -277,14 +277,15 @@ export function LearningApp({ course }: { course: CourseBundle }) {
   const focusLabel = nudge?.focus || currentEvidence?.focusArea || "";
   const journeyActive = journeyEnabledFor(courseFacts.id, currentActivity.id);
   const currentAttempts = currentEvidence?.attempts || 0;
-  const lessonReady = workChecked
-    && practiceCorrect
-    && (currentActivity.activityType === "project"
-      ? reflection.trim().length >= 10
-      : journeyActive
-        ? reflection.trim().length >= 12
-        : true)
-    && (!journeyActive || Boolean(masteryPassed[currentActivity.id]));
+  const lessonReady = completionButtonReady({
+    activityType: currentActivity.activityType,
+    workChecked,
+    practiceCorrect,
+    quizPassed,
+    journeyActive,
+    masteryPassed: Boolean(masteryPassed[currentActivity.id]),
+    reflection,
+  });
 
   function projectBaseline(activity: Lesson): WorkspaceFiles {
     if (activity.activityType === "project") {
@@ -570,7 +571,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
     setTutorBusy(false);
     if (!reply) {
       setTutorOffline(true);
-      const nextHint = Math.min(hintIndex + 1, currentActivity.hints.length - 1);
+      const nextHint = nextHintIndex(hintIndex, currentActivity.hints.length);
       setHintIndex(nextHint);
       setTutorMessage(currentActivity.hints[Math.max(nextHint, 0)]);
       return;
@@ -759,11 +760,15 @@ export function LearningApp({ course }: { course: CourseBundle }) {
       if (currentIndex < lessons.length - 1) chooseActivity(currentIndex + 1);
       return;
     }
-    const allowed = currentActivity.activityType === "challenge"
-      ? workChecked && practiceCorrect && (!journeyActive || (reflection.trim().length >= 12 && Boolean(masteryPassed[currentActivity.id])))
-      : currentActivity.activityType === "project"
-        ? workChecked && practiceCorrect && reflection.trim().length >= 10
-        : quizPassed;
+    const allowed = completionGate({
+      activityType: currentActivity.activityType,
+      workChecked,
+      practiceCorrect,
+      quizPassed,
+      journeyActive,
+      masteryPassed: Boolean(masteryPassed[currentActivity.id]),
+      reflection,
+    });
     if (!allowed) return;
     const didSave = await saveActivity("completed");
     if (!didSave) return;
@@ -1167,9 +1172,7 @@ function CodingActivity({
   const codePassed = results.length > 0 && results.every((result) => result.passed);
   const journeyScript = journeyEnabledFor(courseId, activity.id) ? scriptFor(courseId, activity.id) : null;
   const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(() => initialGuidance(courseId, activity.id));
-  const journeyHintGate = !journeyScript
-    || guidanceMode === "balanced"
-    || (guidanceMode === "guided" ? attempts >= 1 : attempts >= 2);
+  const journeyHintGate = hintGateOpen(journeyScript ? guidanceMode : null, attempts);
   const journeyRequirements = activity.tests.map((test) => test.label);
   const journeyResults = results.map((result) => ({ label: result.label, passed: result.passed }));
   const journeyProps = journeyScript ? {
@@ -1335,7 +1338,7 @@ function CodingActivity({
                   <button className="outline-button tutor-nudge" type="button" disabled={tutorBusy || !journeyHintGate} onClick={() => void requestNudge()}>
                     {tutorBusy ? "Finding a nudge..." : hintsRequested > 0 ? "Another nudge" : "Give me a nudge"}
                   </button>
-                  <button className="text-button" type="button" disabled={tutorBusy || !journeyHintGate} onClick={() => setHintIndex((current) => Math.min(current + 1, activity.hints.length - 1))}>Show hint {Math.min(hintIndex + 2, activity.hints.length)}</button>
+                  <button className="text-button" type="button" disabled={tutorBusy || !journeyHintGate} onClick={() => setHintIndex((current) => nextHintIndex(current, activity.hints.length))}>Show hint {Math.min(hintIndex + 2, activity.hints.length)}</button>
                 </div>
                 {!journeyHintGate && <p className="is-quiet">Check your code first. The first hint appears after an attempt.</p>}
                 <div className="tutor-advice" aria-live="polite">
