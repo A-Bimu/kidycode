@@ -27,7 +27,12 @@ import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const d1Dir = resolve(root, ".wrangler/state/v3/d1/miniflare-D1DatabaseObject");
-const file = readdirSync(d1Dir).find((name) => name.endsWith(".sqlite"));
+/* Newer Miniflare keeps its own bookkeeping in metadata.sqlite and the application
+ * database in the hash-named file beside it. Picking the first .sqlite therefore
+ * migrated metadata.sqlite, reported success, and left the running server with no
+ * application tables at all. The application file is chosen explicitly. */
+const candidates = readdirSync(d1Dir).filter((name) => name.endsWith(".sqlite") && name !== "metadata.sqlite").sort();
+const file = candidates.pop();
 if (!file) throw new Error(`No local D1 file under ${d1Dir}. Run the dev server once first.`);
 const db = new DatabaseSync(resolve(d1Dir, file));
 console.log("local D1:", file);
