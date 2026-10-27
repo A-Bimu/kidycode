@@ -5,7 +5,7 @@ param([switch]$QueueOnly)
 $ErrorActionPreference = 'Stop'
 $repo = Join-Path $HOME 'kidycode'
 $board = 'kidycode-v3-improvements'
-$base = Join-Path $repo '.worktrees\v3-source'
+$base = Join-Path $repo '.worktrees\v3-improvements-source'
 $sourceBranch = 'fix/v3-assessment-correctness'
 function Invoke-KidycodeHermes([string[]]$arguments) {
   $output = & hermes @arguments 2>&1 | Out-String
