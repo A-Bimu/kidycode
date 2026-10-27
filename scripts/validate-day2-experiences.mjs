@@ -171,7 +171,11 @@ step("the learner label never leaks the whole identifier", () => {
 /* The route and the screens exist and call the rules, rather than restating them. */
 step("the pilot route builds the workspace through the boundary helpers", () => {
   const route = read("app/api/institution/workspace/route.ts");
-  assert(route.includes("readLmsIdentity(request)"), "the workspace route must read the platform identity.");
+  /* The identity is read through the trust module, which applies the deployment's identity
+   * mode before the headers are believed. The route must not read the headers itself. */
+  assert(route.includes("readInstitutionIdentity(request)"), "the workspace route must read the platform identity through the trust module.");
+  assert(!route.includes("readLmsIdentity(request)"), "the workspace route must not trust the raw forwarded identity.");
+  assert(route.includes("member_cohort_assignments"), "the workspace route must read the persisted cohort assignment.");
   assert(route.includes("resolveMembership("), "the workspace route must resolve the membership.");
   assert(route.includes("buildPilotWorkspace("), "the workspace route must build through the shared boundary.");
   assert(!/bodyJson|await request\.json/.test(route), "the workspace route must not read a request body.");

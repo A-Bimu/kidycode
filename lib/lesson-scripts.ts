@@ -1,4 +1,9 @@
 import type { CodeFile, CodeTest, CourseId, WorkspaceFiles } from "@/lib/course";
+import { difficultConceptScripts } from "@/lib/lesson-scripts-difficult-concepts";
+import { guidedPathwayScripts } from "@/lib/lesson-scripts-guided-pathways";
+import { creativePathwayScripts } from "@/lib/lesson-scripts-creative-pathways";
+import { developerPathwayScripts } from "@/lib/lesson-scripts-developer-pathways";
+import { practicalPathwayScripts } from "@/lib/lesson-scripts-practical-pathways";
 
 /*
  * The V3 presentation layer. A LessonScript sits beside the existing Lesson
@@ -55,9 +60,43 @@ export type LessonScript = {
   projectStep: string;
   stages: Record<LessonStageId, StageSpec>;
   mastery: MasterySpec;
+  /** The wrong mental models this concept invites, each with its own targeted hint. */
+  misconceptions: Misconception[];
+};
+
+/*
+ * A misconception is the wrong idea a learner is most likely to hold, the
+ * evidence of it in their own code and the hint that repairs it. The detector is
+ * matched against the learner's file, so the hint appears only when the wrong
+ * turn is actually present, not as one more wall of general advice.
+ */
+export type Misconception = {
+  /** The wrong mental model, in one sentence. */
+  wrong: string;
+  /** What the learner sees while that model is in play. */
+  symptom: string;
+  /** The targeted repair hint. It names the wrong turn, never the finished answer. */
+  hint: string;
+  /** The file the wrong turn shows up in. */
+  file: CodeFile;
+  /** Pattern that matches the learner's own file while this wrong turn is present. */
+  detect: string;
+  /** A short snippet containing the wrong turn, used to prove the detector works. */
+  detectableExample: string;
 };
 
 export const lessonScripts: LessonScript[] = [
+  /* The difficult-concept batch lives in its own module and is spread into this
+   * list, so every contract check, the presenter and the course gate see one set
+   * of scripts and content conversion stays reviewable in small batches. */
+  ...difficultConceptScripts,
+  /* Phase 3 widens the journey one age pathway at a time. Each batch is its own
+   * module, so a reviewer reads one pathway's wording at a time and a merge
+   * conflict stays inside the batch that caused it. */
+  ...guidedPathwayScripts,
+  ...creativePathwayScripts,
+  ...developerPathwayScripts,
+  ...practicalPathwayScripts,
   {
     lessonId: "ages-13-15-structure-headings",
     courseIds: ["ages-13-15", "ages-16-18", "adults"],
@@ -132,6 +171,24 @@ export const lessonScripts: LessonScript[] = [
         javascript: "",
       },
     },
+    misconceptions: [
+      {
+        wrong: "a second h1 is fine because the page has two parts.",
+        symptom: "The outline starts twice, so the page appears to have two titles.",
+        hint: "One page, one h1. Turn the second big line into an h2 and let the smaller lines sit underneath it.",
+        file: "html",
+        detect: `<h1[\\s>][\\s\\S]*<h1[\\s>]`,
+        detectableExample: `<h1>Lost and found</h1>\n<h1>Where to look</h1>`,
+      },
+      {
+        wrong: "a small line can become an h3 straight after the title.",
+        symptom: "The outline jumps from the page title to a sub-topic with no section in between.",
+        hint: "Give the section an h2 first and put the h3 inside it. A reader following only the headings should never skip a level.",
+        file: "html",
+        detect: `</h1>\\s*<h3`,
+        detectableExample: `<main>\n  <h1>Notice</h1>\n  <h3>If you find an item</h3>\n</main>`,
+      },
+    ],
   },
   {
     lessonId: "ages-13-15-responsive-flex",
@@ -209,6 +266,24 @@ export const lessonScripts: LessonScript[] = [
         javascript: "",
       },
     },
+    misconceptions: [
+      {
+        wrong: "display: flex belongs on each link so every item lines up.",
+        symptom: "The links stack in a column and each one takes the full width.",
+        hint: "The layout decision belongs on the parent that holds the links. Remove it from the children and put it on the container.",
+        file: "css",
+        detect: `button\\s*\\{[\\s\\S]*display\\s*:\\s*flex`,
+        detectableExample: "button {\n  display: flex;\n}",
+      },
+      {
+        wrong: "justify-content spaces the items, so gap is not needed.",
+        symptom: "The items are spread out, but they touch each other as soon as the row wraps.",
+        hint: "gap is the space between items and it keeps working when the row wraps. Add gap and let justify-content deal only with distribution.",
+        file: "css",
+        detect: `^(?![\\s\\S]*\\bgap\\s*:)[\\s\\S]*justify-content\\s*:`,
+        detectableExample: ".tags {\n  display: flex;\n  justify-content: space-between;\n}",
+      },
+    ],
   },
   {
     lessonId: "javascript-logic-loops",
@@ -289,6 +364,32 @@ export const lessonScripts: LessonScript[] = [
         javascript: "const times = [\"Monday 4pm\", \"Wednesday 5pm\", \"Friday 3pm\"];\nconst list = document.querySelector(\"#meeting-list\");\nconst emptyState = document.querySelector(\"#empty-state\");\nif (times.length === 0) {\n  emptyState.textContent = \"No meetings yet\";\n} else {\n  times.forEach(function (time) {\n    const item = document.createElement(\"li\");\n    item.textContent = time;\n    list.append(item);\n  });\n}\n",
       },
     },
+    misconceptions: [
+      {
+        wrong: "one list item can be created once and reused for every value.",
+        symptom: "The list shows a single row, and it holds the last value.",
+        hint: "Create the element inside the loop so each run gets its own. Creating it above the loop means one element is moved and refilled.",
+        file: "javascript",
+        detect: `const\\s+item\\s*=\\s*document\\.createElement[\\s\\S]*forEach`,
+        detectableExample: "const item = document.createElement(\"li\");\ntimes.forEach(function (time) {\n  item.textContent = time;\n  list.append(item);\n});",
+      },
+      {
+        wrong: "the loop variable is the whole array.",
+        symptom: "Every list item shows all the values joined together.",
+        hint: "The loop variable is one current item. Use it as the text, and reach for the whole array only outside the loop.",
+        file: "javascript",
+        detect: `textContent\\s*=\\s*times\\s*;`,
+        detectableExample: "item.textContent = times;",
+      },
+      {
+        wrong: "the callback does not need the current item.",
+        symptom: "The list items are created, but every one of them is empty.",
+        hint: "Add a parameter to the callback and use it inside. The loop hands one value to the function on each run.",
+        file: "javascript",
+        detect: `forEach\\s*\\(\\s*function\\s*\\(\\s*\\)`,
+        detectableExample: "times.forEach(function () {\n  const item = document.createElement(\"li\");\n  list.append(item);\n});",
+      },
+    ],
   },
 ];
 
@@ -362,7 +463,32 @@ export function lessonScriptIssues(): string[] {
         issues.push(`${script.lessonId}: fresh task check has an invalid pattern: ${check.label}`);
       }
     }
+    if (script.misconceptions.length < 2) {
+      issues.push(`${script.lessonId}: at least two misconception-specific hints are required.`);
+    }
+    for (const mistake of script.misconceptions) {
+      if (!mistake.wrong.trim() || !mistake.symptom.trim() || !mistake.hint.trim()) {
+        issues.push(`${script.lessonId}: a misconception needs a wrong idea, a symptom and a hint.`);
+      }
+      if (!(mistake.file in mastery.starterFiles)) {
+        issues.push(`${script.lessonId}: misconception "${mistake.wrong}" points at a missing file.`);
+      }
+      if (mistake.hint.trim().length < 40) {
+        issues.push(`${script.lessonId}: the hint for "${mistake.wrong}" is too short to repair the idea.`);
+      }
+      try {
+        const expression = new RegExp(mistake.detect, "i");
+        if (!expression.test(mistake.detectableExample)) {
+          issues.push(`${script.lessonId}: the detector for "${mistake.wrong}" misses its own example.`);
+        }
+        if (expression.test(mastery.workedSolution[mistake.file])) {
+          issues.push(`${script.lessonId}: the detector for "${mistake.wrong}" fires on the correct answer.`);
+        }
+      } catch {
+        issues.push(`${script.lessonId}: the detector for "${mistake.wrong}" is an invalid pattern.`);
+      }
+    }
   }
-  if (lessonScripts.length < 3) issues.push("at least three sample lesson scripts are required.");
+  if (lessonScripts.length < 9) issues.push("the difficult-concept phase requires nine lesson scripts.");
   return issues;
 }

@@ -80,8 +80,8 @@ const allTags = entries.map((entry) => entry.tag);
 /* The store a learner was already using before Assessment V2 (0007) and before the Day 1
  * institution contracts (0008). Each upgrade is proved on its own, so a failure names the
  * migration that caused it. */
-const preV2Tags = allTags.filter((tag) => !tag.startsWith("0007") && !tag.startsWith("0008"));
-const preDay1Tags = allTags.filter((tag) => !tag.startsWith("0008"));
+const preV2Tags = allTags.filter((tag) => !tag.startsWith("0007") && !tag.startsWith("0008") && !tag.startsWith("0009"));
+const preDay1Tags = allTags.filter((tag) => !tag.startsWith("0008") && !tag.startsWith("0009"));
 
 step("the journal and the migration files agree, in order and one for one", () => {
   assert.equal(journal.dialect, "sqlite", "the journal must describe a SQLite database.");
@@ -92,18 +92,18 @@ step("the journal and the migration files agree, in order and one for one", () =
     files,
     "the journal order must be the file order, so a fresh database migrates deterministically.",
   );
-  assert.equal(allTags[allTags.length - 1], "0008_ancient_centennial", "0008 must still be the newest migration.");
+  assert.equal(allTags[allTags.length - 1], "0009_member_cohort_assignments", "0009 must be the newest migration.");
 });
 
 step("no migration is missing, duplicated or renumbered", () => {
   const prefixes = allTags.map((tag) => tag.slice(0, 4));
-  assert.deepEqual(prefixes, ["0000", "0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008"], "the migration sequence must be complete.");
+  assert.deepEqual(prefixes, ["0000", "0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008", "0009"], "the migration sequence must be complete.");
   assert.equal(new Set(allTags).size, allTags.length, "a migration may not be listed twice.");
 });
 
 /* ------------------------------------------------------- a fresh database ----- */
 
-step("a fresh local database reaches the current schema from 0000 through 0008", () => {
+step("a fresh local database reaches the current schema from 0000 through 0009", () => {
   const database = open("fresh");
   try {
     for (const tag of allTags) {
@@ -137,10 +137,11 @@ step("a fresh local database reaches the current schema from 0000 through 0008",
       "cohorts",
       "cohort_enrolments",
       "academic_reviews",
+      "member_cohort_assignments",
     ]) {
       assert(tables.includes(table), `the fresh schema is missing ${table}.`);
     }
-    assert.equal(tables.length, 23, `the fresh schema should hold exactly twenty three tables, found ${tables.length}.`);
+    assert.equal(tables.length, 24, `the fresh schema should hold exactly twenty four tables, found ${tables.length}.`);
     assert.equal(database.prepare("PRAGMA foreign_keys").get().foreign_keys, 1, "foreign keys must be enforced on this store.");
   } finally {
     database.close();
@@ -246,7 +247,7 @@ step("every learner-owned table cascades from the learner, directly or through a
      * must outlive one learner, transfer_claim_limits is a coarse bound keyed by a hashed
      * source address holding no learner data at all, and an organisation, its members and
      * its cohorts are institutional records that outlive any cohort of learners. */
-    const outside = ["guardian_accounts", "transfer_claim_limits", "organisations", "organisation_members", "cohorts"];
+    const outside = ["guardian_accounts", "transfer_claim_limits", "organisations", "organisation_members", "cohorts", "member_cohort_assignments"];
     const unexpected = tables.filter((table) => !owned.has(table) && !outside.includes(table));
     assert.deepEqual(unexpected, [], `these tables are outside the learner cascade: ${unexpected.join(", ")}`);
     for (const table of outside) {
@@ -600,6 +601,43 @@ step("a store from before Day 1 upgrades through 0008 with its rows intact", () 
     assert.equal(database.prepare("SELECT COUNT(*) AS total FROM organisations").get().total, 1, "the organisation must outlive the learner.");
     assert.equal(database.prepare("SELECT COUNT(*) AS total FROM cohorts").get().total, 1, "the cohort must outlive the learner.");
     assert.equal(database.prepare("SELECT COUNT(*) AS total FROM organisation_members").get().total, 1, "the member must outlive the learner.");
+  } finally {
+    database.close();
+  }
+});
+
+step("a store from Day 1 upgrades through 0009 with its institutional rows intact", () => {
+  const database = open("assignments-upgrade");
+  try {
+    apply(database, allTags.filter((tag) => !tag.startsWith("0009")));
+    const before = tablesOf(database);
+    assert(before.includes("academic_reviews"), "the pre-0009 store must already hold the Day 1 tables.");
+    assert(!before.includes("member_cohort_assignments"), "the pre-0009 store must not hold the assignment table.");
+
+    database.prepare("INSERT INTO organisations (id, slug, name, created_at) VALUES ('org-assign', 'assign', 'Example School', ?)").run(now);
+    database
+      .prepare("INSERT INTO organisation_members (id, organisation_id, platform_user_id, email, role, created_at, last_seen_at) VALUES ('om-assign', 'org-assign', 'platform-assign', 'lead@example.test', 'cohort_lead', ?, ?)")
+      .run(now, now);
+    database.prepare("INSERT INTO cohorts (id, organisation_id, code, name, course_id, created_at) VALUES ('cohort-assign', 'org-assign', 'A', 'Class A', 'ages-10-12', ?)").run(now);
+    const memberBefore = database.prepare("SELECT * FROM organisation_members WHERE id = 'om-assign'").get();
+    const cohortBefore = database.prepare("SELECT * FROM cohorts WHERE id = 'cohort-assign'").get();
+
+    apply(database, ["0009_member_cohort_assignments"]);
+
+    const after = tablesOf(database);
+    assert.equal(after.length, before.length + 1, "the assignment upgrade must add exactly one table.");
+    assert.deepEqual(database.prepare("SELECT * FROM organisation_members WHERE id = 'om-assign'").get(), memberBefore, "the member changed during the assignment upgrade.");
+    assert.deepEqual(database.prepare("SELECT * FROM cohorts WHERE id = 'cohort-assign'").get(), cohortBefore, "the cohort changed during the assignment upgrade.");
+    assert.equal(database.prepare("SELECT COUNT(*) AS total FROM member_cohort_assignments").get().total, 0, "the assignment table must arrive empty.");
+
+    /* The assignment follows the member and the cohort, so neither a removed member nor a
+     * closed cohort leaves a scope behind. */
+    database
+      .prepare("INSERT INTO member_cohort_assignments (id, member_id, cohort_id, status, assigned_by, assigned_at) VALUES ('mca-1', 'om-assign', 'cohort-assign', 'active', 'organisation', ?)")
+      .run(now);
+    database.prepare("DELETE FROM cohorts WHERE id = 'cohort-assign'").run();
+    assert.equal(database.prepare("SELECT COUNT(*) AS total FROM member_cohort_assignments").get().total, 0, "the assignment must follow the cohort.");
+    assert.equal(database.prepare("SELECT COUNT(*) AS total FROM organisation_members").get().total, 1, "the member must outlive the cohort.");
   } finally {
     database.close();
   }

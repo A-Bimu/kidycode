@@ -11,6 +11,9 @@ and audits what the browser actually did:
   * the fresh mastery task fails on its starter and passes on the repair
   * completion stays blocked until the quick check, the fresh task and the reflection
   * a runtime error in the preview is reported and clears after the repair
+  * keyboard only: the tab order reaches every control, no stop is unnamed, Space
+    selects a guidance mode through the real key pipeline, and the code editor and
+    check button are reachable without a mouse
   * layout at 320, 768 and 1440 pixels: no horizontal overflow, no green, one h1,
     one main, heading order, labelled controls, no em dash
 
@@ -31,8 +34,10 @@ import urllib.request
 import websocket
 
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-PROFILE = os.path.join(os.environ["LOCALAPPDATA"], "Temp", "kidy-v3-journey-profile")
 PORT = int(os.environ.get("KIDYCODE_CDP_PORT", "9341"))
+# The profile is per port: two worktrees can run this harness at the same time,
+# and a shared profile directory would make the second Chrome exit on launch.
+PROFILE = os.path.join(os.environ["LOCALAPPDATA"], "Temp", f"kidy-v3-journey-profile-{PORT}")
 BASE = os.environ.get("KIDYCODE_E2E_URL", "http://localhost:3001").rstrip("/")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -272,6 +277,38 @@ class Page:
         time.sleep(0.4)
         return result
 
+    def press(self, name, code, key_code, text=None):
+        """Dispatch one real key down and up through the browser input pipeline."""
+        for kind in ("rawKeyDown", "keyUp"):
+            payload = {
+                "type": kind,
+                "key": name,
+                "code": code,
+                "windowsVirtualKeyCode": key_code,
+                "nativeVirtualKeyCode": key_code,
+            }
+            if text is not None and kind == "rawKeyDown":
+                payload["text"] = text
+            self.send("Input.dispatchKeyEvent", payload)
+        time.sleep(0.2)
+
+    def tab(self):
+        self.press("Tab", "Tab", 9)
+
+    def reset_focus(self):
+        self.evaluate("(() => { if (document.activeElement) document.activeElement.blur(); document.body.setAttribute('tabindex', '-1'); document.body.focus(); return true; })()")
+
+    def focused(self):
+        return self.evaluate(
+            "(() => { const el = document.activeElement; if (!el) return null;"
+            " const wrap = el.closest('label');"
+            " return { tag: el.tagName, id: el.id, name: el.getAttribute('name') || '',"
+            " value: el.getAttribute('value') || '', type: el.getAttribute('type') || '',"
+            " aria: el.getAttribute('aria-label') || '', disabled: Boolean(el.disabled),"
+            " label: wrap ? (wrap.innerText || '').trim().slice(0, 32) : '',"
+            " text: (el.innerText || '').trim().slice(0, 32) }; })()"
+        )
+
     def audit(self, label):
         layout = json.loads(self.evaluate(AUDIT))
         layout["screen"] = label
@@ -457,6 +494,106 @@ def journey_loops(page, cookie):
     check("the loops lesson saves and advances", advanced, page.text(".guided-title h1"))
 
 
+def journey_keyboard(page, width=1440):
+    """Keyboard-only pass: tab order, no focus trap, and a real Space selection.
+
+    The rest of the harness clicks with a script. This section drives the real key
+    pipeline, because a journey that is only reachable by mouse is not a journey.
+    """
+    print(f"\n== keyboard journey at {width}px ==")
+    stamp = int(time.time())
+    cookie = seed_learner("ages-13-15", 1, f"KeyKid{stamp % 1000}")
+    page.width(width)
+    open_lesson(page, "/learn/13-15", cookie, HEADINGS_LESSON)
+
+    page.reset_focus()
+    order = []
+    seen = set()
+    for _ in range(60):
+        page.tab()
+        focused = page.focused()
+        if not focused:
+            break
+        if focused["tag"] == "BODY":
+            break
+        key = (focused["tag"], focused["id"], focused["name"], focused["value"], focused["aria"], focused["text"])
+        if key in seen:
+            break
+        seen.add(key)
+        order.append(focused)
+
+    tags = [item["tag"] for item in order]
+    check("keyboard: tab reaches the journey controls", len(order) >= 6, f"{len(order)} stops: {tags}")
+    check("keyboard: tab never lands on the body before the controls run out", "BODY" not in tags, tags)
+    check("keyboard: the guidance radios are tabbable", "INPUT" in tags, tags)
+    check(
+        "keyboard: labelled buttons are tabbable",
+        sum(1 for tag in tags if tag == "BUTTON") >= 2,
+        f"{tags.count('BUTTON')} buttons in the tab order",
+    )
+    named = lambda item: bool(item["aria"] or item["text"] or item["id"] or item["label"])
+    check(
+        "keyboard: every stop carries an accessible name",
+        all(named(item) for item in order),
+        [item for item in order if not named(item)],
+    )
+    check(
+        "keyboard: the guidance radios are named by their wrapping label",
+        all(
+            "guided" in item["label"].lower() or "balanced" in item["label"].lower() or "independent" in item["label"].lower()
+            for item in order
+            if item["name"] == "guidance-mode"
+        ),
+        [item for item in order if item["name"] == "guidance-mode"],
+    )
+
+    guided_index = next(
+        (index for index, item in enumerate(order) if item["name"] == "guidance-mode" and item["value"] == "guided"),
+        None,
+    )
+    check("keyboard: the guided mode radio is in the tab order", guided_index is not None, tags)
+    if guided_index is not None:
+        page.reset_focus()
+        for _ in range(guided_index + 1):
+            page.tab()
+        landed = page.focused()
+        check("keyboard: tab lands on the guided radio", landed and landed.get("value") == "guided", landed)
+        page.press(" ", "Space", 32)
+        selected = page.evaluate("document.querySelector('input[name=\"guidance-mode\"][value=\"guided\"]').checked")
+        stored = page.evaluate("(() => localStorage.getItem('kidycode:guidance:ages-13-15-structure-headings'))()")
+        check("keyboard: Space selects the guidance mode", selected is True, selected)
+        check("keyboard: the keyboard choice is stored for this lesson", stored == "guided", stored)
+
+    page.click_text("Start practice")
+    page.wait_for("document.querySelector('.practice-screen')", 30)
+    page.reset_focus()
+    reached_editor = False
+    for _ in range(80):
+        page.tab()
+        focused = page.focused()
+        if not focused or focused["tag"] == "BODY":
+            break
+        if focused["tag"] == "TEXTAREA" and "code editor" in focused["aria"]:
+            reached_editor = True
+            break
+    check("keyboard: the code editor is reachable with Tab", reached_editor, page.focused())
+
+    reached_check = False
+    for _ in range(40):
+        page.tab()
+        focused = page.focused()
+        if not focused or focused["tag"] == "BODY":
+            break
+        if focused["tag"] == "BUTTON" and "check" in focused["text"].lower():
+            reached_check = True
+            check("keyboard: the check button is reachable and enabled", not focused["disabled"], focused)
+            break
+    check("keyboard: the check button is in the tab order after the editor", reached_check, page.focused())
+
+    layout = page.audit(f"{width} keyboard")
+    check("keyboard: the audited screen still has no overflow, no green and one h1", layout["overflow"] <= 0 and layout["greenCount"] == 0 and layout["h1"] == 1 and layout["mains"] == 1, layout)
+
+
 def main():
     widths = [int(value) for value in sys.argv[1:]] or [320, 768, 1440]
     if not BASE.startswith("http://localhost"):
@@ -471,6 +608,9 @@ def main():
 
     cookie = seed_learner("ages-10-12", 33, f"LoopKid{stamp % 1000}")
     journey_loops(page, cookie)
+
+    journey_keyboard(page, 1440)
+    journey_keyboard(page, 320)
 
     failed = [item for item in checks if not item["ok"]]
     report = {"base": BASE, "screens": screens, "checks": checks, "failed": failed}

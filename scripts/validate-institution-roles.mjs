@@ -226,7 +226,8 @@ for (const forbidden of ["DROP TABLE", "DROP INDEX", "ALTER TABLE", "INSERT INTO
 }
 const journal = JSON.parse(read("drizzle/meta/_journal.json"));
 const tags = journal.entries.map((entry) => entry.tag);
-assert.equal(tags[tags.length - 1], "0008_ancient_centennial", "The Day 1 migration must be the newest migration.");
+assert.equal(tags[tags.length - 1], "0009_member_cohort_assignments", "The cohort assignment migration must be the newest migration.");
 assert.equal(tags.filter((tag) => tag === "0008_ancient_centennial").length, 1, "The Day 1 migration must appear once.");
+assert.equal(tags.filter((tag) => tag === "0009_member_cohort_assignments").length, 1, "The cohort assignment migration must appear once.");
 
 console.log("Validated five institution roles, organisation and cohort scope, the review boundary and the Day 1 additive migration.");
