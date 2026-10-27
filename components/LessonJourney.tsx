@@ -8,7 +8,7 @@ import {
   type GuidanceMode,
   type LessonScript,
 } from "@/lib/lesson-scripts";
-import { appendPreviewError, evaluateMasteryChecks, masteryEditorFiles, masteryResultSummary, visibleRequirements } from "@/lib/lesson-journey";
+import { activeMisconceptions, appendPreviewError, evaluateMasteryChecks, masteryEditorFiles, masteryResultSummary, visibleRequirements } from "@/lib/lesson-journey";
 import { buildPreview } from "@/lib/preview";
 
 /*
@@ -198,6 +198,9 @@ export function JourneyMastery({
 
   const passed = checked && results.length > 0 && results.every((result) => result.passed);
   const activeFiles = masteryEditorFiles(mastery.editableFiles);
+  /* Misconception help appears only after a failed check, so it names the wrong
+   * turn the learner actually wrote instead of pre-empting the attempt. */
+  const activeMistakes = checked && results.some((result) => !result.passed) ? activeMisconceptions(script, workspace) : [];
 
   function updateFile(value: string) {
     setWorkspace((current) => ({ ...current, [activeFile]: value }));
@@ -267,6 +270,20 @@ export function JourneyMastery({
           <ul>
             {results.map((result) => (
               <li key={result.label} className={result.passed ? "is-pass" : "is-fail"}><span>{result.passed ? "Done" : "Not yet"}</span>{result.label}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {activeMistakes.length > 0 && (
+        <div className="mastery-misconception" role="note">
+          <b>A common wrong turn, and how to leave it</b>
+          <ul>
+            {activeMistakes.map((mistake) => (
+              <li key={mistake.wrong}>
+                <span>{mistake.wrong}</span>
+                <p>{mistake.symptom}</p>
+                <p className="mastery-misconception-hint">{mistake.hint}</p>
+              </li>
             ))}
           </ul>
         </div>

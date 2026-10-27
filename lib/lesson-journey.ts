@@ -1,5 +1,5 @@
 import type { CodeFile, CodeTest, CourseId, WorkspaceFiles } from "@/lib/course";
-import { guidanceForCourse, guidanceModes, scriptFor, type GuidanceMode } from "@/lib/lesson-scripts";
+import { guidanceForCourse, guidanceModes, scriptFor, type GuidanceMode, type LessonScript, type Misconception } from "@/lib/lesson-scripts";
 
 /*
  * The feature flag and the per-lesson guidance override for the V3 lesson
@@ -144,4 +144,25 @@ export function masteryResultSummary(checked: boolean, results: { passed: boolea
 /** The fresh task's editable files, in the order the lesson declares them. */
 export function masteryEditorFiles(editableFiles: CodeFile[], fallback: CodeFile = "html"): CodeFile[] {
   return editableFiles.length > 0 ? editableFiles : [fallback];
+}
+
+/* Misconception-specific help. A script declares the wrong mental models this
+ * concept invites and how each one shows up in the learner's own file, so the
+ * hint names the wrong turn that was actually taken instead of repeating general
+ * advice. At most two are shown at once, and an invalid detector is ignored
+ * rather than throwing, so a broken script cannot lock a learner out. */
+export function activeMisconceptions(script: LessonScript, workspace: WorkspaceFiles, limit = 2): Misconception[] {
+  const matched: Misconception[] = [];
+  for (const mistake of script.misconceptions) {
+    let present = false;
+    try {
+      present = new RegExp(mistake.detect, "i").test(workspace[mistake.file]);
+    } catch {
+      present = false;
+    }
+    if (!present) continue;
+    matched.push(mistake);
+    if (matched.length >= limit) break;
+  }
+  return matched;
 }

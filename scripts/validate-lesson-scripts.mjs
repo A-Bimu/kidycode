@@ -127,5 +127,6 @@ const source = [
 assert(!source.includes("\u2014"), "The lesson scripts contain an em dash.");
 assert(!/\bgreen\b/i.test(source), "The lesson scripts contain the banned colour name.");
 
-console.log(`Validated ${lessonScripts.length} lesson scripts, ${resolvedLessons} course and companion mappings, their prerequisites, mastery checks and misconception detectors across ${expectedCourseIds.length} courses.`);
+const detectorCount = lessonScripts.reduce((total, script) => total + script.misconceptions.length, 0);
+console.log(`Validated ${lessonScripts.length} lesson scripts, ${resolvedLessons} course and companion mappings, their prerequisites and mastery checks, and ${detectorCount} misconception detectors across ${expectedCourseIds.length} courses.`);
 for (const line of coverage) console.log(`  ${line}`);
