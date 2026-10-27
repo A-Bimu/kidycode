@@ -1,5 +1,9 @@
 import type { CodeFile, CodeTest, CourseId, WorkspaceFiles } from "@/lib/course";
 import { difficultConceptScripts } from "@/lib/lesson-scripts-difficult-concepts";
+import { guidedPathwayScripts } from "@/lib/lesson-scripts-guided-pathways";
+import { creativePathwayScripts } from "@/lib/lesson-scripts-creative-pathways";
+import { developerPathwayScripts } from "@/lib/lesson-scripts-developer-pathways";
+import { practicalPathwayScripts } from "@/lib/lesson-scripts-practical-pathways";
 
 /*
  * The V3 presentation layer. A LessonScript sits beside the existing Lesson
@@ -86,6 +90,13 @@ export const lessonScripts: LessonScript[] = [
    * list, so every contract check, the presenter and the course gate see one set
    * of scripts and content conversion stays reviewable in small batches. */
   ...difficultConceptScripts,
+  /* Phase 3 widens the journey one age pathway at a time. Each batch is its own
+   * module, so a reviewer reads one pathway's wording at a time and a merge
+   * conflict stays inside the batch that caused it. */
+  ...guidedPathwayScripts,
+  ...creativePathwayScripts,
+  ...developerPathwayScripts,
+  ...practicalPathwayScripts,
   {
     lessonId: "ages-13-15-structure-headings",
     courseIds: ["ages-13-15", "ages-16-18", "adults"],

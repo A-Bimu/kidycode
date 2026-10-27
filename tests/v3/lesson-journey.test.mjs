@@ -16,7 +16,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { courses } from "../../lib/course-catalog.ts";
-import { lessonScripts } from "../../lib/lesson-scripts.ts";
+import { lessonScripts, scriptFor } from "../../lib/lesson-scripts.ts";
+import { guidedPathwayScripts } from "../../lib/lesson-scripts-guided-pathways.ts";
+import { creativePathwayScripts } from "../../lib/lesson-scripts-creative-pathways.ts";
+import { developerPathwayScripts } from "../../lib/lesson-scripts-developer-pathways.ts";
+import { practicalPathwayScripts } from "../../lib/lesson-scripts-practical-pathways.ts";
 import {
   activeMisconceptions,
   appendPreviewError,
@@ -366,6 +370,76 @@ step("the fresh task is a different task from the lesson it belongs to", () => {
 step("the journey presenter shows the tested misconception rule", () => {
   const journey = fs.readFileSync(path.join(root, "components/LessonJourney.tsx"), "utf8");
   assert(journey.includes("activeMisconceptions("), "LessonJourney does not use the tested misconception rule.");
+});
+
+console.log("age pathways and catalogue coverage");
+
+/* Phase 3 widens the journey one age pathway at a time. The batches are imported
+ * directly so the checks below can prove what each pathway actually carries. */
+const pathwayBatches = [
+  { label: "ages 10 to 12 guided", courseId: "ages-10-12", registry: guidedPathwayScripts },
+  { label: "ages 13 to 15 creative", courseId: "ages-13-15", registry: creativePathwayScripts },
+  { label: "ages 16 to 18 developer", courseId: "ages-16-18", registry: developerPathwayScripts },
+  { label: "adults practical", courseId: "adults", registry: practicalPathwayScripts },
+];
+
+step("each age pathway carries wording of its own for all six moments", () => {
+  for (const batch of pathwayBatches) {
+    assert(batch.registry.length >= 4, `${batch.label} carries fewer than four scripts.`);
+    for (const script of batch.registry) {
+      assert.equal(script.courseIds[0], batch.courseId, `${script.lessonId} belongs to the wrong pathway.`);
+      for (const [stage, spec] of Object.entries(script.stages)) {
+        for (const mode of ["guided", "balanced", "independent"]) {
+          assert(spec.variants && spec.variants[mode], `${script.lessonId}: ${stage} has no ${mode} wording.`);
+        }
+        const lines = [spec.lead, ...Object.values(spec.variants)];
+        assert.equal(new Set(lines).size, lines.length, `${script.lessonId}: ${stage} repeats its own wording.`);
+      }
+    }
+  }
+});
+
+step("every pathway lesson resolves through the presenter with a script", () => {
+  for (const batch of pathwayBatches) {
+    for (const script of batch.registry) {
+      const enabled = journeyEnabledFor(batch.courseId, script.lessonId);
+      assert(enabled, `${script.lessonId} is not enabled in ${batch.courseId}.`);
+      assert.equal(scriptFor(batch.courseId, script.lessonId)?.lessonId, script.lessonId, `${script.lessonId} does not resolve.`);
+    }
+  }
+});
+
+step("catalogue coverage is reported per course and is not claimed as complete", () => {
+  const baseline = { "ages-10-12": 7, "ages-13-15": 9, "ages-16-18": 6, adults: 9 };
+  let total = 0;
+  let catalogue = 0;
+  const report = [];
+  for (const courseId of Object.keys(courses)) {
+    const lessons = courses[courseId].lessons;
+    const scripted = lessons.filter((lesson) => journeyEnabledFor(courseId, lesson.id));
+    assert(
+      scripted.length >= baseline[courseId],
+      `${courseId} lost coverage: ${scripted.length} scripted, baseline ${baseline[courseId]}.`,
+    );
+    total += scripted.length;
+    catalogue += lessons.length;
+    report.push(`${courseId} ${scripted.length}/${lessons.length}`);
+  }
+  assert(total < catalogue, "coverage is partial and must be reported as partial, not as complete.");
+  console.log(`  coverage: ${report.join(", ")}, total ${total} of ${catalogue} activities`);
+});
+
+step("the phase-3 batches keep the misconception contract", () => {
+  for (const batch of pathwayBatches) {
+    for (const script of batch.registry) {
+      assert(script.misconceptions.length >= 2, `${script.lessonId} names fewer than two wrong turns.`);
+      for (const mistake of script.misconceptions) {
+        const detect = new RegExp(mistake.detect, "i");
+        assert(detect.test(mistake.detectableExample), `${script.lessonId}: detector misses its own example.`);
+        assert(!detect.test(script.mastery.workedSolution[mistake.file]), `${script.lessonId}: detector fires on the correct answer.`);
+      }
+    }
+  }
 });
 
 console.log("guidance defaults and the per-lesson override");
