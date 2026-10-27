@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isInstitutionRole } from "@/lib/institution-roles";
-import { planEnrolment, readLmsIdentity, resolveMembership, withCohorts } from "@/lib/lms-accounts";
+import { readInstitutionIdentity } from "@/lib/institution-identity";
+import { membershipFromAssignments, planEnrolment, resolveMembership } from "@/lib/lms-accounts";
 import { databaseError, getDatabase } from "@/lib/server-database";
 
 /*
@@ -27,7 +28,7 @@ const bodySchema = z
 
 export async function POST(request: Request) {
   try {
-    const identity = readLmsIdentity(request);
+    const identity = await readInstitutionIdentity(request);
     if (!identity) return Response.json({ error: "Sign in to change a learner link." }, { status: 401 });
 
     const parsed = bodySchema.safeParse(await request.json().catch(() => null));
@@ -46,12 +47,28 @@ export async function POST(request: Request) {
       return Response.json({ error: "This identity holds no active membership in that organisation." }, { status: 403 });
     }
 
-    /* The cohort must belong to the named organisation, and the role must work in it. */
-    const cohortIds = await database
-      .prepare("SELECT id FROM cohorts WHERE organisation_id = ? AND status = 'active'")
-      .bind(parsed.data.organisationId)
-      .all<{ id: string }>();
-    const scoped = withCohorts(membership, (cohortIds.results ?? []).map((row) => row.id));
+    /* The cohort must belong to the named organisation. A cohort id from another
+     * organisation is answered as not found rather than as a permission decision, so the
+     * response cannot be used to discover another institution's cohorts. */
+    const cohort = await database
+      .prepare("SELECT id FROM cohorts WHERE id = ? AND organisation_id = ? AND status = 'active'")
+      .bind(parsed.data.cohortId, parsed.data.organisationId)
+      .first<{ id: string }>();
+    if (!cohort) return Response.json({ error: "That cohort does not belong to this organisation." }, { status: 404 });
+
+    /* The role must work in that cohort, and the only source of a cohort-scoped scope is the
+     * persisted assignment. An unassigned lead or instructor therefore holds no cohort and
+     * planEnrolment refuses the write. */
+    const memberAccount = accounts.find(
+      (account) => account.organisationId === parsed.data.organisationId && account.platformUserId === identity.platformUserId,
+    );
+    const assignmentRows = memberAccount
+      ? await database
+          .prepare("SELECT cohort_id AS cohortId, status FROM member_cohort_assignments WHERE member_id = ? AND status = 'active'")
+          .bind(memberAccount.id)
+          .all<{ cohortId: string; status: string }>()
+      : { results: [] as Array<{ cohortId: string; status: string }> };
+    const scoped = membershipFromAssignments(membership, assignmentRows.results ?? []);
 
     const current = await database
       .prepare("SELECT cohort_id AS cohortId, learner_id AS learnerId, status FROM cohort_enrolments WHERE cohort_id = ? AND learner_id = ?")
