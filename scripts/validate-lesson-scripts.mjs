@@ -52,10 +52,56 @@ for (const script of lessonScripts) {
   assert(languagesCovered.size >= 1, `${script.lessonId} has no language.`);
 }
 
-assert.equal(lessonScripts.length, 3, "Three sample lesson scripts are required in this phase.");
+assert.equal(lessonScripts.length, 9, "Nine lesson scripts are required in the difficult-concept phase.");
 for (const language of ["HTML", "CSS", "JavaScript"]) {
   assert(languages.has(language), `The sample lessons must cover ${language}.`);
 }
+
+/* The concepts this phase must cover, by primary lesson id. A missing script is a
+ * missing concept, not a rounding error, so the list is written out. */
+const requiredScripts = [
+  "ages-13-15-structure-headings",
+  "ages-13-15-responsive-flex",
+  "ages-13-15-responsive-grid",
+  "javascript-logic-loops",
+  "ages-13-15-javascript-values",
+  "ages-13-15-javascript-functions",
+  "ages-13-15-data-arrays",
+  "ages-16-18-javascript-objects",
+  "ages-16-18-javascript-filter",
+];
+for (const required of requiredScripts) {
+  assert(lessonScripts.some((script) => script.lessonId === required), `The ${required} script is missing.`);
+}
+
+/* Independent transfer. The fresh task may not be the lesson's own task: its
+ * starter has to differ and its requirement list may not be the lesson's list. */
+for (const script of lessonScripts) {
+  const primary = courses[script.courseIds[0]].lessons.find((item) => item.id === script.lessonId);
+  assert(primary, `${script.lessonId} has no lesson to compare its fresh task against.`);
+  assert.notDeepEqual(script.mastery.checks, primary.tests, `${script.lessonId}: the fresh task reuses the lesson's own checks.`);
+  for (const check of script.mastery.checks) {
+    assert.notEqual(
+      script.mastery.starterFiles[check.file],
+      primary.starterFiles[check.file],
+      `${script.lessonId}: the fresh task starter for ${check.file} is the lesson's own starter.`,
+    );
+  }
+}
+
+/* Individual coverage, reported per course. Phase 3 widens conversion from this
+ * baseline, so the number of scripted activities per course is printed rather
+ * than claimed. */
+const coverage = expectedCourseIds.map((courseId) => {
+  const scripted = courses[courseId].lessons.filter((lesson) => {
+    for (const script of lessonScripts) {
+      if (script.courseIds.includes(courseId) && (script.courseLessonIds?.[courseId] || script.lessonId) === lesson.id) return true;
+      if ((script.companionLessonIds?.[courseId] || []).includes(lesson.id)) return true;
+    }
+    return false;
+  });
+  return `${courseId}: ${scripted.length} of ${courses[courseId].lessons.length} activities scripted`;
+});
 
 /* The presenter resolves a script by course and lesson id. Prove both the primary
  * ids and every companion id resolve back to the same script. */
@@ -74,8 +120,12 @@ for (const script of lessonScripts) {
   }
 }
 
-const source = readFileSync(resolve(root, "lib/lesson-scripts.ts"), "utf8");
+const source = [
+  readFileSync(resolve(root, "lib/lesson-scripts.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-difficult-concepts.ts"), "utf8"),
+].join("\n");
 assert(!source.includes("\u2014"), "The lesson scripts contain an em dash.");
 assert(!/\bgreen\b/i.test(source), "The lesson scripts contain the banned colour name.");
 
-console.log(`Validated ${lessonScripts.length} lesson scripts, ${resolvedLessons} course and companion mappings, their prerequisites and mastery checks across ${expectedCourseIds.length} courses.`);
+console.log(`Validated ${lessonScripts.length} lesson scripts, ${resolvedLessons} course and companion mappings, their prerequisites, mastery checks and misconception detectors across ${expectedCourseIds.length} courses.`);
+for (const line of coverage) console.log(`  ${line}`);
