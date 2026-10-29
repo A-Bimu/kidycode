@@ -1,4 +1,8 @@
 import type { LessonScript } from "@/lib/lesson-scripts";
+import { guidedHtmlScripts } from "@/lib/lesson-scripts-guided-html";
+import { guidedCssScripts } from "@/lib/lesson-scripts-guided-css";
+import { guidedJavascriptScripts } from "@/lib/lesson-scripts-guided-javascript";
+import { guidedQualityScripts } from "@/lib/lesson-scripts-guided-quality";
 
 /*
  * The guided batch of the V3 lesson journey: the ages 10 to 12 pathway.
@@ -21,7 +25,7 @@ import type { LessonScript } from "@/lib/lesson-scripts";
  * wall of general advice.
  */
 
-export const guidedPathwayScripts: LessonScript[] = [
+const guidedExistingScripts: LessonScript[] = [
   {
     lessonId: "html-foundations-nesting",
     courseIds: ["ages-10-12"],
@@ -411,4 +415,19 @@ export const guidedPathwayScripts: LessonScript[] = [
       },
     ],
   },
+];
+
+/*
+ * The four batches below widen the same pathway from the four hand-authored
+ * scripts to every remaining ages 10 to 12 challenge lesson, one module per
+ * language area. A quiz has no code and a project lesson carries its own
+ * completion rule, so neither takes a six-moment script; the coverage report in
+ * the validator prints exactly what is and is not scripted.
+ */
+export const guidedPathwayScripts: LessonScript[] = [
+  ...guidedExistingScripts,
+  ...guidedHtmlScripts,
+  ...guidedCssScripts,
+  ...guidedJavascriptScripts,
+  ...guidedQualityScripts,
 ];

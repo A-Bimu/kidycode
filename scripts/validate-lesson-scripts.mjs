@@ -4,6 +4,10 @@ import { resolve } from "node:path";
 import { courses } from "../lib/course-catalog.ts";
 import { lessonScripts, lessonScriptIssues, lessonIdForCourse, scriptFor } from "../lib/lesson-scripts.ts";
 import { guidedPathwayScripts } from "../lib/lesson-scripts-guided-pathways.ts";
+import { guidedHtmlScripts } from "../lib/lesson-scripts-guided-html.ts";
+import { guidedCssScripts } from "../lib/lesson-scripts-guided-css.ts";
+import { guidedJavascriptScripts } from "../lib/lesson-scripts-guided-javascript.ts";
+import { guidedQualityScripts } from "../lib/lesson-scripts-guided-quality.ts";
 import { creativePathwayScripts } from "../lib/lesson-scripts-creative-pathways.ts";
 import { developerPathwayScripts } from "../lib/lesson-scripts-developer-pathways.ts";
 import { practicalPathwayScripts } from "../lib/lesson-scripts-practical-pathways.ts";
@@ -56,7 +60,7 @@ for (const script of lessonScripts) {
   assert(languagesCovered.size >= 1, `${script.lessonId} has no language.`);
 }
 
-assert.equal(lessonScripts.length, 25, "Twenty five lesson scripts are required after the age-pathway phase.");
+assert.equal(lessonScripts.length, 46, "Forty six lesson scripts are required after the ages 10 to 12 remaining-content phase.");
 for (const language of ["HTML", "CSS", "JavaScript"]) {
   assert(languages.has(language), `The sample lessons must cover ${language}.`);
 }
@@ -91,6 +95,31 @@ const requiredScripts = [
   "adults-quality-accessibility",
   "adults-css-system-box-model",
   "adults-interaction-validation",
+  /* The ages 10 to 12 remaining-content batch converts every challenge lesson
+   * that did not already carry a script. Quizzes and project lessons are
+   * deliberately excluded, because a quiz has no typed code and a project
+   * lesson keeps its own reflection-only completion rule. */
+  "html-foundations-elements",
+  "html-foundations-lists",
+  "html-content-links",
+  "html-content-images",
+  "html-content-semantics",
+  "html-content-forms",
+  "css-foundations-rules",
+  "css-foundations-type",
+  "css-foundations-cards",
+  "css-layout-box",
+  "css-layout-responsive",
+  "javascript-foundations-output",
+  "javascript-foundations-types",
+  "javascript-logic-compare",
+  "dom-interaction-select",
+  "dom-interaction-classes",
+  "dom-interaction-forms",
+  "quality-html",
+  "quality-syntax",
+  "quality-access",
+  "quality-sharing",
 ];
 for (const required of requiredScripts) {
   assert(lessonScripts.some((script) => script.lessonId === required), `The ${required} script is missing.`);
@@ -111,8 +140,12 @@ for (const [courseId, minimum] of Object.entries(pathwayMinimum)) {
  * The phase-3 batches name all three guidance modes for all six moments, so the
  * same lesson carries a younger and an older reader without a second copy of the
  * content. The earlier samples are left exactly as they were authored. */
+const guidedRemainingScripts = [...guidedHtmlScripts, ...guidedCssScripts, ...guidedJavascriptScripts, ...guidedQualityScripts];
+assert.equal(guidedRemainingScripts.length, 21, "The ages 10 to 12 remaining-content batch adds twenty one scripts.");
+assert.equal(guidedPathwayScripts.length, 25, "The guided pathway carries twenty five scripts after this batch.");
+
 const agePathwayScripts = [...guidedPathwayScripts, ...creativePathwayScripts, ...developerPathwayScripts, ...practicalPathwayScripts];
-assert.equal(agePathwayScripts.length, 16, "The age-pathway phase adds sixteen scripts.");
+assert.equal(agePathwayScripts.length, 37, "The age-pathway batches add thirty seven scripts in total.");
 for (const script of agePathwayScripts) {
   for (const [stage, spec] of Object.entries(script.stages)) {
     for (const mode of ["guided", "balanced", "independent"]) {
@@ -174,6 +207,10 @@ const source = [
   readFileSync(resolve(root, "lib/lesson-scripts.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-difficult-concepts.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-guided-pathways.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-guided-html.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-guided-css.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-guided-javascript.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-guided-quality.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-creative-pathways.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-developer-pathways.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-practical-pathways.ts"), "utf8"),

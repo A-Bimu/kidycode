@@ -410,7 +410,7 @@ step("every pathway lesson resolves through the presenter with a script", () => 
 });
 
 step("catalogue coverage is reported per course and is not claimed as complete", () => {
-  const baseline = { "ages-10-12": 7, "ages-13-15": 9, "ages-16-18": 6, adults: 9 };
+  const baseline = { "ages-10-12": 32, "ages-13-15": 9, "ages-16-18": 6, adults: 9 };
   let total = 0;
   let catalogue = 0;
   const report = [];
