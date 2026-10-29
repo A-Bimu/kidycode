@@ -20,6 +20,7 @@
     "test:browser:product": "bash scripts/browser-sweep.sh",
     "test:browser:experiences": "python scripts/browser-sweep-day2.py",
     "test:browser:journey": "python scripts/browser-journey-v3.py",
+    "test:browser:adults": "python scripts/browser-adults-sweep.py",
     "test:e2e": "bash scripts/e2e-all.sh"
   },
   "dependencies": {
