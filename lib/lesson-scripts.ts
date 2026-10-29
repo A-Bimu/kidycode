@@ -1,6 +1,7 @@
 import type { CodeFile, CodeTest, CourseId, WorkspaceFiles } from "@/lib/course";
 import { difficultConceptScripts } from "@/lib/lesson-scripts-difficult-concepts";
 import { guidedPathwayScripts } from "@/lib/lesson-scripts-guided-pathways";
+import { teenPathwayScripts } from "@/lib/lesson-scripts-teen-pathways";
 import { creativePathwayScripts } from "@/lib/lesson-scripts-creative-pathways";
 import { developerPathwayScripts } from "@/lib/lesson-scripts-developer-pathways";
 import { practicalPathwayScripts } from "@/lib/lesson-scripts-practical-pathways";
@@ -94,6 +95,7 @@ export const lessonScripts: LessonScript[] = [
    * module, so a reviewer reads one pathway's wording at a time and a merge
    * conflict stays inside the batch that caused it. */
   ...guidedPathwayScripts,
+  ...teenPathwayScripts,
   ...creativePathwayScripts,
   ...developerPathwayScripts,
   ...practicalPathwayScripts,
