@@ -4,6 +4,7 @@ import { guidedPathwayScripts } from "@/lib/lesson-scripts-guided-pathways";
 import { teenPathwayScripts } from "@/lib/lesson-scripts-teen-pathways";
 import { creativePathwayScripts } from "@/lib/lesson-scripts-creative-pathways";
 import { developerPathwayScripts } from "@/lib/lesson-scripts-developer-pathways";
+import { developerRemainingScripts } from "@/lib/lesson-scripts-developer-remaining";
 import { practicalPathwayScripts } from "@/lib/lesson-scripts-practical-pathways";
 
 /*
@@ -98,6 +99,7 @@ export const lessonScripts: LessonScript[] = [
   ...teenPathwayScripts,
   ...creativePathwayScripts,
   ...developerPathwayScripts,
+  ...developerRemainingScripts,
   ...practicalPathwayScripts,
   {
     lessonId: "ages-13-15-structure-headings",

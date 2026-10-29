@@ -13,6 +13,11 @@ import { teenHtmlScripts } from "../lib/lesson-scripts-teen-html.ts";
 import { teenCssScripts } from "../lib/lesson-scripts-teen-css.ts";
 import { teenJavascriptScripts } from "../lib/lesson-scripts-teen-javascript.ts";
 import { teenQualityScripts } from "../lib/lesson-scripts-teen-quality.ts";
+import { developerHtmlScripts } from "../lib/lesson-scripts-developer-html.ts";
+import { developerCssScripts } from "../lib/lesson-scripts-developer-css.ts";
+import { developerJavascriptScripts } from "../lib/lesson-scripts-developer-javascript.ts";
+import { developerQualityScripts } from "../lib/lesson-scripts-developer-quality.ts";
+import { developerRemainingScripts } from "../lib/lesson-scripts-developer-remaining.ts";
 import { creativePathwayScripts } from "../lib/lesson-scripts-creative-pathways.ts";
 import { developerPathwayScripts } from "../lib/lesson-scripts-developer-pathways.ts";
 import { practicalPathwayScripts } from "../lib/lesson-scripts-practical-pathways.ts";
@@ -65,7 +70,7 @@ for (const script of lessonScripts) {
   assert(languagesCovered.size >= 1, `${script.lessonId} has no language.`);
 }
 
-assert.equal(lessonScripts.length, 65, "Sixty five lesson scripts are required after the ages 13 to 15 remaining-content phase.");
+assert.equal(lessonScripts.length, 87, "Eighty seven lesson scripts are required after the ages 16 to 18 remaining-content phase.");
 for (const language of ["HTML", "CSS", "JavaScript"]) {
   assert(languages.has(language), `The sample lessons must cover ${language}.`);
 }
@@ -150,6 +155,34 @@ const requiredScripts = [
   "ages-13-15-quality-accessibility",
   "ages-13-15-quality-security",
   "ages-13-15-quality-release",
+  /* The ages 16 to 18 remaining-content batch converts every challenge lesson
+   * that did not already carry a script: the page regions, the navigation, the
+   * document metadata, the four form lessons, the CSS system lessons, the fluid
+   * width, the breakpoint, the copy based collection operations, the
+   * asynchronous request and its failure path, and the three quality lessons.
+   * Quizzes and project lessons are excluded for the same reason as above. */
+  "ages-16-18-structure-landmarks",
+  "ages-16-18-structure-links",
+  "ages-16-18-structure-metadata",
+  "ages-16-18-forms-labels",
+  "ages-16-18-forms-types",
+  "ages-16-18-forms-groups",
+  "ages-16-18-forms-messages",
+  "ages-16-18-css-system-selectors",
+  "ages-16-18-css-system-box-model",
+  "ages-16-18-css-system-tokens",
+  "ages-16-18-css-system-states",
+  "ages-16-18-responsive-viewport",
+  "ages-16-18-responsive-media",
+  "ages-16-18-javascript-sort",
+  "ages-16-18-data-update",
+  "ages-16-18-data-delete",
+  "ages-16-18-interaction-fetch",
+  "ages-16-18-interaction-errors",
+  "ages-16-18-interaction-abort",
+  "ages-16-18-quality-debug",
+  "ages-16-18-quality-accessibility",
+  "ages-16-18-quality-release",
 ];
 for (const required of requiredScripts) {
   assert(lessonScripts.some((script) => script.lessonId === required), `The ${required} script is missing.`);
@@ -178,8 +211,12 @@ const teenRemainingScripts = [...teenHtmlScripts, ...teenCssScripts, ...teenJava
 assert.equal(teenRemainingScripts.length, 19, "The ages 13 to 15 remaining-content batch adds nineteen scripts.");
 assert.equal(teenPathwayScripts.length, 19, "The ages 13 to 15 pathway carries nineteen scripts after this batch.");
 
-const agePathwayScripts = [...guidedPathwayScripts, ...teenPathwayScripts, ...creativePathwayScripts, ...developerPathwayScripts, ...practicalPathwayScripts];
-assert.equal(agePathwayScripts.length, 56, "The age-pathway batches add fifty six scripts in total.");
+const developerRemainingBatch = [...developerHtmlScripts, ...developerCssScripts, ...developerJavascriptScripts, ...developerQualityScripts];
+assert.equal(developerRemainingBatch.length, 22, "The ages 16 to 18 remaining-content batch adds twenty two scripts.");
+assert.equal(developerRemainingScripts.length, 22, "The ages 16 to 18 pathway carries twenty two scripts after this batch.");
+
+const agePathwayScripts = [...guidedPathwayScripts, ...teenPathwayScripts, ...developerRemainingScripts, ...creativePathwayScripts, ...developerPathwayScripts, ...practicalPathwayScripts];
+assert.equal(agePathwayScripts.length, 78, "The age-pathway batches add seventy eight scripts in total.");
 for (const script of agePathwayScripts) {
   for (const [stage, spec] of Object.entries(script.stages)) {
     for (const mode of ["guided", "balanced", "independent"]) {
@@ -250,6 +287,11 @@ const source = [
   readFileSync(resolve(root, "lib/lesson-scripts-teen-css.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-teen-javascript.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-teen-quality.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-developer-html.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-developer-css.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-developer-javascript.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-developer-quality.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-developer-remaining.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-creative-pathways.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-developer-pathways.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-practical-pathways.ts"), "utf8"),
@@ -279,6 +321,7 @@ console.log(`  all four courses: ${totalScripted} of ${totalActivities} activiti
 for (const [label, batch] of [
   ["ages 10 to 12 guided", guidedPathwayScripts],
   ["ages 13 to 15 remaining content", teenPathwayScripts],
+  ["ages 16 to 18 remaining content", developerRemainingScripts],
   ["ages 13 to 15 creative", creativePathwayScripts],
   ["ages 16 to 18 developer", developerPathwayScripts],
   ["adults practical", practicalPathwayScripts],
