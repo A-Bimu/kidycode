@@ -6,6 +6,7 @@ import { creativePathwayScripts } from "@/lib/lesson-scripts-creative-pathways";
 import { developerPathwayScripts } from "@/lib/lesson-scripts-developer-pathways";
 import { developerRemainingScripts } from "@/lib/lesson-scripts-developer-remaining";
 import { practicalPathwayScripts } from "@/lib/lesson-scripts-practical-pathways";
+import { practicalRemainingScripts } from "@/lib/lesson-scripts-practical-remaining";
 
 /*
  * The V3 presentation layer. A LessonScript sits beside the existing Lesson
@@ -101,6 +102,7 @@ export const lessonScripts: LessonScript[] = [
   ...developerPathwayScripts,
   ...developerRemainingScripts,
   ...practicalPathwayScripts,
+  ...practicalRemainingScripts,
   {
     lessonId: "ages-13-15-structure-headings",
     courseIds: ["ages-13-15", "ages-16-18", "adults"],

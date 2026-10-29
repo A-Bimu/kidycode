@@ -21,6 +21,11 @@ import { developerRemainingScripts } from "../lib/lesson-scripts-developer-remai
 import { creativePathwayScripts } from "../lib/lesson-scripts-creative-pathways.ts";
 import { developerPathwayScripts } from "../lib/lesson-scripts-developer-pathways.ts";
 import { practicalPathwayScripts } from "../lib/lesson-scripts-practical-pathways.ts";
+import { practicalRemainingScripts } from "../lib/lesson-scripts-practical-remaining.ts";
+import { practicalHtmlScripts } from "../lib/lesson-scripts-practical-html.ts";
+import { practicalCssScripts } from "../lib/lesson-scripts-practical-css.ts";
+import { practicalJavascriptScripts } from "../lib/lesson-scripts-practical-javascript.ts";
+import { practicalQualityScripts } from "../lib/lesson-scripts-practical-quality.ts";
 
 /*
  * The V3 lesson journey contract. It proves that every script is anchored to a
@@ -70,7 +75,7 @@ for (const script of lessonScripts) {
   assert(languagesCovered.size >= 1, `${script.lessonId} has no language.`);
 }
 
-assert.equal(lessonScripts.length, 87, "Eighty seven lesson scripts are required after the ages 16 to 18 remaining-content phase.");
+assert.equal(lessonScripts.length, 106, "One hundred and six lesson scripts are required after the adults remaining-content phase.");
 for (const language of ["HTML", "CSS", "JavaScript"]) {
   assert(languages.has(language), `The sample lessons must cover ${language}.`);
 }
@@ -183,6 +188,31 @@ const requiredScripts = [
   "ages-16-18-quality-debug",
   "ages-16-18-quality-accessibility",
   "ages-16-18-quality-release",
+  /* The adults remaining-content batch converts every challenge lesson that did
+   * not already carry a script: the page regions, the navigation, the image
+   * description, the three form lessons, the CSS system lessons, the fluid
+   * width, the breakpoint, the decision, the DOM output, the three interaction
+   * lessons and the three quality lessons. Quizzes and project lessons are
+   * excluded for the same reason as every earlier batch. */
+  "adults-structure-landmarks",
+  "adults-structure-links",
+  "adults-structure-metadata",
+  "adults-forms-types",
+  "adults-forms-groups",
+  "adults-forms-messages",
+  "adults-css-system-selectors",
+  "adults-css-system-tokens",
+  "adults-css-system-states",
+  "adults-responsive-viewport",
+  "adults-responsive-media",
+  "adults-javascript-conditions",
+  "adults-javascript-dom-output",
+  "adults-interaction-select",
+  "adults-interaction-events",
+  "adults-interaction-storage",
+  "adults-quality-debug",
+  "adults-quality-security",
+  "adults-quality-release",
 ];
 for (const required of requiredScripts) {
   assert(lessonScripts.some((script) => script.lessonId === required), `The ${required} script is missing.`);
@@ -215,8 +245,12 @@ const developerRemainingBatch = [...developerHtmlScripts, ...developerCssScripts
 assert.equal(developerRemainingBatch.length, 22, "The ages 16 to 18 remaining-content batch adds twenty two scripts.");
 assert.equal(developerRemainingScripts.length, 22, "The ages 16 to 18 pathway carries twenty two scripts after this batch.");
 
-const agePathwayScripts = [...guidedPathwayScripts, ...teenPathwayScripts, ...developerRemainingScripts, ...creativePathwayScripts, ...developerPathwayScripts, ...practicalPathwayScripts];
-assert.equal(agePathwayScripts.length, 78, "The age-pathway batches add seventy eight scripts in total.");
+const practicalRemainingBatch = [...practicalHtmlScripts, ...practicalCssScripts, ...practicalJavascriptScripts, ...practicalQualityScripts];
+assert.equal(practicalRemainingBatch.length, 19, "The adults remaining-content batch adds nineteen scripts.");
+assert.equal(practicalRemainingScripts.length, 19, "The adults pathway carries nineteen remaining-content scripts.");
+
+const agePathwayScripts = [...guidedPathwayScripts, ...teenPathwayScripts, ...developerRemainingScripts, ...creativePathwayScripts, ...developerPathwayScripts, ...practicalPathwayScripts, ...practicalRemainingScripts];
+assert.equal(agePathwayScripts.length, 97, "The age-pathway batches add ninety seven scripts in total.");
 for (const script of agePathwayScripts) {
   for (const [stage, spec] of Object.entries(script.stages)) {
     for (const mode of ["guided", "balanced", "independent"]) {
@@ -295,6 +329,11 @@ const source = [
   readFileSync(resolve(root, "lib/lesson-scripts-creative-pathways.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-developer-pathways.ts"), "utf8"),
   readFileSync(resolve(root, "lib/lesson-scripts-practical-pathways.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-practical-remaining.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-practical-html.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-practical-css.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-practical-javascript.ts"), "utf8"),
+  readFileSync(resolve(root, "lib/lesson-scripts-practical-quality.ts"), "utf8"),
 ].join("\n");
 assert(!source.includes("\u2014"), "The lesson scripts contain an em dash.");
 assert(!/\bgreen\b/i.test(source), "The lesson scripts contain the banned colour name.");
@@ -325,6 +364,7 @@ for (const [label, batch] of [
   ["ages 13 to 15 creative", creativePathwayScripts],
   ["ages 16 to 18 developer", developerPathwayScripts],
   ["adults practical", practicalPathwayScripts],
+  ["adults remaining content", practicalRemainingScripts],
 ]) {
   const courses_ = new Set(batch.map((script) => script.courseIds[0]));
   console.log(`  ${label} batch: ${batch.length} scripts for ${[...courses_].join(", ")}`);

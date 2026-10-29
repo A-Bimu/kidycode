@@ -23,6 +23,7 @@ import { developerRemainingScripts } from "../../lib/lesson-scripts-developer-re
 import { creativePathwayScripts } from "../../lib/lesson-scripts-creative-pathways.ts";
 import { developerPathwayScripts } from "../../lib/lesson-scripts-developer-pathways.ts";
 import { practicalPathwayScripts } from "../../lib/lesson-scripts-practical-pathways.ts";
+import { practicalRemainingScripts } from "../../lib/lesson-scripts-practical-remaining.ts";
 import {
   activeMisconceptions,
   appendPreviewError,
@@ -385,6 +386,7 @@ const pathwayBatches = [
   { label: "ages 13 to 15 creative", courseId: "ages-13-15", registry: creativePathwayScripts },
   { label: "ages 16 to 18 developer", courseId: "ages-16-18", registry: developerPathwayScripts },
   { label: "adults practical", courseId: "adults", registry: practicalPathwayScripts },
+  { label: "adults remaining content", courseId: "adults", registry: practicalRemainingScripts },
 ];
 
 step("each age pathway carries wording of its own for all six moments", () => {
@@ -414,7 +416,7 @@ step("every pathway lesson resolves through the presenter with a script", () => 
 });
 
 step("catalogue coverage is reported per course and is not claimed as complete", () => {
-  const baseline = { "ages-10-12": 32, "ages-13-15": 32, "ages-16-18": 32, adults: 9 };
+  const baseline = { "ages-10-12": 32, "ages-13-15": 32, "ages-16-18": 32, adults: 32 };
   let total = 0;
   let catalogue = 0;
   const report = [];
