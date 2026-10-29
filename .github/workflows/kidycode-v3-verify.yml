@@ -1,0 +1,35 @@
+name: KidyCode V3 release verification
+
+on:
+  pull_request:
+    branches: [main, "wt/t_31cba5cd", "curriculum/v3-content-only"]
+  push:
+    branches: ["release/v3-integrate-and-verify"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kidycode-v3-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-quality:
+    name: Typecheck, curriculum, lint, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: TypeScript and curriculum gates
+        run: npm run check
+      - name: Lint
+        run: npm run lint
+      - name: Verified production build
+        run: npm run build
