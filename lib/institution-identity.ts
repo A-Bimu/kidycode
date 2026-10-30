@@ -21,7 +21,7 @@ export function identityTrustConfiguration(): { mode: IdentityTrustMode; secret:
 export async function readInstitutionIdentity(request: Request): Promise<GuardianIdentity | null> {
   // Staging migration: a configured provider token must be verified by the issuer.
   // There is no automatic downgrade to raw identity headers after a failed bearer check.
-  const authMode = typeof env.KIDYCODE_AUTH_MODE === "string" ? env.KIDYCODE_AUTH_MODE : "legacy";
+  const authMode = typeof env.KIDYCODE_AUTH_MODE === "string" ? env.KIDYCODE_AUTH_MODE : "deny";
   if (authMode === "supabase") {
     return verifySupabaseAdultIdentity(request, {
       url: typeof env.SUPABASE_URL === "string" ? env.SUPABASE_URL : null,
