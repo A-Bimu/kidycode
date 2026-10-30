@@ -36,5 +36,9 @@ declare module "cloudflare:workers" {
      * the signed proxy mode. */
     KIDYCODE_IDENTITY_SECRET?: string;
     KIDYCODE_IDENTITY_TRUST?: string;
+    /* Migration: provider-backed adult login. Missing mode defaults to deny. */
+    KIDYCODE_AUTH_MODE?: string;
+    SUPABASE_URL?: string;
+    SUPABASE_PUBLISHABLE_KEY?: string;
   };
 }
