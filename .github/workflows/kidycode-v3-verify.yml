@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, "wt/t_31cba5cd", "curriculum/v3-content-only", "release/v3-integrate-and-verify"]
   push:
-    branches: ["release/v3-integrate-and-verify", "release/v3-integrated-security-staging"]
+    branches: ["release/v3-integrate-and-verify", "release/v3-integrated-security-staging", "security/staging-verified-adult-auth"]
   workflow_dispatch:
 
 permissions:
@@ -29,6 +29,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: TypeScript and curriculum gates
         run: npm run check
+      - name: Verified adult token negative tests
+        run: node --import tsx tests/security/supabase-identity.test.mjs
       - name: Institution security assertions
         run: node --import tsx scripts/validate-institution-security.mjs
       - name: Lint
