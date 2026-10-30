@@ -3,6 +3,7 @@ import {
   canRead,
   dataClasses,
   institutionActions,
+  organisationScoped,
   type DataClass,
   type InstitutionAction,
   type InstitutionRole,
@@ -261,7 +262,10 @@ export function buildPilotWorkspace(membership: Membership, input: PilotWorkspac
   return {
     organisation: organisation ? { id: organisation.id, name: organisation.name, kind: organisation.kind, status: organisation.status } : null,
     role: membership.role,
-    audience: membership.cohortIds.length > 0 ? "cohort" : "organisation",
+    /* The audience is the role's scope, not whether the role happens to hold cohorts. An
+     * organisation-scoped role reads the whole organisation, so it is never presented as a
+     * cohort view merely because its readable cohort set is non-empty. */
+    audience: organisationScoped.includes(membership.role) ? "organisation" : "cohort",
     cohorts,
     members,
     capabilities: { mayRead, mayAct },
