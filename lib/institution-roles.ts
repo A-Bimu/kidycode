@@ -27,6 +27,10 @@ export const institutionActions = [
   "manage_organisation",
   "manage_members",
   "create_cohort",
+  /* Assigning a grown-up to a cohort is the permission that makes cohort scope real. It is
+   * held by the two organisation-scoped roles, because a person who can only work inside a
+   * cohort must not be able to widen their own scope. */
+  "assign_cohort",
   "enrol_learner",
   "revoke_enrolment",
   "read_cohort_roster",
@@ -60,8 +64,8 @@ const allowed = (actions: InstitutionAction[]): Record<InstitutionAction, boolea
 /* The one permission table. A role that is not listed for an action is refused, so a new
  * action arrives refused everywhere until it is granted deliberately. */
 export const permissions: PermissionTable = {
-  organisation_admin: allowed(["manage_organisation", "manage_members", "create_cohort", "revoke_enrolment", "read_cohort_roster", "read_progress_summary"]),
-  programme_coordinator: allowed(["create_cohort", "enrol_learner", "revoke_enrolment", "read_cohort_roster", "read_progress_summary", "read_learner_identity"]),
+  organisation_admin: allowed(["manage_organisation", "manage_members", "create_cohort", "assign_cohort", "revoke_enrolment", "read_cohort_roster", "read_progress_summary"]),
+  programme_coordinator: allowed(["create_cohort", "assign_cohort", "enrol_learner", "revoke_enrolment", "read_cohort_roster", "read_progress_summary", "read_learner_identity"]),
   cohort_lead: allowed(["enrol_learner", "revoke_enrolment", "read_cohort_roster", "read_progress_summary", "read_assessment_evidence", "read_learner_identity", "read_learner_code"]),
   instructor: allowed(["read_cohort_roster", "read_progress_summary", "read_assessment_evidence", "read_learner_identity", "read_learner_code"]),
   academic_reviewer: allowed(["read_cohort_roster", "read_progress_summary", "read_assessment_evidence", "record_academic_review", "decide_academic_review"]),

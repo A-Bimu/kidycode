@@ -64,6 +64,13 @@
       "when": 1792778736385,
       "tag": "0008_ancient_centennial",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1793135809926,
+      "tag": "0009_member_cohort_assignments",
+      "breakpoints": true
     }
   ]
 }

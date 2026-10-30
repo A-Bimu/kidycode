@@ -1,5 +1,5 @@
-import { readLmsIdentity } from "@/lib/lms-accounts";
-import { isInstitutionRole } from "@/lib/institution-roles";
+import { readInstitutionIdentity } from "@/lib/institution-identity";
+import { isInstitutionRole, organisationScoped } from "@/lib/institution-roles";
 import {
   buildPilotWorkspace,
   type PilotCohort,
@@ -9,7 +9,7 @@ import {
   type PilotReview,
   type PilotWorkspaceInput,
 } from "@/lib/pilot-workspace";
-import { resolveMembership, withCohorts } from "@/lib/lms-accounts";
+import { assignedCohortIds, resolveMembership, withCohorts } from "@/lib/lms-accounts";
 import { databaseError, getDatabase } from "@/lib/server-database";
 
 /*
@@ -40,7 +40,7 @@ function accountRow(row: MemberRow) {
 
 export async function GET(request: Request) {
   try {
-    const identity = readLmsIdentity(request);
+    const identity = await readInstitutionIdentity(request);
     if (!identity) return Response.json({ error: "Sign in to open the pilot workspace." }, { status: 401 });
 
     const database = getDatabase();
@@ -76,13 +76,28 @@ export async function GET(request: Request) {
       .all<PilotCohort>();
     const cohorts = cohortRows.results ?? [];
 
-    /* A cohort-scoped grown-up works inside the cohorts of their own organisation. The
-     * pilot derives those cohorts from the organisation while the member-to-cohort
-     * assignment is still an open contract, and the scope test in canRead/canActOn still
-     * applies per cohort, so a lead never reaches a cohort outside their organisation. */
-    const scoped = membership.cohortIds.length > 0 || membership.role === "cohort_lead" || membership.role === "instructor" || membership.role === "academic_reviewer"
+    /* A cohort-scoped grown-up works only in the cohorts they are assigned to, read from
+     * member_cohort_assignments. The list is never derived from the organisation's cohorts:
+     * doing that granted every lead, instructor and reviewer in a school access to every
+     * cohort in it, which is the finding security PR #3 was opened for. A member with no
+     * active assignment is granted no cohort, so the boundary fails closed.
+     *
+     * Organisation-scoped roles are answered at the organisation scope by the permission
+     * table, so their readable cohort set is the organisation's own active cohorts. That is
+     * the same boundary they already held: no cohort outside the organisation can appear,
+     * because the query is bound to the membership's organisation id. */
+    const memberAccount = accounts.find(
+      (account) => account.organisationId === membership.organisationId && account.platformUserId === identity.platformUserId,
+    );
+    const assignmentRows = memberAccount
+      ? await database
+          .prepare("SELECT cohort_id AS cohortId, status FROM member_cohort_assignments WHERE member_id = ? AND status = 'active'")
+          .bind(memberAccount.id)
+          .all<{ cohortId: string; status: string }>()
+      : { results: [] as Array<{ cohortId: string; status: string }> };
+    const scoped = organisationScoped.includes(membership.role)
       ? withCohorts(membership, cohorts.map((cohort) => cohort.id))
-      : membership;
+      : withCohorts(membership, assignedCohortIds(assignmentRows.results ?? []));
 
     const cohortIds = scoped.cohortIds;
     const enrolmentRows = cohortIds.length
