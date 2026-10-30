@@ -39,3 +39,34 @@ jobs:
         run: npm run build
       - name: Independent Cloudflare Workers staging build
         run: npx vite build --config vite.workers.config.ts
+
+  seeded-journeys:
+    name: Seeded D1 end-to-end journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Seed isolated local D1 (synthetic data only)
+        run: node --no-warnings scripts/seed-local-pilot.mjs
+      - name: Start local server and await readiness
+        shell: bash
+        run: |
+          npm run dev -- --port 3001 > /tmp/kidycode-server.log 2>&1 &
+          echo $! > /tmp/kidycode-server.pid
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3001/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/kidycode-server.log
+          exit 1
+      - name: Execute all end-to-end journeys
+        run: npm run test:e2e
+      - name: Upload server log on failure
+        if: failure()
+        run: tail -n 120 /tmp/kidycode-server.log || true
