@@ -541,6 +541,37 @@ export const cohortEnrolments = sqliteTable(
   ],
 );
 
+/* The persisted member to cohort assignment. This is the row that decides which cohorts a
+ * cohort-scoped grown-up works in. It exists because deriving that scope from "every cohort
+ * in the organisation" silently granted a lead, instructor or reviewer access to every
+ * cohort in the school, which is the open finding in security PR #3.
+ *
+ * The assignment is durable and additive: a revoked row is kept so the history of who was
+ * assigned, by whom and when survives, and a re-assignment reactivates the same row. It
+ * cascades from both the member and the cohort, so neither a removed member nor a closed
+ * cohort leaves a scope behind. */
+export const memberCohortAssignments = sqliteTable(
+  "member_cohort_assignments",
+  {
+    id: text("id").primaryKey(),
+    memberId: text("member_id")
+      .notNull()
+      .references(() => organisationMembers.id, { onDelete: "cascade" }),
+    cohortId: text("cohort_id")
+      .notNull()
+      .references(() => cohorts.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("active"),
+    assignedBy: text("assigned_by").notNull().default("organisation"),
+    assignedAt: text("assigned_at").notNull(),
+    revokedAt: text("revoked_at"),
+  },
+  (table) => [
+    uniqueIndex("member_cohort_assignments_pair_unique").on(table.memberId, table.cohortId),
+    index("member_cohort_assignments_member_idx").on(table.memberId, table.status),
+    index("member_cohort_assignments_cohort_idx").on(table.cohortId, table.status),
+  ],
+);
+
 /* The academic review record. It carries requirement-level evidence only: a scope, an
  * outcome and a compact JSON summary. It never holds learner code, and the reviewer
  * reference is nullable so a review outlives the reviewer leaving the organisation. */

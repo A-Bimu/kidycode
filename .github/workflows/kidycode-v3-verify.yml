@@ -2,9 +2,9 @@ name: KidyCode V3 release verification
 
 on:
   pull_request:
-    branches: [main, "wt/t_31cba5cd", "curriculum/v3-content-only"]
+    branches: [main, "wt/t_31cba5cd", "curriculum/v3-content-only", "release/v3-integrate-and-verify"]
   push:
-    branches: ["release/v3-integrate-and-verify"]
+    branches: ["release/v3-integrate-and-verify", "release/v3-integrated-security-staging"]
   workflow_dispatch:
 
 permissions:
@@ -29,6 +29,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: TypeScript and curriculum gates
         run: npm run check
+      - name: Institution security assertions
+        run: node --import tsx scripts/validate-institution-security.mjs
       - name: Lint
         run: npm run lint
       - name: Verified production build

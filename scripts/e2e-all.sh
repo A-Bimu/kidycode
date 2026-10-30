@@ -19,3 +19,4 @@ node --import tsx --no-warnings scripts/e2e-assessment-defence.mjs
 node --import tsx --no-warnings scripts/e2e-payload-leak.mjs
 node --import tsx --no-warnings scripts/e2e-certification.mjs
 node --import tsx --no-warnings scripts/e2e-dry-runs.mjs
+node --import tsx --no-warnings scripts/e2e-institution-security.mjs

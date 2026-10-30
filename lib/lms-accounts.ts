@@ -84,6 +84,28 @@ export function activeCohortIds(enrolments: Array<{ cohortId: string; status: st
   return [...new Set(enrolments.filter((row) => row.status === "active").map((row) => row.cohortId))];
 }
 
+/*
+ * The cohorts a persisted assignment actually grants.
+ *
+ * This is the only source of a cohort-scoped grown-up's scope. It is deliberately not
+ * derived from the organisation's cohort list: deriving it that way gave every lead,
+ * instructor and reviewer in a school access to every cohort in that school, which is the
+ * finding security PR #3 was opened for. A revoked row keeps the history but grants
+ * nothing, and a member with no rows is granted no cohort at all, so the boundary fails
+ * closed instead of guessing.
+ */
+export type CohortAssignment = { cohortId: string; status: string };
+
+export function assignedCohortIds(assignments: CohortAssignment[]): string[] {
+  return [...new Set(assignments.filter((row) => row.status === "active").map((row) => row.cohortId))];
+}
+
+/* The membership a request acts with: role and organisation from the account, cohorts only
+ * from the assignment rows. */
+export function membershipFromAssignments(membership: Membership, assignments: CohortAssignment[]): Membership {
+  return withCohorts(membership, assignedCohortIds(assignments));
+}
+
 export type EnrolmentPlan =
   | { action: "insert"; reason: string }
   | { action: "reactivate"; reason: string }
@@ -131,6 +153,51 @@ export function planEnrolment(request: EnrolmentRequest): EnrolmentPlan {
   if (!request.current) return { action: "no-op", reason: "There is no learner link to revoke." };
   if (request.current.status === "revoked") return { action: "no-op", reason: "This learner link is already revoked." };
   return { action: "revoke", reason: "The learner link is revoked, and the row is kept." };
+}
+
+export type AssignmentPlan =
+  | { action: "insert"; reason: string }
+  | { action: "reactivate"; reason: string }
+  | { action: "revoke"; reason: string }
+  | { action: "no-op"; reason: string }
+  | { action: "refused"; reason: string };
+
+export type AssignmentRequest = {
+  membership: Membership;
+  organisationId: string;
+  cohortId: string;
+  /* The member row the assignment is for. The route has already checked that this member
+   * belongs to the same organisation; the plan checks the actor's own scope. */
+  current: { cohortId: string; memberId: string; status: string } | null;
+  wanted: "active" | "revoked";
+};
+
+/*
+ * The assignment decision, in one place.
+ *
+ * Only an organisation-scoped role holds assign_cohort, and canActOn still refuses an
+ * organisation the actor does not belong to and a cohort it may not name, so a cohort lead
+ * can neither assign itself into another cohort nor widen its own scope. An existing row is
+ * reactivated rather than replaced, so the history of who was assigned and when survives.
+ */
+export function planAssignment(request: AssignmentRequest): AssignmentPlan {
+  const target: InstitutionScope = { organisationId: request.organisationId, cohortId: request.cohortId };
+  if (!canActOn(request.membership, "assign_cohort", target)) {
+    return { action: "refused", reason: "This role may not change assignments for that cohort." };
+  }
+  if (request.organisationId !== request.membership.organisationId) {
+    return { action: "refused", reason: "Assignments never cross an organisation." };
+  }
+
+  if (request.wanted === "active") {
+    if (!request.current) return { action: "insert", reason: "A new cohort assignment is created for this member." };
+    if (request.current.status === "active") return { action: "no-op", reason: "This member already works in this cohort." };
+    return { action: "reactivate", reason: "The existing assignment is reactivated and keeps its history." };
+  }
+
+  if (!request.current) return { action: "no-op", reason: "There is no assignment to revoke." };
+  if (request.current.status === "revoked") return { action: "no-op", reason: "This assignment is already revoked." };
+  return { action: "revoke", reason: "The assignment is revoked, and the row is kept." };
 }
 
 /* The roles that may be granted inside an organisation, so a route cannot accept a role

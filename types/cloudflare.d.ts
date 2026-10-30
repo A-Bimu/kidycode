@@ -31,5 +31,10 @@ declare module "cloudflare:workers" {
         };
       };
     };
+    /* Identity trust configuration. Both are optional: with neither set, the deployment is
+     * in the documented platform-header mode; a secret switches the institution routes to
+     * the signed proxy mode. */
+    KIDYCODE_IDENTITY_SECRET?: string;
+    KIDYCODE_IDENTITY_TRUST?: string;
   };
 }
