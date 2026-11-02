@@ -55,12 +55,9 @@ jobs:
       - name: Start local server and await readiness
         shell: bash
         run: |
-          # Worker bindings do not inherit shell process.env. The Cloudflare
-          # Vite plugin loads .dev.vars into the local worker runtime.
-          # This file is created only on the disposable CI runner for synthetic
-          # header-based fixtures; never deploy it or use real learner data.
-          printf 'KIDYCODE_AUTH_MODE=legacy\\nKIDYCODE_IDENTITY_TRUST=platform-headers\\n' > .dev.vars
-          npm run dev -- --port 3001 > /tmp/kidycode-server.log 2>&1 &
+          # Explicitly opt into synthetic forwarded-header fixtures in Vite's
+          # local Worker bindings. This flag is absent from all build/deploy jobs.
+          KIDYCODE_CI_SYNTHETIC_E2E=1 npm run dev -- --port 3001 > /tmp/kidycode-server.log 2>&1 &
           echo $! > /tmp/kidycode-server.pid
           for i in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:3001/ >/dev/null; then exit 0; fi
