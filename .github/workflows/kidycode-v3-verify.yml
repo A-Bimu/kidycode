@@ -63,6 +63,23 @@ jobs:
           done
           cat /tmp/kidycode-server.log
           exit 1
+      # Vite serves the home page without touching D1. Miniflare therefore may
+      # have only metadata.sqlite after readiness; the application DB is created
+      # lazily by its first SQL query. This read-only probe uses deliberately
+      # nonexistent credentials, so it cannot create or change learner records.
+      - name: Initialize local D1 via a read-only unauthenticated probe
+        shell: bash
+        run: |
+          curl -sS -o /tmp/kidycode-d1-probe.json -w 'D1 probe HTTP %{http_code}\\n' \\
+            -H 'x-kidycode-learner: ci-nonexistent-learner' \\
+            -H 'x-kidycode-key: ci-nonexistent-access-key' \\
+            http://127.0.0.1:3001/api/progress
+          test -n "$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -maxdepth 1 -type f -name '*.sqlite' ! -name metadata.sqlite -print -quit)" || {
+            echo 'Local D1 application file was not initialized by the probe.'
+            cat /tmp/kidycode-d1-probe.json
+            tail -n 100 /tmp/kidycode-server.log
+            exit 1
+          }
       - name: Seed isolated local D1 (synthetic data only)
         run: node --no-warnings scripts/seed-local-pilot.mjs
       - name: Execute all end-to-end journeys
