@@ -13,7 +13,7 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 // The legacy forwarded-header fixtures are permitted only inside the synthetic
 // CI E2E worker. They must never become a default or enter a deploy build.
-const syntheticCiIdentityVars =
+const syntheticCiIdentityVars: Record<string, string> =
   process.env.CI === "true" && process.env.KIDYCODE_CI_SYNTHETIC_E2E === "1"
     ? { KIDYCODE_AUTH_MODE: "legacy", KIDYCODE_IDENTITY_TRUST: "platform-headers" }
     : {};
