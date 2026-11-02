@@ -55,7 +55,10 @@ jobs:
       - name: Start local server and await readiness
         shell: bash
         run: |
-          npm run dev -- --port 3001 > /tmp/kidycode-server.log 2>&1 &
+          # The synthetic guardian/institution journey fixtures use forwarded
+          # identity headers. Enable compatibility only for this ephemeral CI
+          # server; deployed Workers still default to fail-closed auth.
+          KIDYCODE_AUTH_MODE=legacy KIDYCODE_IDENTITY_TRUST=platform-headers npm run dev -- --port 3001 > /tmp/kidycode-server.log 2>&1 &
           echo $! > /tmp/kidycode-server.pid
           for i in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:3001/ >/dev/null; then exit 0; fi
