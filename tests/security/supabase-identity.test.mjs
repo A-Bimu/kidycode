@@ -10,7 +10,7 @@ const accepting = async (input, options) => {
   assert.equal(new URL(input).href, url + "/auth/v1/user");
   assert.equal(options.method, "GET");
   assert.equal(options.headers.Authorization, "Bearer valid-token");
-  return Response.json({ id: UUID, email: "Grownup@Example.com", is_anonymous: false });
+  return Response.json({ id: UUID, email: "Grownup@Example.com", email_confirmed_at: "2026-10-20T10:00:00.000Z", is_anonymous: false });
 };
 const request = (authorization) => new Request("https://kidycode.test/api/guardian/session", {
   headers: authorization ? { Authorization: authorization, "oai-authenticated-user-id": "forged", "oai-authenticated-user-email": "forged@example.com" } : { "oai-authenticated-user-id": "forged" },
@@ -27,6 +27,10 @@ const fail = async () => Response.json({ error: "invalid token" }, { status: 401
 assert.equal(await verifySupabaseAdultIdentity(request("Bearer invalid"), config, fail), null);
 const anonymous = async () => Response.json({ id: UUID, email: "child@example.com", is_anonymous: true });
 assert.equal(await verifySupabaseAdultIdentity(request("Bearer valid-token"), config, anonymous), null);
+const unconfirmed = async () => Response.json({ id: UUID, email: "unconfirmed@example.com", email_confirmed_at: null, is_anonymous: false });
+assert.equal(await verifySupabaseAdultIdentity(request("Bearer valid-token"), config, unconfirmed), null);
+const missingConfirmation = async () => Response.json({ id: UUID, email: "missing@example.com", is_anonymous: false });
+assert.equal(await verifySupabaseAdultIdentity(request("Bearer valid-token"), config, missingConfirmation), null);
 const malformed = async () => Response.json({ id: "forged-id", email: "wrong@example.com" });
 assert.equal(await verifySupabaseAdultIdentity(request("Bearer valid-token"), config, malformed), null);
 const networkFailure = async () => { throw new Error("unreachable"); };
