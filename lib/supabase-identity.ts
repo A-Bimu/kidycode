@@ -14,6 +14,7 @@ type SupabaseUserResponse = {
   id?: unknown;
   email?: unknown;
   is_anonymous?: unknown;
+  email_confirmed_at?: unknown;
 };
 
 const MAX_BEARER_LENGTH = 8192;
@@ -55,6 +56,10 @@ export async function verifySupabaseAdultIdentity(
     const body = (await response.json()) as SupabaseUserResponse;
     if (body.is_anonymous === true || typeof body.id !== "string" || !ID_PATTERN.test(body.id)) return null;
     if (typeof body.email !== "string" || body.email.length > 254 || !EMAIL_PATTERN.test(body.email)) return null;
+    // An issuer-validated token is not proof that the account owns its email.
+    // Do not create a guardian/institution identity for an unconfirmed address.
+    // Email confirmation does NOT establish adult age or guardian consent.
+    if (typeof body.email_confirmed_at !== "string" || !Number.isFinite(Date.parse(body.email_confirmed_at))) return null;
     return { platformUserId: body.id, email: body.email.toLowerCase(), displayName: null };
   } catch {
     return null;
