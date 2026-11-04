@@ -61,7 +61,15 @@ jobs:
             --user-data-dir=/tmp/kidycode-studio-chrome about:blank > /tmp/kidycode-chrome.log 2>&1 &
           chrome_pid=$!
           trap 'kill "$server" "$chrome_pid" 2>/dev/null || true' EXIT
-          KIDYCODE_E2E_URL=http://127.0.0.1:3003 node scripts/browser-studio-cdp.mjs
+          sleep 2
+          echo "Browser: $BROWSER"
+          ps -p "$chrome_pid" -o pid,stat,cmd || true
+          curl -fsS --max-time 4 http://127.0.0.1:9226/json/version || true
+          KIDYCODE_E2E_URL=http://127.0.0.1:3003 node scripts/browser-studio-cdp.mjs || {
+            echo "Chrome debugging log:"
+            tail -n 100 /tmp/kidycode-chrome.log || true
+            exit 1
+          }
       - name: Upload browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
