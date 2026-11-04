@@ -9,11 +9,11 @@ export const metadata: Metadata = {
   description: "Learn design in six hands-on modules and practice in the KidyCode Design Studio.",
 };
 
-const chooseProject = (module: string, age: DesignAgeBand) => {
+const chooseProject = (moduleId: string, age: DesignAgeBand) => {
   if (age === "adults") return "portfolio";
-  if (module === "people" || module === "interface") return "welcome";
-  if (module === "system") return "logo";
-  if (module === "present") return "welcome";
+  if (moduleId === "people" || moduleId === "interface") return "welcome";
+  if (moduleId === "system") return "logo";
+  if (moduleId === "present") return "welcome";
   return "login";
 };
 
