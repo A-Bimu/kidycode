@@ -32,6 +32,11 @@ export default function DesignPage() {
       </p>
       <ExperienceNav current="/design" />
       <section className="kc-section">
+        <h2>Now you can design inside KidyCode</h2>
+        <p className="kc-note">Open the beginner-friendly Design Studio to create a real welcome screen, move elements, add pictures and save your editable project on this device.</p>
+        <Link href="/studio?project=welcome" className="primary-button">Open the Design Studio</Link>
+      </section>
+      <section className="kc-section">
         <h2>Age bands</h2>
         <ul className="kc-chips">
           {bands.map((band) => (
@@ -59,6 +64,7 @@ export default function DesignPage() {
             </article>
           ))}
           <p className="kc-req"><strong>Studio:</strong> {module.studio}</p>
+          <Link href={"/studio?module=" + encodeURIComponent(module.id) + "&project=" + (module.id === "structure" || module.id === "test" ? "login" : module.id === "present" ? "portfolio" : "welcome")} className="primary-button">Practise this module in Design Studio</Link>
         </section>
       ))}
     </main>
