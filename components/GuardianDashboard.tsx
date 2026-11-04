@@ -16,7 +16,7 @@ import type { GuardianSummary } from "@/lib/guardian-view";
 type Learner = { linkRef: string; firstName: string; courseGroup: string; connectedAt: string };
 type SessionPayload = { guardian: { displayName: string; email: string }; learners: Learner[] };
 
-const SIGN_IN_PATH = "/signin-with-chatgpt";
+const SIGN_IN_PATH = "/adult-login";
 
 function formatWhen(value: string | null): string {
   if (!value) return "No activity yet";
@@ -186,9 +186,9 @@ export function GuardianDashboard() {
           <p className="kicker">KIDYCODE GROWN-UPS</p>
           <h1>Follow a learner&apos;s progress</h1>
           <p className="guardian-lede">
-            Sign in with ChatGPT first. KidyCode uses that sign-in, so you never create another password here.
+            Sign in using a one-time code sent to your email. Children keep their separate learner access.
           </p>
-          <a className="primary-button" href={`${SIGN_IN_PATH}?return_to=/guardian`}>Sign in with ChatGPT</a>
+          <a className="primary-button" href={SIGN_IN_PATH}>Sign in with email</a>
           <p className="guardian-quiet">
             After signing in, you will need the one-time code from the learner you look after.
           </p>
@@ -206,7 +206,10 @@ export function GuardianDashboard() {
           Signed in as {guardian?.email}. This view is read only: you can follow progress and disconnect,
           and nothing here can change a learner&apos;s work.
         </p>
-        <a className="text-button" href={`/signout-with-chatgpt?return_to=/guardian`}>Sign out</a>
+        <button className="text-button" type="button" onClick={() => {
+          void fetch("/api/adult-auth/logout", { method: "POST", credentials: "same-origin" })
+            .then(() => window.location.assign("/adult-login"));
+        }}>Sign out</button>
       </section>
 
       <section className="guardian-connect" aria-labelledby="guardian-connect-heading">
