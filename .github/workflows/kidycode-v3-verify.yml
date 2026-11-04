@@ -37,3 +37,17 @@ jobs:
         run: npm run lint
       - name: Verified production build
         run: npm run build
+      - name: Live Practice Studio route and bundled asset smoke
+        shell: bash
+        run: |
+          npm run dev -- --port 3003 > /tmp/kidycode-studio.log 2>&1 &
+          server=$!
+          trap 'kill "$server" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3003/studio > /dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then cat /tmp/kidycode-studio.log; exit 1; fi
+          KIDYCODE_E2E_URL=http://127.0.0.1:3003 node scripts/e2e-studio-route.mjs
+
