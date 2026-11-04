@@ -255,6 +255,15 @@ export function DesignStudio() {
     if (!doc) return;
     setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, notes: { ...d.notes, [field]: text.slice(0, 5000) }, updatedAt: new Date().toISOString() } : d));
   }
+  function saveNow() {
+    try {
+      window.localStorage.setItem(STUDIO_STORAGE_KEY, JSON.stringify(documents));
+      setNotice("Saved on this device. You can return to this project later.");
+      setStorageError("");
+    } catch {
+      setStorageError("Save failed on this browser. Export your project file to keep your work.");
+    }
+  }
   function exportProject() {
     if (!doc) return;
     const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
@@ -366,6 +375,7 @@ export function DesignStudio() {
                   <button type="button" title="Redo" aria-label="Redo" onClick={redo} disabled={!future.length}><Redo2 size={18}/></button>
                   <button type="button" title={preview ? "Back to edit" : "Preview design"} onClick={() => {setPreview(p => !p);setSelectedId("");}}>
                     {preview ? "Edit" : "Preview"}</button>
+                  <button type="button" className={styles.saveButton} onClick={saveNow}><Save size={16}/> Save my design</button>
                 </div>
               </div>
               {!beginner && <div className={styles.screenControls} aria-label="Screens">
@@ -377,6 +387,7 @@ export function DesignStudio() {
               <div className={styles.canvasScroll}>
                 <div className={styles.canvas} ref={canvas}
                   data-testid="studio-canvas"
+                  data-project={doc.project} data-preview={preview ? "true" : "false"}
                   style={{ width: screen.width > 400 ? "min(100%, 900px)" : "min(100%, 360px)", aspectRatio: String(screen.width) + " / " + String(screen.height),
                     background: screen.background } as CSSProperties}>
                   {screen.elements.map(element => {
