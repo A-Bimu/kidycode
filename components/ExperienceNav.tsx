@@ -7,6 +7,7 @@ const links: Array<{ href: string; label: string }> = [
   { href: "/catalogue", label: "Courses" },
   { href: "/notes", label: "Notes Library" },
   { href: "/practice", label: "Practice Lab" },
+  { href: "/studio", label: "Design Studio" },
   { href: "/design", label: "UI and UX Design" },
   { href: "/build-outside", label: "Build Outside" },
   { href: "/curriculum", label: "Curriculum map" },
