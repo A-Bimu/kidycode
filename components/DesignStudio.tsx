@@ -154,13 +154,17 @@ export function DesignStudio() {
   }
   function duplicateProject() {
     if (!doc || documents.length >= STUDIO_MAX_DOCUMENTS) return;
+    const ids = new Map(doc.screens.map(s => [s.id, crypto.randomUUID()]));
     const copy: StudioDocument = {
-      ...structuredClone(doc), id: crypto.randomUUID(), title: doc.title + " (copy)",
-      screens: doc.screens.map(s => ({ ...s, id: crypto.randomUUID() })),
+      ...structuredClone(doc), id: crypto.randomUUID(), title: doc.title.slice(0, 93) + " (copy)",
+      screens: doc.screens.map(s => ({
+        ...s, id: ids.get(s.id)!, elements: s.elements.map(e => ({
+          ...e, id: crypto.randomUUID(),
+          targetScreenId: e.targetScreenId ? ids.get(e.targetScreenId) : undefined,
+        })),
+      })),
       updatedAt: new Date().toISOString(),
     };
-    // Strip prototype links to the original document's screen ids.
-    copy.screens = copy.screens.map(s => ({ ...s, elements: s.elements.map(e => ({ ...e, id: crypto.randomUUID(), targetScreenId: undefined })) }));
     setDocuments(prev => [copy, ...prev]); activate(copy);
   }
   function deleteProject() {
@@ -202,16 +206,52 @@ export function DesignStudio() {
     commit({ ...doc, screens: [...doc.screens, next] });
     setScreenId(next.id); setSelectedId(""); setPreview(false);
   }
-  function resizeFrame(which: "phone" | "desktop") {
+  function renameProject(value: string) {
+    if (!doc) return;
+    setDocuments(prev => prev.map(item => item.id === doc.id ? {
+      ...item, title: value.slice(0, 100), updatedAt: new Date().toISOString(),
+    } : item));
+  }
+  function renameScreen(value: string) {
     if (!doc || !screen) return;
-    const width = which === "phone" ? 360 : 960;
-    const height = which === "phone" ? 640 : 640;
-    // Keep elements inside the newly selected frame.
-    const mapped = screen.elements.map(e => ({
-      ...e, x: clamp(Math.round(e.x * width / screen.width), 0, width - e.width),
-      y: clamp(e.y, 0, height - e.height),
-    }));
-    commit(updateScreen(doc, screen.id, s => ({ ...s, width, height, elements: mapped })));
+    setDocuments(prev => prev.map(item => item.id === doc.id ?
+      updateScreen(item, screen.id, current => ({...current, title: value.slice(0, 100)})) : item));
+  }
+  function removeScreen() {
+    if (!doc || !screen || doc.screens.length <= 1) return;
+    if (!window.confirm("Delete this screen and its contents? Other buttons pointing here will stop navigating.")) return;
+    const next = doc.screens.filter(item => item.id !== screen.id);
+    commit({
+      ...doc,
+      screens: next.map(item => ({...item, elements: item.elements.map(el =>
+        el.targetScreenId === screen.id ? {...el, targetScreenId: undefined} : el)})),
+    });
+    setScreenId(next[0].id); setSelectedId(""); setPreviewHistory([]);
+  }
+  function duplicateScreen() {
+    if (!doc || !screen || doc.screens.length >= STUDIO_MAX_SCREENS) return;
+    const clone: StudioScreen = {
+      ...structuredClone(screen), id: crypto.randomUUID(), title: (screen.title + " copy").slice(0, 100),
+      elements: screen.elements.map(el => ({ ...el, id: crypto.randomUUID() })),
+    };
+    commit({ ...doc, screens: [...doc.screens, clone] });
+    setScreenId(clone.id); setSelectedId(""); setPreviewHistory([]);
+  }
+  function resizeFrame(which: "phone" | "tablet" | "desktop") {
+    if (!doc || !screen) return;
+    const dimensions = { phone: [360, 640], tablet: [768, 700], desktop: [960, 640] };
+    const [width, height] = dimensions[which];
+    const mapped = screen.elements.map(e => {
+      const targetWidth = Math.min(e.width * width / screen.width, width - 12);
+      const targetHeight = Math.min(e.height * height / screen.height, height - 12);
+      return {
+        ...e, width: Math.round(targetWidth), height: Math.round(targetHeight),
+        x: clamp(Math.round(e.x * width / screen.width), 0, width - targetWidth),
+        y: clamp(Math.round(e.y * height / screen.height), 0, height - targetHeight),
+      };
+    });
+    commit(updateScreen(doc, screen.id, current => ({ ...current, width, height, elements: mapped })));
+    setSelectedId("");
   }
   function onPointerDown(event: ReactPointerEvent<HTMLButtonElement>, element: StudioElement) {
     if (preview || !doc || !screen || !canvas.current || event.button !== 0) return;
