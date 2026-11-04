@@ -440,6 +440,8 @@ export function DesignStudio() {
             <button onClick={deleteProject} type="button"><Trash2 size={16}/> Delete</button>
           </div>
           <button className={styles.export} type="button" onClick={exportProject}><Download size={16}/> Export editable file</button>
+          <button className={styles.export} type="button" onClick={exportSvg}><Download size={16}/> Download SVG image</button>
+          <button className={styles.export} type="button" onClick={() => {void exportPng();}}><Download size={16}/> Download PNG image</button>
           <label className={styles.importLabel}>Import a project <input type="file" accept=".json,application/json" onChange={e => { importProject(e.target.files?.[0]); e.target.value = ""; }} /></label>
           <p className={styles.localNote}>{storageLabel}</p>
         </aside>
@@ -453,12 +455,27 @@ export function DesignStudio() {
               <p>{currentProject.goal}</p>
               <span className={styles.pathLabel}>{beginner ? "Beginner mode · one step at a time" : "Creative practice · your own approach"}</span>
             </div>
-            <button className={styles.hintButton} type="button" onClick={() => setShowHint(p => !p)}>Give me a hint</button>
+            <div className={styles.challengeActions}>
+              <button className={styles.hintButton} type="button" onClick={() => setShowHint(p => !p)}>Give me a hint</button>
+              <button className={styles.hintButton} type="button" aria-expanded={showReview}
+                onClick={() => setShowReview(p => !p)}>Review my design ({reviewCount}/{review.length})</button>
+            </div>
           </div>
           {showHelp && <div className={styles.help} role="region" aria-label="How to use the editor">
             <strong>Three simple steps:</strong> (1) Choose Text, Shape, Button or Image. (2) Click the item on your design and drag to move it. (3) Change its colour or words, then preview. Your work saves on this device automatically.
           </div>}
           {showHint && <div className={styles.help} role="status"><strong>Try this:</strong> {challengeTip}</div>}
+          {showReview && <section className={styles.review} aria-label="Guided design review">
+            <h2>What have you tried so far?</h2>
+            <p>This is a helpful checklist, not a grade. There are many valid ways to design.</p>
+            <ul>
+              {review.map(item => <li key={item.id}>
+                <span aria-label={item.done ? "Included" : "Try next"}>{item.done ? "✓" : "○"}</span>
+                <div><strong>{item.title}</strong>{!item.done && <p>{item.suggestion}</p>}</div>
+              </li>)}
+            </ul>
+            <button type="button" className={styles.notesToggle} onClick={() => setShowNotes(true)}>Write about your design choices</button>
+          </section>}
           <div className={styles.workspace}>
             <aside className={styles.tools} aria-label="Add to your design">
               <h2>Add something</h2>
@@ -471,11 +488,16 @@ export function DesignStudio() {
                 </button>
               </div>
               <h3>Pick a picture</h3>
+              <label className={styles.visuallyHidden} htmlFor="studio-asset-search">Search pictures</label>
+              <input id="studio-asset-search" className={styles.input} value={assetQuery}
+                onChange={event => setAssetQuery(event.target.value)} placeholder="Search pictures…"/>
               <div className={styles.assetGrid}>
-                {studioAssets.map(asset => <button type="button" key={asset.id} title={"Add " + asset.label}
+                {visibleAssets.map(asset => <button type="button" key={asset.id} title={"Add " + asset.label}
+                  aria-label={"Add " + asset.label + " image"}
                   onClick={() => addElement("image", { asset: asset.id, text: asset.label })}>
                   <Image src={asset.src} alt={asset.label} width={44} height={44} unoptimized/></button>)}
               </div>
+              {visibleAssets.length === 0 && <p className={styles.toolsTip}>No images match. Try another word.</p>}
               <p className={styles.toolsTip}>Tap to add an item, then drag it on your screen.</p>
             </aside>
 
