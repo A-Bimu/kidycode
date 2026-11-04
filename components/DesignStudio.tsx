@@ -282,6 +282,47 @@ export function DesignStudio() {
     URL.revokeObjectURL(url);
     setNotice("Editable project file exported.");
   }
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+  function exportSvg() {
+    if (!doc || !screen) return;
+    downloadBlob(new Blob([studioScreenSvg(screen)], { type: "image/svg+xml;charset=utf-8" }),
+      "kidycode-" + doc.project + "-" + screen.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".svg");
+    setNotice("Your screen is saved as a portable SVG image.");
+  }
+  async function exportPng() {
+    if (!doc || !screen) return;
+    try {
+      const img = document.createElement("img");
+      const blob = new Blob([studioScreenSvg(screen)], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve(); img.onerror = () => reject(new Error("Image loading failed"));
+        img.src = url;
+      });
+      const raster = document.createElement("canvas");
+      raster.width = screen.width * 2; raster.height = screen.height * 2;
+      const context = raster.getContext("2d");
+      if (!context) throw new Error("Canvas export is unavailable");
+      context.scale(2, 2);
+      context.drawImage(img, 0, 0, screen.width, screen.height);
+      URL.revokeObjectURL(url);
+      const png = await new Promise<Blob>((resolve, reject) =>
+        raster.toBlob(result => result ? resolve(result) : reject(new Error("PNG export failed")), "image/png"));
+      downloadBlob(png, "kidycode-" + doc.project + "-" + screen.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".png");
+      setNotice("Your screen is saved as a PNG image.");
+    } catch {
+      setNotice("PNG export is not available in this browser. Try Export SVG instead.");
+    }
+  }
   function importProject(file: File | undefined) {
     if (!file || file.size > 150000 || documents.length >= STUDIO_MAX_DOCUMENTS) {
       setNotice("Choose an exported KidyCode project under 150 KB, with room for a new project."); return;
