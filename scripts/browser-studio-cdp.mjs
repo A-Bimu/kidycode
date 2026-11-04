@@ -143,8 +143,10 @@ await delay(330);
 const store = await evaluate('localStorage.getItem("kidycode.practice-studio.v1")');
 assert(store && JSON.parse(store)[0].screens.length === 2, "Device draft must store two screens");
 await command("Page.reload", { ignoreCache: true });
-await ready();
-assert(await evaluate('document.querySelectorAll("[aria-label=Screens] button").length >= 4'), "Reload must restore multi-screen work");
+// Page.reload returns before React has restored the localStorage draft.
+// Wait for the actual multi-screen UI, not merely the first HTML frame.
+await retry(() => evaluate('document.querySelectorAll("[aria-label=Screens] button").length'),
+  count => count >= 4, "Reload must restore multi-screen work", 70);
 console.log("Studio device-only draft: survives reload");
 
 await viewport(768);
