@@ -420,6 +420,9 @@ export function DesignStudio() {
               <FolderOpen size={16} /> <span>{item.title}</span>
             </button>)}
           </div>
+          <label htmlFor="project-title" className={styles.fieldLabel}>Project name</label>
+          <input id="project-title" className={styles.input} value={doc.title}
+            onChange={event => renameProject(event.target.value)} maxLength={100}/>
           <label htmlFor="new-project" className={styles.fieldLabel}>Start a project</label>
           <select id="new-project" value="" onChange={event => {if (event.target.value) addProject(event.target.value as StudioProject);}}
             className={styles.select}>
@@ -482,16 +485,26 @@ export function DesignStudio() {
                 <div className={styles.canvasControls}>
                   <button type="button" title="Undo" aria-label="Undo" onClick={undo} disabled={!history.length}><Undo2 size={18}/></button>
                   <button type="button" title="Redo" aria-label="Redo" onClick={redo} disabled={!future.length}><Redo2 size={18}/></button>
-                  <button type="button" title={preview ? "Back to edit" : "Preview design"} onClick={() => {setPreview(p => !p);setSelectedId("");}}>
+                  <button type="button" title={preview ? "Back to edit" : "Preview design"} onClick={() => {setPreview(p => !p);setPreviewHistory([]);setSelectedId("");}}>
                     {preview ? "Edit" : "Preview"}</button>
                   <button type="button" className={styles.saveButton} onClick={saveNow}><Save size={16}/> Save my design</button>
                 </div>
               </div>
               {!beginner && <div className={styles.screenControls} aria-label="Screens">
                 {doc.screens.map(s => <button type="button" className={s.id === screen.id ? styles.screenActive : ""} key={s.id}
-                  onClick={() => {setScreenId(s.id);setSelectedId("");}}>{s.title}</button>)}
-                <button type="button" onClick={addScreen} disabled={doc.screens.length >= STUDIO_MAX_SCREENS}><Plus size={15}/> Screen</button>
-                <button type="button" onClick={() => resizeFrame(screen.width > 400 ? "phone" : "desktop")}><Smartphone size={15}/>{screen.width > 400 ? "Phone" : "Desktop"}</button>
+                  onClick={() => {setScreenId(s.id);setSelectedId("");setPreviewHistory([]);}}>{s.title}</button>)}
+                <button type="button" onClick={addScreen} disabled={doc.screens.length >= STUDIO_MAX_SCREENS}><Plus size={15}/> Add screen</button>
+                <button type="button" onClick={duplicateScreen} disabled={doc.screens.length >= STUDIO_MAX_SCREENS}><Copy size={15}/> Duplicate screen</button>
+                <button type="button" onClick={removeScreen} disabled={doc.screens.length <= 1}><Trash2 size={15}/> Delete screen</button>
+                <label className={styles.inlineField} htmlFor="studio-frame"><Smartphone size={15}/> Frame
+                  <select id="studio-frame" value={screen.width <= 400 ? "phone" : screen.width <= 800 ? "tablet" : "desktop"}
+                    onChange={e => resizeFrame(e.target.value as "phone" | "tablet" | "desktop")}>
+                    <option value="phone">Phone</option><option value="tablet">Tablet</option><option value="desktop">Desktop</option>
+                  </select>
+                </label>
+                <label className={styles.inlineField} htmlFor="studio-screen-name">Name
+                  <input id="studio-screen-name" value={screen.title} maxLength={100} onChange={e => renameScreen(e.target.value)}/>
+                </label>
               </div>}
               <div className={styles.canvasScroll}>
                 <div className={styles.canvas} ref={canvas}
@@ -514,6 +527,7 @@ export function DesignStudio() {
                       key={element.id} type="button" style={style}
                       onClick={() => {
                         if (preview && element.kind === "button" && element.targetScreenId && doc.screens.some(s => s.id === element.targetScreenId)) {
+                          setPreviewHistory(prev => [...prev, screen.id].slice(-15));
                           setScreenId(element.targetScreenId);
                         } else if (!preview) setSelectedId(element.id);
                       }}
@@ -544,7 +558,15 @@ export function DesignStudio() {
                   )}
                 </div>
               </div>
-              {preview && <p className={styles.previewNotice}>Preview mode: tap a button linked to another screen. Choose Edit to make changes.</p>}
+              {preview && <div className={styles.previewBar}>
+                <p className={styles.previewNotice}>Preview mode: tap a linked button to open another screen.</p>
+                <button type="button" disabled={previewHistory.length === 0} onClick={() => {
+                  const previous = previewHistory[previewHistory.length - 1];
+                  if (previous) setScreenId(previous);
+                  setPreviewHistory(p => p.slice(0, -1));
+                }}>← Previous screen</button>
+                <button type="button" onClick={() => {setPreview(false);setPreviewHistory([]);}}>Back to editing</button>
+              </div>}
               <div className={styles.canvasFoot}>
                 <span>{notice || (selected ? "Selected " + selected.kind + " — change it on the right." : "Pick something on the canvas to change it.")}</span>
                 <span className={styles.saved}><Save size={15}/> Device-only autosave</span>
