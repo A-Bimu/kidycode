@@ -109,6 +109,8 @@
   border: 1px solid #d9cce5; border-radius: 8px; background: #fff; padding: 7px 10px;
   font-weight: 790; color: #433066; font-size: .77rem;
 }
+.canvasControls .saveButton { background: #6541a4; color: white; border-color: #6541a4; }
+.canvasControls .saveButton:hover { background: #4a2a83; }
 .screenControls { padding: 2px 4px 12px; overflow-x: auto; }
 .screenControls button { flex-shrink: 0; }
 .screenControls .screenActive { background: #5d3aa4; color: white; border-color: #5d3aa4; }
@@ -133,6 +135,11 @@
 .canvasItem.input { background: white; border: 1px solid #c7b9d8; color: #69587a; justify-content: flex-start; text-align: left; padding-left: 4%; font-weight: 500; }
 .canvasItem.button { font-weight: 830; }
 .canvasItem.selected { border: 2px solid #a16cea; outline: 2px dashed #572b99; outline-offset: 2px; }
+.canvas[data-project="loading"][data-preview="true"] .shape {
+  transform-origin: left center;
+  animation: studioLoading 1.4s ease-in-out infinite alternate;
+}
+@keyframes studioLoading { from { transform: scaleX(.22); } to { transform: scaleX(1); } }
 .canvasFoot { justify-content: space-between; padding: 10px 4px 1px; align-items: flex-start; color: #5d536b; font-size: .72rem; line-height: 1.5; }
 .saved { white-space: nowrap; color: #644695; display: inline-flex; align-items: center; gap: 6px; font-weight: 770; }
 .previewNotice { font-size: .74rem; color: #4e396f; text-align: center; }
@@ -166,8 +173,12 @@
   .sidebar { padding: 12px 14px; gap: 7px; }
   .sidebar .projectList { display: flex; gap: 5px; overflow-x: auto; margin-bottom: 3px; }
   .sidebar .projectButton, .sidebar .activeProject { width: auto; flex-shrink: 0; }
-  .sidebar .fieldLabel, .sidebar .select, .sidebar .sidebarDivider, .sidebar .smallActions, .sidebar .export, .sidebar .importLabel { display: none; }
-  .sidebar .eyebrow { margin: 0; }
+  .sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .sidebar .eyebrow, .sidebar .projectList, .sidebar .localNote { flex-basis: 100%; }
+  .sidebar .fieldLabel { margin: 0; }
+  .sidebar .select { width: auto; max-width: 200px; flex: 1 1 145px; }
+  .sidebar .sidebarDivider { display: none; }
+  .sidebar .smallActions { margin: 0; }
   .sidebar .localNote { font-size: .68rem; padding: 0; margin: 0; }
   .workspace { grid-template-columns: minmax(0,1fr); }
   .tools { order: 2; }
@@ -188,6 +199,8 @@
   .toolButton { min-height: 75px; }
   .canvasArea { padding: 8px; }
   .canvasFoot { flex-direction: column; }
+  .canvasControls { gap: 4px; flex-wrap: wrap; }
+  .canvasControls button { padding: 7px 8px; font-size: .7rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .shell *, .shell *::before, .shell *::after { animation-duration: .01ms!important; transition-duration: .01ms!important; }
