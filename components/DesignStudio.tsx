@@ -15,6 +15,7 @@ import {
   type StudioDocument, type StudioElement, type StudioKind, type StudioProject,
   type StudioScreen, type StudioAge
 } from "@/lib/studio-model";
+import { reviewStudioDocument, studioScreenSvg } from "@/lib/studio-review-export";
 import styles from "./DesignStudio.module.css";
 
 type DragState = {
@@ -54,6 +55,9 @@ export function DesignStudio() {
   const [future, setFuture] = useState<StudioDocument[]>([]);
   const [showHelp, setShowHelp] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+  const [assetQuery, setAssetQuery] = useState("");
+  const [previewHistory, setPreviewHistory] = useState<string[]>([]);
   const [preview, setPreview] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [notice, setNotice] = useState("");
@@ -108,6 +112,9 @@ export function DesignStudio() {
   const currentProject = studioProjects.find(p => p.id === doc?.project) ?? studioProjects[1];
   const moduleId = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("module");
   const challengeTip = moduleId && projectTips[moduleId] ? projectTips[moduleId] : currentProject.tip;
+  const review = doc ? reviewStudioDocument(doc) : [];
+  const reviewCount = review.filter(item => item.done).length;
+  const visibleAssets = studioAssets.filter(asset => (asset.label + " " + asset.category).toLowerCase().includes(assetQuery.toLowerCase().trim()));
 
   function commit(next: StudioDocument) {
     if (!doc) return;
@@ -134,7 +141,7 @@ export function DesignStudio() {
   function activate(next: StudioDocument) {
     setActiveId(next.id); setScreenId(next.screens[0].id); setSelectedId("");
     setPreview(false); setHistory([]); setFuture([]);
-    setShowNotes(false); setNotice("");
+    setShowNotes(false); setShowReview(false); setPreviewHistory([]); setNotice("");
   }
   function addProject(project: StudioProject) {
     if (documents.length >= STUDIO_MAX_DOCUMENTS) {
