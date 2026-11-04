@@ -125,8 +125,82 @@ export function createStudioDocument(project: StudioProject = "welcome", age: St
       makeElement("button", { x: 68, y: 510, width: 275, height: 64, text: "View my work" }),
     ];
   }
+  let screens: StudioScreen[] = [screen];
+  if (project === "login" && age === "ages-13-15") {
+    const splash = makeScreen("Welcome", [
+      makeElement("image", {x: 126, y: 154, width: 108, height: 108, asset: "rocket"}),
+      makeElement("text", {x: 36, y: 320, width: 288, text: "Adventure Club", fontSize: 35}),
+      makeElement("button", {x: 55, y: 450, width: 250, text: "Let's begin"}),
+    ]);
+    const home = makeScreen("Home", [
+      makeElement("text", {x: 35, y: 126, width: 290, text: "You made it!", fontSize: 33}),
+      makeElement("image", {x: 126, y: 218, width: 108, height: 108, asset: "rocket"}),
+      makeElement("button", {x: 55, y: 448, width: 250, text: "Back to login"}),
+    ]);
+    splash.elements[2].targetScreenId = screen.id;
+    screen.elements[screen.elements.length - 1].targetScreenId = home.id;
+    home.elements[2].targetScreenId = screen.id;
+    screen.title = "Login";
+    screens = [splash, screen, home];
+  } else if (project === "login" && age === "ages-16-18") {
+    const intro = makeScreen("Onboarding", [
+      makeElement("image", {x: 132, y: 115, width: 96, height: 96, asset: "planet"}),
+      makeElement("text", {x: 31, y: 266, width: 298, text: "Plan your day", fontSize: 35}),
+      makeElement("text", {x: 45, y: 325, width: 270, text: "A simple daily planner", fontSize: 20}),
+      makeElement("button", {x: 46, y: 460, width: 268, text: "Get started"}),
+    ]);
+    const recover = makeScreen("Reset password", [
+      makeElement("text", {x: 34, y: 175, width: 292, text: "Forgot password?", fontSize: 31}),
+      makeElement("input", {x: 38, y: 294, width: 284, height: 56, text: "Your example email"}),
+      makeElement("button", {x: 45, y: 405, width: 270, text: "Back to login"}),
+    ]);
+    const dashboard = makeScreen("Dashboard", [
+      makeElement("text", {x: 24, y: 110, width: 312, text: "Your dashboard", fontSize: 32}),
+      makeElement("text", {x: 38, y: 250, width: 284, text: "Today's plans", fontSize: 23}),
+      makeElement("shape", {x: 38, y: 306, width: 284, height: 78, fill: "#E6D9FF"}),
+      makeElement("button", {x: 38, y: 490, width: 284, text: "Sign out (demo)"}),
+    ]);
+    intro.elements[3].targetScreenId = screen.id;
+    screen.title = "Login";
+    screen.elements[screen.elements.length - 1].targetScreenId = dashboard.id;
+    screen.elements.push(makeElement("button", {
+      x: 65, y: 528, width: 230, height: 43, text: "Forgot password?", fill: "#E6D9FF", color: "#171B3D",
+      targetScreenId: recover.id,
+    }));
+    recover.elements[2].targetScreenId = screen.id;
+    dashboard.elements[3].targetScreenId = screen.id;
+    screens = [intro, screen, recover, dashboard];
+  } else if (project === "portfolio" && age === "adults") {
+    const about = makeScreen("About", [
+      makeElement("text", {x: 68, y: 85, width: 760, height: 72, text: "A little about me", fontSize: 48}),
+      makeElement("text", {x: 68, y: 225, width: 660, height: 135, text: "I'm a curious creator. I enjoy solving problems for real people.", fontSize: 27}),
+      makeElement("image", {x: 720, y: 300, width: 144, height: 144, asset: "flower"}),
+      makeElement("button", {x: 68, y: 508, width: 278, height: 61, text: "Explore my projects"}),
+    ], 960, 640);
+    const work = makeScreen("Projects", [
+      makeElement("text", {x: 68, y: 72, width: 770, height: 84, text: "Selected projects", fontSize: 49}),
+      makeElement("shape", {x: 68, y: 197, width: 375, height: 220, fill: "#E6D9FF"}),
+      makeElement("image", {x: 174, y: 240, width: 150, height: 150, asset: "books"}),
+      makeElement("text", {x: 493, y: 220, width: 399, height: 100, text: "Learning app case study", fontSize: 30}),
+      makeElement("button", {x: 493, y: 501, width: 300, height: 61, text: "Get in touch"}),
+    ], 960, 640);
+    const contact = makeScreen("Contact", [
+      makeElement("text", {x: 68, y: 90, width: 820, height: 86, text: "Let's make something", fontSize: 50}),
+      makeElement("text", {x: 68, y: 251, width: 720, height: 90, text: "Replace this with your own safe contact call-to-action.", fontSize: 26}),
+      makeElement("button", {x: 68, y: 470, width: 300, height: 64, text: "Back home"}),
+    ], 960, 640);
+    screen.elements[screen.elements.length - 1].targetScreenId = work.id;
+    screen.elements.push(makeElement("button", {
+      x: 374, y: 510, width: 243, height: 64, text: "About me",
+      fill: "#E6D9FF", color: "#171B3D", targetScreenId: about.id,
+    }));
+    about.elements[3].targetScreenId = work.id;
+    work.elements[4].targetScreenId = contact.id;
+    contact.elements[2].targetScreenId = screen.id;
+    screens = [screen, about, work, contact];
+  }
   return {
-    version: 1, id: uid(), title, age, project, screens: [screen],
+    version: 1, id: uid(), title, age, project, screens,
     notes: { brief: "", evidence: "", reflection: "" }, updatedAt: new Date().toISOString(),
   };
 }
