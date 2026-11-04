@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ExperienceNav } from "@/components/ExperienceNav";
+import { DesignQuickCheck } from "@/components/DesignQuickCheck";
 import { designAgeBands, designCourseFor, isDesignAgeBand, type DesignAgeBand } from "@/lib/design-course";
 
 export const metadata: Metadata = {
@@ -70,13 +71,7 @@ export default async function DesignPage({
               <p className="kc-objective">{lesson.objective}</p>
               {lesson.notes.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
               <p className="kc-note"><strong>Try this:</strong> {lesson.activity}</p>
-              <details className="kc-details">
-                <summary>Check what you learned</summary>
-                <p>{lesson.check.prompt}</p>
-                <ul>{lesson.check.options.map((option, index) =>
-                  <li key={index}>{option}</li>)}</ul>
-                <p className="kc-muted">You can review the notes and come back to these questions.</p>
-              </details>
+              <DesignQuickCheck check={lesson.check} />
             </article>
           ))}
           <p className="kc-req"><strong>Your Studio project:</strong> {module.studio}</p>
