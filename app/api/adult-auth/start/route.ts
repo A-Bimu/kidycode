@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { isSameOriginMutation, supabaseAuthEndpoint } from "@/lib/kidycode-adult-session";
 
-const EMAIL = /^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$/;
+const EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 /** Request a one-time email code for a self-attested adult guardian. */
 export async function POST(request: Request): Promise<Response> {
