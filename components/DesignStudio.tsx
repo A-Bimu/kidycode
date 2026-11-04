@@ -21,7 +21,8 @@ import styles from "./DesignStudio.module.css";
 type DragState = {
   id: string; screenId: string; originX: number; originY: number;
   startX: number; startY: number; scaleX: number; scaleY: number;
-  before: StudioDocument; moved: boolean;
+  before: StudioDocument; moved: boolean; mode: "move" | "resize";
+  originWidth: number; originHeight: number;
 };
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 const screenOf = (doc: StudioDocument, id: string) => doc.screens.find(s => s.id === id) ?? doc.screens[0];
@@ -253,14 +254,15 @@ export function DesignStudio() {
     commit(updateScreen(doc, screen.id, current => ({ ...current, width, height, elements: mapped })));
     setSelectedId("");
   }
-  function onPointerDown(event: ReactPointerEvent<HTMLButtonElement>, element: StudioElement) {
+  function onPointerDown(event: ReactPointerEvent<HTMLButtonElement>, element: StudioElement, mode: "move" | "resize" = "move") {
     if (preview || !doc || !screen || !canvas.current || event.button !== 0) return;
     const rect = canvas.current.getBoundingClientRect();
     drag.current = {
       id: element.id, screenId: screen.id, originX: element.x, originY: element.y,
       startX: event.clientX, startY: event.clientY,
       scaleX: screen.width / rect.width, scaleY: screen.height / rect.height,
-      before: structuredClone(doc), moved: false,
+      before: structuredClone(doc), moved: false, mode,
+      originWidth: element.width, originHeight: element.height,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
     setSelectedId(element.id);
@@ -270,11 +272,19 @@ export function DesignStudio() {
     if (!move || !doc || !screen || move.screenId !== screen.id) return;
     const original = screen.elements.find(e => e.id === move.id);
     if (!original) return;
-    const x = clamp(Math.round(move.originX + (event.clientX - move.startX) * move.scaleX), 0, Math.max(0, screen.width - original.width));
-    const y = clamp(Math.round(move.originY + (event.clientY - move.startY) * move.scaleY), 0, Math.max(0, screen.height - original.height));
-    if (x === original.x && y === original.y) return;
+    const dx = (event.clientX - move.startX) * move.scaleX;
+    const dy = (event.clientY - move.startY) * move.scaleY;
+    const patch = move.mode === "resize" ? {
+      width: clamp(Math.round((move.originWidth + dx) / 8) * 8, 28, screen.width - move.originX),
+      height: clamp(Math.round((move.originHeight + dy) / 8) * 8, 20, screen.height - move.originY),
+    } : {
+      x: clamp(Math.round((move.originX + dx) / 8) * 8, 0, Math.max(0, screen.width - original.width)),
+      y: clamp(Math.round((move.originY + dy) / 8) * 8, 0, Math.max(0, screen.height - original.height)),
+    };
+    if (Object.entries(patch).every(([key, value]) => original[key as keyof StudioElement] === value)) return;
     move.moved = true;
-    setDocuments(prev => prev.map(d => d.id === move.before.id ? updateNode(d, move.screenId, move.id, e => ({ ...e, x, y })) : d));
+    setDocuments(prev => prev.map(d => d.id === move.before.id ?
+      updateNode(d, move.screenId, move.id, e => ({ ...e, ...patch })) : d));
   }
   function onPointerUp() {
     const before = drag.current?.moved ? drag.current.before : null;
@@ -283,6 +293,17 @@ export function DesignStudio() {
       setHistory(prev => [...prev.slice(-39), before]);
       setFuture([]);
     }
+  }
+  function keyboardResize(event: React.KeyboardEvent<HTMLButtonElement>, element: StudioElement) {
+    if (!doc || !screen || preview) return;
+    const resize = { ArrowLeft: [-8, 0], ArrowRight: [8, 0], ArrowUp: [0, -8], ArrowDown: [0, 8] } as const;
+    const delta = resize[event.key as keyof typeof resize];
+    if (!delta) return;
+    event.preventDefault();
+    commit(updateNode(doc, screen.id, element.id, n => ({
+      ...n, width: clamp(n.width + delta[0], 28, screen.width - n.x),
+      height: clamp(n.height + delta[1], 20, screen.height - n.y),
+    })));
   }
   function keyboardMove(event: React.KeyboardEvent<HTMLButtonElement>, element: StudioElement) {
     if (preview || !doc || !screen) return;
@@ -507,6 +528,20 @@ export function DesignStudio() {
                       {asset ? <Image src={asset.src} alt={element.text || asset.label} width={140} height={140} unoptimized draggable={false}/> : element.kind === "shape" ? "" : element.text}
                     </button>;
                   })}
+                  {selected && !preview && (
+                    <button type="button"
+                      className={styles.resizeHandle}
+                      aria-label="Resize selected element; drag or use arrow keys"
+                      title="Drag to resize; arrow keys adjust by 8px"
+                      style={{
+                        left: ((selected.x + selected.width) / screen.width * 100) + "%",
+                        top: ((selected.y + selected.height) / screen.height * 100) + "%",
+                      }}
+                      onPointerDown={event => onPointerDown(event, selected, "resize")}
+                      onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+                      onKeyDown={event => keyboardResize(event, selected)}
+                    />
+                  )}
                 </div>
               </div>
               {preview && <p className={styles.previewNotice}>Preview mode: tap a button linked to another screen. Choose Edit to make changes.</p>}
