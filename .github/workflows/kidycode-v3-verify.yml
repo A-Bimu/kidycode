@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, "wt/t_31cba5cd", "curriculum/v3-content-only", "release/v3-integrate-and-verify"]
   push:
-    branches: ["release/v3-integrate-and-verify", "release/v3-integrated-security-staging"]
+    branches: ["release/v3-integrate-and-verify", "release/v3-integrated-security-staging", "security/staging-verified-adult-auth"]
   workflow_dispatch:
 
 permissions:
@@ -29,9 +29,62 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: TypeScript and curriculum gates
         run: npm run check
+      - name: Verified adult token negative tests
+        run: node --import tsx tests/security/supabase-identity.test.mjs
+      - name: Adult browser session and CSRF tests
+        run: node --import tsx tests/security/adult-session.test.mjs
       - name: Institution security assertions
         run: node --import tsx scripts/validate-institution-security.mjs
       - name: Lint
         run: npm run lint
       - name: Verified production build
         run: npm run build
+      - name: Independent Cloudflare Workers staging build
+        run: npx vite build --config vite.workers.config.ts
+
+  seeded-journeys:
+    name: Seeded D1 end-to-end journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Start local server and await readiness
+        shell: bash
+        run: |
+          # Explicitly opt into synthetic forwarded-header fixtures in Vite's
+          # local Worker bindings. This flag is absent from all build/deploy jobs.
+          KIDYCODE_CI_SYNTHETIC_E2E=1 npm run dev -- --port 3001 > /tmp/kidycode-server.log 2>&1 &
+          echo $! > /tmp/kidycode-server.pid
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3001/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/kidycode-server.log
+          exit 1
+      # Vite serves the home page without touching D1. Miniflare therefore may
+      # have only metadata.sqlite after readiness; the application DB is created
+      # lazily by its first SQL query. This read-only probe uses deliberately
+      # nonexistent credentials, so it cannot create or change learner records.
+      - name: Initialize local D1 via a read-only unauthenticated probe
+        shell: bash
+        run: |
+          curl -sS -o /tmp/kidycode-d1-probe.json -w 'D1 probe HTTP %{http_code}' -H 'x-kidycode-learner: ci-nonexistent-learner' -H 'x-kidycode-key: ci-nonexistent-access-key' http://127.0.0.1:3001/api/progress
+          test -n "$(find .wrangler/state/v3/d1/miniflare-D1DatabaseObject -maxdepth 1 -type f -name '*.sqlite' ! -name metadata.sqlite -print -quit)" || {
+            echo 'Local D1 application file was not initialized by the probe.'
+            cat /tmp/kidycode-d1-probe.json
+            tail -n 100 /tmp/kidycode-server.log
+            exit 1
+          }
+      - name: Seed isolated local D1 (synthetic data only)
+        run: node --no-warnings scripts/seed-local-pilot.mjs
+      - name: Execute all end-to-end journeys
+        run: npm run test:e2e
+      - name: Upload server log on failure
+        if: failure()
+        run: tail -n 120 /tmp/kidycode-server.log || true

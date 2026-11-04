@@ -1,5 +1,7 @@
 import { env } from "cloudflare:workers";
 import type { GuardianIdentity } from "@/lib/guardian-identity";
+import { verifySupabaseAdultIdentity } from "@/lib/supabase-identity";
+import { cookieToken, isSameOriginMutation } from "@/lib/kidycode-adult-session";
 import { identityTrustModeFor, trustForwardedIdentity, type IdentityTrustMode } from "@/lib/identity-trust";
 
 /*
@@ -18,6 +20,23 @@ export function identityTrustConfiguration(): { mode: IdentityTrustMode; secret:
 }
 
 export async function readInstitutionIdentity(request: Request): Promise<GuardianIdentity | null> {
+  // Staging migration: a configured provider token must be verified by the issuer.
+  // There is no automatic downgrade to raw identity headers after a failed bearer check.
+  const authMode = typeof env.KIDYCODE_AUTH_MODE === "string" ? env.KIDYCODE_AUTH_MODE : "deny";
+  if (authMode === "supabase") {
+    const browserToken = cookieToken(request);
+    // SameSite=Strict is defense in depth; mutating browser-cookie requests
+    // additionally need a matching Origin to prevent cross-site actions.
+    if (browserToken && !["GET", "HEAD", "OPTIONS"].includes(request.method) && !isSameOriginMutation(request)) return null;
+    const authorization = request.headers.get("authorization") ?? (browserToken ? `Bearer ${browserToken}` : null);
+    if (!authorization) return null;
+    const authenticatedRequest = new Request(request.url, { headers: { authorization } });
+    return verifySupabaseAdultIdentity(authenticatedRequest, {
+      url: typeof env.SUPABASE_URL === "string" ? env.SUPABASE_URL : null,
+      publishableKey: typeof env.SUPABASE_PUBLISHABLE_KEY === "string" ? env.SUPABASE_PUBLISHABLE_KEY : null,
+    });
+  }
+  if (authMode !== "legacy") return null;
   const { mode, secret } = identityTrustConfiguration();
   return trustForwardedIdentity(request, { mode, secret });
 }

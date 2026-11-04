@@ -129,8 +129,8 @@ const brokenName = readGuardianIdentity(requestWith({
   [GUARDIAN_NAME_ENCODING_HEADER]: PERCENT_ENCODED_UTF8,
 }));
 assert.equal(brokenName?.displayName, null, "A malformed name is dropped, not trusted.");
-assert.equal(GUARDIAN_SIGN_IN_PATH, "/signin-with-chatgpt");
-assert.equal(GUARDIAN_SIGN_OUT_PATH, "/signout-with-chatgpt");
+assert.equal(GUARDIAN_SIGN_IN_PATH, "/adult-login");
+assert.equal(GUARDIAN_SIGN_OUT_PATH, "/api/adult-auth/logout");
 
 /* 6. A child's page never shows a guardian's full address. */
 assert.equal(maskEmail("seedy@sites.test"), "s****@sites.test");
@@ -269,7 +269,7 @@ assert(read("lib/guardian-links.ts").includes("hashConnectCode"), "Only a digest
 
 const interfaceSource = `${read("components/GrownUpAccess.tsx")}\n${read("components/GuardianDashboard.tsx")}\n${read("components/ProgressPage.tsx")}`;
 assert(interfaceSource.includes("Grown-up access"), "The learner must see the grown-up area.");
-assert(interfaceSource.includes("Sign in with ChatGPT"), "A guardian must be offered the platform sign in.");
+assert(interfaceSource.includes("Sign in with email"), "A guardian must be offered the verified adult sign-in.");
 assert(interfaceSource.includes("End access"), "A learner must be able to end a connection.");
 assert(interfaceSource.includes("Disconnect"), "A guardian must be able to disconnect.");
 assert(interfaceSource.includes("aria-live"), "Status changes must be announced.");

@@ -14,10 +14,10 @@ export const GUARDIAN_FULL_NAME_HEADER = "oai-authenticated-user-full-name";
 export const GUARDIAN_NAME_ENCODING_HEADER = "oai-authenticated-user-full-name-encoding";
 export const PERCENT_ENCODED_UTF8 = "percent-encoded-utf-8";
 
-/* The platform provides these two paths. Keeping them here means the interface
- * never invents a sign-in route of its own. */
-export const GUARDIAN_SIGN_IN_PATH = "/signin-with-chatgpt";
-export const GUARDIAN_SIGN_OUT_PATH = "/signout-with-chatgpt";
+/* Browser login is initiated on the KidyCode grown-up page; logout is POST-only.
+ * Both are staging-only replacements for the old ChatGPT Sites routes. */
+export const GUARDIAN_SIGN_IN_PATH = "/adult-login";
+export const GUARDIAN_SIGN_OUT_PATH = "/api/adult-auth/logout";
 
 const MAX_PLATFORM_ID_LENGTH = 128;
 const MAX_EMAIL_LENGTH = 254;
