@@ -650,10 +650,14 @@ export function DesignStudio() {
           {showNotes && <section className={styles.notes} aria-label="Project research and reflection">
             <h2>Think like a designer</h2>
             <p>These notes stay on this device. Use pretend names and avoid personal information.</p>
-            {([{ name: "brief", label: "Who is your design for?", hint: "Describe the person and what they want to do." },
-              { name: "evidence", label: "What did you notice?", hint: "What did someone try, say or find confusing?" },
-              { name: "reflection", label: "What would you improve?", hint: "Explain one choice and your next change." }] as const).map(field =>
-              <label key={field.name}>{field.label}<textarea value={doc.notes[field.name]} maxLength={5000}
+            {([{ name: "brief", label: "1. Who is the design for?", hint: "Describe one person, their goal and the problem you are solving." },
+              { name: "evidence", label: "2. What did you learn about them?", hint: "What did they actually try or say? Never include private information." },
+              { name: "flow", label: "3. What steps should the user take?", hint: "Example: Welcome → Login → Home → Complete the task. Include a way back." },
+              { name: "decisions", label: "4. Why did you choose this layout?", hint: "Explain your colours, headings, button placement and reusable styles." },
+              { name: "testing", label: "5. What happened when someone tried it?", hint: "Record observations, confusion, success and what you changed." },
+              { name: "reflection", label: "6. What would you improve next?", hint: "Describe one specific improvement and why it helps." },
+              { name: "presentation", label: "7. Present your final work", hint: "Write a short case study: the problem, idea, prototype, test and learning." }] as const).map(field =>
+              <label key={field.name}>{field.label}<textarea value={doc.notes[field.name] ?? ""} maxLength={5000}
                 onChange={e => editNote(field.name, e.target.value)} placeholder={field.hint} rows={3}/></label>)}
           </section>}
           {storageError && <p role="alert" className={styles.storageError}>{storageError}</p>}
