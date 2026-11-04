@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import {
-  ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, CircleHelp, Copy, Download,
-  FolderOpen, Image as ImageIcon, Layers, MousePointer2, Palette, Plus, Redo2, RotateCcw,
+  ChevronLeft, ChevronRight, CircleHelp, Copy, Download,
+  FolderOpen, Image as ImageIcon, Layers, MousePointer2, Plus, Redo2,
   Save, Shapes, Smartphone, Sparkles, Trash2, Type, Undo2
 } from "lucide-react";
 import {
@@ -60,6 +61,7 @@ export function DesignStudio() {
   const drag = useRef<DragState | null>(null);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
     let saved: StudioDocument[] = [];
     try {
       const raw = window.localStorage.getItem(STUDIO_STORAGE_KEY);
@@ -82,16 +84,21 @@ export function DesignStudio() {
     setActiveId(doc.id);
     setScreenId(doc.screens[0].id);
     setLoaded(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     if (!loaded) return;
+    const timer = window.setTimeout(() => {
     try {
       window.localStorage.setItem(STUDIO_STORAGE_KEY, JSON.stringify(documents));
       setStorageError("");
     } catch {
       setStorageError("This browser cannot save your draft right now. Export the design file before you leave.");
     }
+    }, 150);
+    return () => window.clearTimeout(timer);
   }, [documents, loaded]);
 
   const doc = documents.find(d => d.id === activeId) ?? null;
@@ -223,11 +230,12 @@ export function DesignStudio() {
     setDocuments(prev => prev.map(d => d.id === move.before.id ? updateNode(d, move.screenId, move.id, e => ({ ...e, x, y })) : d));
   }
   function onPointerUp() {
-    if (drag.current?.moved) {
-      setHistory(prev => [...prev.slice(-39), drag.current!.before]);
+    const before = drag.current?.moved ? drag.current.before : null;
+    drag.current = null;
+    if (before) {
+      setHistory(prev => [...prev.slice(-39), before]);
       setFuture([]);
     }
-    drag.current = null;
   }
   function keyboardMove(event: React.KeyboardEvent<HTMLButtonElement>, element: StudioElement) {
     if (preview || !doc || !screen) return;
@@ -345,7 +353,7 @@ export function DesignStudio() {
               <div className={styles.assetGrid}>
                 {studioAssets.map(asset => <button type="button" key={asset.id} title={"Add " + asset.label}
                   onClick={() => addElement("image", { asset: asset.id, text: asset.label })}>
-                  <img src={asset.src} alt={asset.label} width={44} height={44}/></button>)}
+                  <Image src={asset.src} alt={asset.label} width={44} height={44} unoptimized/></button>)}
               </div>
               <p className={styles.toolsTip}>Tap to add an item, then drag it on your screen.</p>
             </aside>
@@ -397,7 +405,7 @@ export function DesignStudio() {
                       aria-pressed={!preview && selectedId === element.id}
                       title={preview ? "Preview element" : "Select and drag; arrow keys nudge"}
                     >
-                      {asset ? <img src={asset.src} alt={element.text || asset.label} draggable={false}/> : element.kind === "shape" ? "" : element.text}
+                      {asset ? <Image src={asset.src} alt={element.text || asset.label} width={140} height={140} unoptimized draggable={false}/> : element.kind === "shape" ? "" : element.text}
                     </button>;
                   })}
                 </div>
