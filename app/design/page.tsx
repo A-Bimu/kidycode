@@ -35,7 +35,7 @@ export default async function DesignPage({
         <h1>Learn to design, then try it yourself</h1>
         <p className="kc-lede">
           Start with a small idea, build real screens in KidyCode Design Studio, then improve what you made.
-          You don't need to know how to code. Your learning activities are adapted to your pathway.
+          You do not need to know how to code. Your learning activities are adapted to your pathway.
         </p>
       </header>
       <p className="kc-banner kc-banner-demo" role="status">
