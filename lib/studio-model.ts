@@ -54,10 +54,14 @@ export const studioProjects: Array<{ id: StudioProject; label: string; goal: str
 ];
 export const studioPalette = ["#5D3AA4", "#B69AEF", "#E6D9FF", "#171B3D", "#FDF9F3", "#F1B565", "#CE759E", "#FFFFFF"];
 export const studioAssets = [
-  { id: "spark", label: "Sparkle", src: "/studio-assets/spark.svg" },
-  { id: "planet", label: "Planet", src: "/studio-assets/planet.svg" },
-  { id: "flower", label: "Flower", src: "/studio-assets/flower.svg" },
-  { id: "books", label: "Books", src: "/studio-assets/books.svg" },
+  { id: "spark", label: "Sparkle", src: "/studio-assets/spark.svg", category: "Symbols" },
+  { id: "planet", label: "Planet", src: "/studio-assets/planet.svg", category: "Adventure" },
+  { id: "flower", label: "Flower", src: "/studio-assets/flower.svg", category: "Nature" },
+  { id: "books", label: "Books", src: "/studio-assets/books.svg", category: "Learning" },
+  { id: "rocket", label: "Rocket", src: "/studio-assets/rocket.svg", category: "Adventure" },
+  { id: "cloud", label: "Cloud", src: "/studio-assets/cloud.svg", category: "Nature" },
+  { id: "music", label: "Music", src: "/studio-assets/music.svg", category: "Creative" },
+  { id: "heart", label: "Heart", src: "/studio-assets/heart.svg", category: "Symbols" },
 ] as const;
 
 const uid = () => crypto.randomUUID();
