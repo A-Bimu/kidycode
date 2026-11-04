@@ -33,6 +33,8 @@ jobs:
         run: node --import tsx tests/studio/model.test.mjs
       - name: Practice Studio design review and export safety
         run: node --import tsx tests/studio/review-export.test.mjs
+      - name: Age-adapted UI and UX curriculum
+        run: node --import tsx tests/studio/design-age.test.mjs
       - name: Institution security assertions
         run: node --import tsx scripts/validate-institution-security.mjs
       - name: Lint
