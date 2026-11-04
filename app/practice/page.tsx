@@ -30,11 +30,18 @@ export default function PracticePage() {
         automatic checks the course itself uses.
       </p>
       <ExperienceNav current="/practice" />
+      <section className="kc-section">
+        <h2>Want to make an interface?</h2>
+        <p className="kc-note">Our Design Studio lets you add text, buttons, images and shapes on a real editable canvas. No code required for your first design.</p>
+        <Link href="/studio?project=welcome" className="primary-button">Open Design Studio</Link>
+      </section>
       {labs.map((lab) => (
         <section key={lab.courseId} className="kc-section">
           <h2>
             {lab.title} <span className="kc-muted">({lab.ageRange}, {lab.requirementCount} requirements)</span>
           </h2>
+          <p className="kc-note">For HTML, CSS and JavaScript practice, use the existing working code editor in your course.</p>
+          <Link href={lab.courseId === "ages-10-12" ? "/learn" : "/learn/" + (lab.courseId === "adults" ? "adults" : lab.courseId.replace("ages-", ""))} className="primary-button">Open this pathway’s code editor</Link>
           <ul className="kc-cards">
             {lab.cards.map((card) => (
               <li key={card.lessonId} className="kc-card">
