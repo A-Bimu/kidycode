@@ -32,7 +32,7 @@ export type StudioDocument = {
   age: StudioAge;
   project: StudioProject;
   screens: StudioScreen[];
-  notes: { brief: string; evidence: string; reflection: string };
+  notes: { brief: string; evidence: string; reflection: string; flow?: string; decisions?: string; testing?: string; presentation?: string };
   updatedAt: string;
 };
 export const STUDIO_STORAGE_KEY = "kidycode.practice-studio.v1";
@@ -217,7 +217,8 @@ export function validStudioDocument(value: unknown): value is StudioDocument {
     !Array.isArray(d.screens) || d.screens.length < 1 || d.screens.length > STUDIO_MAX_SCREENS ||
     !d.notes || typeof d.notes.brief !== "string" || typeof d.notes.evidence !== "string" ||
     typeof d.notes.reflection !== "string" ||
-    [d.notes.brief, d.notes.evidence, d.notes.reflection].some(t => t.length > 5000)) return false;
+    [d.notes.brief, d.notes.evidence, d.notes.reflection, d.notes.flow, d.notes.decisions, d.notes.testing, d.notes.presentation]
+      .some(t => t !== undefined && (typeof t !== "string" || t.length > 5000))) return false;
   return d.screens.every(s => s && typeof s.id === "string" && typeof s.title === "string" &&
     s.title.length <= 100 && [s.width, s.height].every(n => Number.isFinite(n) && n >= 240 && n <= 1200) &&
     typeof s.background === "string" && /^#[0-9a-fA-F]{6}$/.test(s.background) &&
