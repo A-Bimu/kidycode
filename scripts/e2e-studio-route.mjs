@@ -7,7 +7,7 @@ for (const path of ["/studio", "/design", "/practice"]) {
   const content = await response.text();
   assert(content.length > 300, path + " must return meaningful HTML");
 }
-for (const asset of ["spark", "planet", "flower", "books"]) {
+for (const asset of ["spark", "planet", "flower", "books", "rocket", "cloud", "music", "heart"]) {
   const response = await fetch(base + "/studio-assets/" + asset + ".svg", { signal: AbortSignal.timeout(12000) });
   assert.equal(response.status, 200, asset + " must be bundled locally");
   const source = await response.text();
