@@ -31,6 +31,8 @@ jobs:
         run: npm run check
       - name: Verified adult token negative tests
         run: node --import tsx tests/security/supabase-identity.test.mjs
+      - name: Adult browser session and CSRF tests
+        run: node --import tsx tests/security/adult-session.test.mjs
       - name: Institution security assertions
         run: node --import tsx scripts/validate-institution-security.mjs
       - name: Lint
