@@ -564,7 +564,7 @@ await step("guardian endpoints refuse a caller with no platform identity", async
   for (const [path, method] of [["/api/guardian/session", "GET"], ["/api/guardian/links", "POST"], ["/api/guardian/summary?link=abc", "GET"]]) {
     const result = await guardianApi(path, { method, body: method === "POST" ? JSON.stringify({ code: "AAAA-BBBB-CCCC-DDDD" }) : undefined });
     assert.equal(result.status, 401, `${method} ${path} must answer 401 without an identity, received ${result.status}`);
-    assert.equal(result.body.signInPath, "/signin-with-chatgpt", "A 401 must point at the platform sign in.");
+    assert.equal(result.body.signInPath, "/adult-login", "A 401 must point to the adult sign-in page.");
   }
 });
 
