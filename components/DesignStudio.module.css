@@ -205,3 +205,39 @@
 @media (prefers-reduced-motion: reduce) {
   .shell *, .shell *::before, .shell *::after { animation-duration: .01ms!important; transition-duration: .01ms!important; }
 }
+
+/* Functional studio V2 controls: beginner-friendly feedback and direct manipulation. */
+.challengeActions { margin-left: auto; display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+.challengeActions .hintButton { margin-left: 0; }
+.review { background: #fffdfa; border: 1px solid #d6c6ec; border-radius: 16px; margin-top: 12px; padding: 17px 20px; }
+.review h2 { margin: 0 0 6px; font-size: 1rem; }
+.review > p { margin: 0 0 12px; font-size: .8rem; color: #5b4c73; }
+.review ul { list-style: none; display: grid; gap: 8px; padding: 0; margin: 0; }
+.review li { display: flex; align-items: flex-start; gap: 12px; background: #f7f1fc; border-radius: 10px; padding: 12px; font-size: .85rem; }
+.review li span { width: 21px; flex: 0 0 21px; color: #5d3aa4; font-size: 1.1rem; font-weight: 800; }
+.review li strong { display: block; }
+.review li p { margin: 3px 0 0; color: #615371; font-size: .78rem; line-height: 1.5; }
+.review .notesToggle { max-width: 280px; margin-top: 14px; }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.inlineField { background: #fff; border: 1px solid #d9cce5; border-radius: 8px; padding: 5px 9px; display: inline-flex; gap: 5px; align-items: center; font-size: .76rem; font-weight: 700; white-space: nowrap; }
+.inlineField select, .inlineField input { border: 1px solid #d8cbe5; background: #fffdfa; color: #32224e; border-radius: 5px; padding: 4px 7px; font-size: .8rem; max-width: 123px; }
+.resizeHandle { position: absolute; z-index: 5; width: 24px; height: 24px; border: 4px solid #fff; border-radius: 7px; background: #6240a6; transform: translate(-50%,-50%); box-shadow: 0 2px 8px rgba(35,21,72,.32); cursor: nwse-resize; touch-action: none; }
+.resizeHandle:hover { background: #a370e5; }
+.previewBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 9px; background: #e7dff1; padding: 10px; border-radius: 9px; }
+.previewBar button { background: #fff; color: #422d6b; border: 1px solid #bba4d9; border-radius: 8px; padding: 8px 12px; font-size: .78rem; font-weight: 800; }
+@media (max-width: 1220px) {
+  .challengeActions { flex-basis: 100%; margin-left: 60px; }
+  .screenControls { flex-wrap: wrap; }
+}
+@media (max-width: 780px) {
+  .sidebar #project-title { width: auto; }
+  .challengeActions { margin-left: 0; }
+  .review { padding: 12px; }
+  .screenControls { flex-wrap: nowrap; }
+}
+@media (max-width: 480px) {
+  .challengeActions { width: 100%; }
+  .hintButton { white-space: normal; }
+  .canvasControls .saveButton { order: -1; }
+  .inlineField { min-width: 0; }
+}
