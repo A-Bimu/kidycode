@@ -262,6 +262,146 @@ const modules: DesignModule[] = [
   },
 ];
 
+
+/* Ages 10–12 learn the same real principles with smaller actions and plain words.
+ * A guided learner should never need professional Figma vocabulary first. */
+const beginnerCopy: Record<string, Pick<DesignLesson, "objective" | "notes" | "activity" | "check">> = {
+  who: {
+    objective: "Choose one person who would enjoy using your app.",
+    notes: [
+      "Imagine you are making an app for someone you know. What would they want to do when they open it? Start with one person, not everybody in the world.",
+      "For example, a child who likes reading might want to find the next book easily. A clear goal helps you choose what goes on your screen.",
+    ],
+    activity: "Choose one pretend user and write what they want to do in Project notes. Then open the Welcome screen in Studio.",
+    check: check("Who should your first design help?", "One person with a clear goal", "Every person on Earth", "Only the designer", "One clear goal makes your first design easier."),
+  },
+  evidence: {
+    objective: "Ask a simple question and write what you learn.",
+    notes: [
+      "Designers learn by noticing what people actually do. You can ask a friend how they look for a book, or watch them try a pretend screen.",
+      "Write down their words and actions without guessing what they meant. Ask permission before a test and never collect someone else's private details.",
+    ],
+    activity: "Ask a trusted grown-up what makes a welcome screen clear. Write one observation in the notes, without names or personal details.",
+    check: check("What helps us learn about a user?", "Watching what they try", "Guessing what they think", "Picking our favourite colour", "Noticing real actions gives us useful information."),
+  },
+  outline: {
+    objective: "Put the most important thing first on your screen.",
+    notes: [
+      "People need to see the main message quickly. A big title tells them where they are, and a clear button shows them what to do next.",
+      "Use just a few elements at first. You can always add more after the important message is easy to find and read.",
+    ],
+    activity: "Open your welcome screen, move the app title where it is easy to see, and place one button below it.",
+    check: check("What should be easiest to see?", "The main message", "A tiny decoration", "The least useful link", "The main message helps a new visitor understand the screen."),
+  },
+  flow: {
+    objective: "Show the simple steps someone takes through your app.",
+    notes: [
+      "A user journey is a path from starting to finishing. A welcome screen could lead to a login mockup and then to a home screen.",
+      "Draw or write the steps in order. Think about what happens when someone wants to go back or accidentally taps the wrong thing.",
+    ],
+    activity: "In Project notes, write three steps for your pretend app: Welcome, Next, Finish. Explain how someone would go back.",
+    check: check("What is a user journey?", "The steps someone takes to finish a task", "A list of favourite colours", "A computer password", "A journey shows how screens fit together."),
+  },
+  layout: {
+    objective: "Use space to keep words and buttons easy to notice.",
+    notes: [
+      "A crowded screen can make it hard to see what matters. Leave a little breathing room around your title, picture and button.",
+      "Try moving the pieces apart until they feel balanced. You do not need to measure every pixel to practise good spacing.",
+    ],
+    activity: "Move the text, image and button in your welcome design. Preview it and make sure nothing is crowded or overlapping.",
+    check: check("Why leave space between elements?", "So each part is easier to notice", "To hide the button", "To make the text smaller", "Space helps people read."),
+  },
+  "type-colour": {
+    objective: "Choose readable colours and make important words bigger.",
+    notes: [
+      "Letters have sizes and styles. Make your app name larger than the sentence underneath, so people understand which words matter most.",
+      "Pick colours that make words easy to read against the background. Pretty colours are great, but clear reading comes first.",
+    ],
+    activity: "Choose a different colour for your button, then make the app title larger than the welcome text. Check that both stay readable.",
+    check: check("How should your app name appear?", "Easy to read and more noticeable", "Almost invisible", "Smaller than every other word", "Important information should stand out."),
+  },
+  states: {
+    objective: "Show people when the app is busy or needs help.",
+    notes: [
+      "A loading screen tells us the app is still doing something. Without a message, people might think it has stopped working.",
+      "You can also add friendly help if somebody makes a mistake. A useful message tells them what to try next, rather than blaming them.",
+    ],
+    activity: "Open the Loading screen project and add a short message such as Getting ready. Preview the result.",
+    check: check("Why show a loading message?", "To tell visitors the app is still working", "To hide the page forever", "To ask for a password", "Feedback keeps people informed."),
+  },
+  test: {
+    objective: "Let someone try your pretend screen and listen.",
+    notes: [
+      "You learn a lot by watching someone try your design. Ask a trusted grown-up to find the button on your welcome screen.",
+      "Don't tell them where it is at first. Notice whether they find it easily, and ask what could be clearer. Don't collect personal information.",
+    ],
+    activity: "Ask a trusted person to point at the main button. Write what they noticed and one thing you could improve.",
+    check: check("What should you do in a design test?", "Watch what someone tries", "Tell them every step", "Hide all the buttons", "Their actions help you improve the design."),
+  },
+  components: {
+    objective: "Use the same kind of button across your screens.",
+    notes: [
+      "When two buttons do similar jobs, they can look similar. That helps people recognise what they can tap on each screen.",
+      "You can copy a button and change the words while keeping its size and colour. Reusing parts makes your app feel more consistent.",
+    ],
+    activity: "Choose a button you like, copy it and make its words different. Keep the same colour and rounded corners.",
+    check: check("Why reuse button styles?", "So actions look familiar", "To make every screen confusing", "To hide how buttons work", "Familiar parts help people learn."),
+  },
+  tokens: {
+    objective: "Choose a small set of colours and letter sizes.",
+    notes: [
+      "A colour palette is a group of colours that look good together. You do not need dozens of choices to make a beautiful design.",
+      "Pick one main colour, one lighter colour and one dark text colour. Try to use them in the same way throughout your app.",
+    ],
+    activity: "Pick three colours for your app and write why you chose them in Project notes. Use them on your screen.",
+    check: check("What is a colour palette?", "A small group of chosen colours", "The name of a password", "A list of every colour", "A small palette helps designs feel connected."),
+  },
+  critique: {
+    objective: "Listen to helpful ideas about your design.",
+    notes: [
+      "A helpful comment explains what was confusing and why. Someone might say they could not see the main button or read a message.",
+      "You can thank them and try one small improvement. You do not have to change your design just because another person likes a different colour.",
+    ],
+    activity: "Ask a trusted person what was easy and what was confusing. Choose one helpful change and try it.",
+    check: check("What makes feedback useful?", "It explains what was confusing", "It only says I like purple", "It makes fun of the designer", "Useful feedback describes an experience."),
+  },
+  present: {
+    objective: "Show your design and explain what you made.",
+    notes: [
+      "A good design story explains who you wanted to help, what you made and what you learned. It does not have to be a long presentation.",
+      "Show your first idea, one change you made, and the final screen. Say one thing you would still like to improve.",
+    ],
+    activity: "Preview your welcome screen. In Project notes write who it helps, what you changed, and what you learned.",
+    check: check("What should you explain when showing your work?", "Who it helps and what you learned", "Only how many colours you used", "A pretend award", "Your choices and learning are worth sharing."),
+  },
+};
+const beginnerStudios: Record<string, string> = {
+  people: "Write who your welcome screen is for in the project notebook. Start with one person and one helpful task.",
+  structure: "Make a simple welcome screen. Put the app name at the top and a button that shows what to do next.",
+  interface: "Arrange your image, app name and button. Use clear colour and spacing so a new visitor understands the screen.",
+  test: "Make a loading screen. Ask a trusted adult what they understand, and record one suggestion in your notes.",
+  system: "Create a simple logo and use the same small set of colours on your welcome screen and button.",
+  present: "Show your welcome screen, download a picture and explain who it helps and what you would improve.",
+};
+const ageExtension: Partial<Record<DesignAgeBand, Record<string, string>>> = {
+  "ages-16-18": {
+    people: " Add the primary user goal, accessibility need and one evidence-based assumption to your brief.",
+    structure: " Create a three-screen journey with a failure state and a way back.",
+    interface: " Compare the mobile and desktop layout for hierarchy and readability.",
+    test: " Link screens in a prototype and document one usability test with a recovery path.",
+    system: " Define consistent text, colour and button decisions across the screens.",
+    present: " Present the problem, evidence, prototype, limitations and next iteration.",
+  },
+  adults: {
+    people: " Identify your portfolio audience and what professional outcome they seek.",
+    structure: " Plan Home, About, Projects and Contact pages in one coherent journey.",
+    interface: " Make your portfolio readable on phone and desktop and explain your visual hierarchy.",
+    test: " Ask someone to locate a project and contact action; record what happened.",
+    system: " Apply a clear colour palette, text hierarchy and reusable button styles.",
+    present: " Write a concise case study with trade-offs, evidence and next steps.",
+  },
+};
+
 export function designCourseFor(ageBand: DesignAgeBand): DesignCourse {
   const meta = ageBandMeta[ageBand];
   return {
@@ -272,7 +412,21 @@ export function designCourseFor(ageBand: DesignAgeBand): DesignCourse {
     estimatedHours: meta.hours,
     kind: "design",
     audience: meta.audience,
-    modules,
+    modules: ageBand === "ages-10-12"
+      ? modules.map(module => ({
+          ...module,
+          studio: beginnerStudios[module.id] ?? module.studio,
+          lessons: module.lessons.map(lesson => ({ ...lesson, ...beginnerCopy[lesson.id] })),
+        }))
+      : ageExtension[ageBand]
+        ? modules.map(module => ({
+            ...module,
+            studio: module.studio + (ageExtension[ageBand]?.[module.id] ?? ""),
+            lessons: module.lessons.map(lesson => ({
+              ...lesson, activity: lesson.activity + (ageExtension[ageBand]?.[module.id] ?? ""),
+            })),
+          }))
+        : modules,
     adaptedFor: ageBand,
   };
 }
