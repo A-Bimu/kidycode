@@ -15,8 +15,8 @@ assert.notDeepEqual(beginner.modules[0].lessons[0].notes, intermediate.modules[0
   "Beginner notes must be genuinely simpler, not just have a different age label");
 assert.notEqual(adult.modules[0].studio, beginner.modules[0].studio,
   "Adults must receive a distinct professional project brief");
-for (const module of beginner.modules) {
-  for (const lesson of module.lessons) {
+for (const section of beginner.modules) {
+  for (const lesson of section.lessons) {
     assert(lesson.check.options.length === 3 && lesson.check.options[lesson.check.answer],
       "Beginner check must have a grounded answer");
     assert(lesson.activity.length >= 30 && lesson.notes.join(" ").length >= 120,
