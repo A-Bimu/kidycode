@@ -9,13 +9,20 @@ for (const age of studioAges) {
     const doc = createStudioDocument(p.id, age.id);
     assert.equal(doc.age, age.id);
     assert.equal(doc.project, p.id);
-    assert.equal(doc.screens.length, 1);
+    const expected = p.id === "portfolio" && age.id === "adults" ? 4
+      : p.id === "login" && age.id === "ages-16-18" ? 4
+      : p.id === "login" && age.id === "ages-13-15" ? 3 : 1;
+    assert.equal(doc.screens.length, expected, "Age-specific project complexity");
     assert(validStudioDocument(doc), "Starter template should be valid: " + age.id + " " + p.id);
-    assert(doc.screens[0].elements.length > 1, "Starter project must be editable");
-    for (const node of doc.screens[0].elements) {
-      assert(node.x >= 0 && node.y >= 0, "A template item must start on canvas");
-      assert(node.x + node.width <= doc.screens[0].width, "A template item must fit canvas width");
-      assert(node.y + node.height <= doc.screens[0].height, "A template item must fit canvas height");
+    for (const screen of doc.screens) {
+      assert(screen.elements.length > 1, "Starter project must be editable");
+      for (const node of screen.elements) {
+        assert(node.x >= 0 && node.y >= 0, "A template item must start on canvas");
+        assert(node.x + node.width <= screen.width, "A template item must fit canvas width");
+        assert(node.y + node.height <= screen.height, "A template item must fit canvas height");
+        if (node.targetScreenId)
+          assert(doc.screens.some(target => target.id === node.targetScreenId), "Prototype links must stay within the document");
+      }
     }
   }
 }
