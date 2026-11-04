@@ -128,7 +128,6 @@ const sizeAfter = await evaluate('document.querySelector(' + JSON.stringify(node
 assert.notEqual(sizeAfter, sizeBefore, "Resize grip must change the element width");
 console.log("Studio resize: changed width via pointer grip");
 
-await clickText("Review my design (3/5)").catch?.(() => {});
 // Review label is dynamic by project; activate using DOM instead.
 const reviewOpen = await evaluate('(()=>{const b=[...document.querySelectorAll("button")].find(n=>n.textContent.includes("Review my design"));if(!b)return false;if(!b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded")==="false")b.click();return true;})()');
 assert(reviewOpen, "Review control should exist");
