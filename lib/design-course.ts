@@ -263,7 +263,7 @@ const modules: DesignModule[] = [
 ];
 
 
-/* Ages 10–12 learn the same real principles with smaller actions and plain words.
+/* Ages 10 to 12 learn the same real principles with smaller actions and plain words.
  * A guided learner should never need professional Figma vocabulary first. */
 const beginnerCopy: Record<string, Pick<DesignLesson, "objective" | "notes" | "activity" | "check">> = {
   who: {
