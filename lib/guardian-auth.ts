@@ -1,9 +1,9 @@
 import { getDatabase } from "@/lib/server-database";
 import {
   GUARDIAN_SIGN_IN_PATH,
-  readGuardianIdentity,
   type GuardianIdentity,
 } from "@/lib/guardian-identity";
+import { readInstitutionIdentity } from "@/lib/institution-identity";
 
 /*
  * Server-only guardian authentication.
@@ -12,8 +12,10 @@ import {
  * platform has not signed the visitor in, which is the only way a route reaches
  * its 401 answer, so no route can be written that forgets to check.
  *
- * The identity is always read from the platform request headers. It is never
- * read from a body, a query string or a cookie.
+ * The identity is read via the same trust boundary as institution routes. In
+ * proxy-signature mode an unsigned guardian request is refused, too. A raw
+ * client-provided identity header must never create a guardian account.
+ * A deployment remains BLOCKED until the actual hosting edge is verified.
  */
 
 export type GuardianAccount = {
@@ -30,7 +32,7 @@ export async function establishGuardian(
   request: Request,
   now = new Date().toISOString(),
 ): Promise<{ account: GuardianAccount; identity: GuardianIdentity } | null> {
-  const identity = readGuardianIdentity(request);
+  const identity = await readInstitutionIdentity(request);
   if (!identity) return null;
 
   const database = getDatabase();

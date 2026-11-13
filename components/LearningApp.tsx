@@ -16,6 +16,9 @@ import { ExamPanel } from "@/components/ExamPanel";
 import AssessmentFlow from "@/components/AssessmentFlow";
 import { ProgressPage } from "@/components/ProgressPage";
 import { SkillsPassport } from "@/components/SkillsPassport";
+import { LessonJourney } from "@/components/LessonJourney";
+import { completionButtonReady, completionGate, hintGateOpen, initialGuidance, journeyEnabledFor, nextHintIndex, writeGuidanceOverride } from "@/lib/lesson-journey";
+import { scriptFor, type GuidanceMode } from "@/lib/lesson-scripts";
 import {
   languageGuidance,
   termDefinitions,
@@ -245,6 +248,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [summaryError, setSummaryError] = useState("");
   const [summaryReload, setSummaryReload] = useState(0);
+  const [masteryPassed, setMasteryPassed] = useState<Record<string, boolean>>({});
   const checkpointLock = useRef(new Set<string>());
 
   const currentActivity = lessons[currentIndex] || lessons[0];
@@ -271,6 +275,17 @@ export function LearningApp({ course }: { course: CourseBundle }) {
   const checksAvailable = currentEvidence?.checksAvailable
     || (1 + (currentActivity.question ? 1 : 0) + ((currentActivity.questions || []).length > 0 ? 1 : 0));
   const focusLabel = nudge?.focus || currentEvidence?.focusArea || "";
+  const journeyActive = journeyEnabledFor(courseFacts.id, currentActivity.id);
+  const currentAttempts = currentEvidence?.attempts || 0;
+  const lessonReady = completionButtonReady({
+    activityType: currentActivity.activityType,
+    workChecked,
+    practiceCorrect,
+    quizPassed,
+    journeyActive,
+    masteryPassed: Boolean(masteryPassed[currentActivity.id]),
+    reflection,
+  });
 
   function projectBaseline(activity: Lesson): WorkspaceFiles {
     if (activity.activityType === "project") {
@@ -314,6 +329,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
     setReviewStatus("");
     setMessage("");
     setAutosaveStatus("idle");
+    setMasteryPassed((current) => ({ ...current, [activity.id]: false }));
   }, [lessons]);
 
   useEffect(() => {
@@ -555,7 +571,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
     setTutorBusy(false);
     if (!reply) {
       setTutorOffline(true);
-      const nextHint = Math.min(hintIndex + 1, currentActivity.hints.length - 1);
+      const nextHint = nextHintIndex(hintIndex, currentActivity.hints.length);
       setHintIndex(nextHint);
       setTutorMessage(currentActivity.hints[Math.max(nextHint, 0)]);
       return;
@@ -744,11 +760,15 @@ export function LearningApp({ course }: { course: CourseBundle }) {
       if (currentIndex < lessons.length - 1) chooseActivity(currentIndex + 1);
       return;
     }
-    const allowed = currentActivity.activityType === "challenge"
-      ? workChecked && practiceCorrect
-      : currentActivity.activityType === "project"
-        ? workChecked && practiceCorrect && reflection.trim().length >= 10
-        : quizPassed;
+    const allowed = completionGate({
+      activityType: currentActivity.activityType,
+      workChecked,
+      practiceCorrect,
+      quizPassed,
+      journeyActive,
+      masteryPassed: Boolean(masteryPassed[currentActivity.id]),
+      reflection,
+    });
     if (!allowed) return;
     const didSave = await saveActivity("completed");
     if (!didSave) return;
@@ -887,6 +907,9 @@ export function LearningApp({ course }: { course: CourseBundle }) {
                 key={currentActivity.id}
                 activity={currentActivity}
                 stage={currentStage}
+                courseId={courseFacts.id}
+                attempts={currentAttempts}
+                onMasteryChange={(passed) => setMasteryPassed((current) => ({ ...current, [currentActivity.id]: passed }))}
                 workspace={workspace}
                 resetFiles={projectBaseline(currentActivity)}
                 updateWorkspace={updateWorkspace}
@@ -904,7 +927,7 @@ export function LearningApp({ course }: { course: CourseBundle }) {
                 saving={saving}
                 autosaveStatus={autosaveStatus}
                 done={activityDone}
-                ready={workChecked && practiceCorrect && (currentActivity.activityType !== "project" || reflection.trim().length >= 10)}
+                ready={lessonReady}
                 tutorBusy={tutorBusy}
                 nudge={nudge}
                 tutorMessage={tutorMessage}
@@ -1057,6 +1080,9 @@ function CourseRail({
 function CodingActivity({
   activity,
   stage,
+  courseId,
+  attempts,
+  onMasteryChange,
   workspace,
   resetFiles,
   updateWorkspace,
@@ -1095,6 +1121,9 @@ function CodingActivity({
 }: {
   activity: Lesson;
   stage: Stage;
+  courseId: CourseId;
+  attempts: number;
+  onMasteryChange: (passed: boolean) => void;
   workspace: WorkspaceFiles;
   resetFiles: WorkspaceFiles;
   updateWorkspace: (files: WorkspaceFiles) => void;
@@ -1141,6 +1170,25 @@ function CodingActivity({
   const guidance = languageGuidance[activity.language];
   const practiceFiles = activity.editableFiles.map((file) => fileNames[file]).join(", ");
   const codePassed = results.length > 0 && results.every((result) => result.passed);
+  const journeyScript = journeyEnabledFor(courseId, activity.id) ? scriptFor(courseId, activity.id) : null;
+  const [guidanceMode, setGuidanceMode] = useState<GuidanceMode>(() => initialGuidance(courseId, activity.id));
+  const journeyHintGate = hintGateOpen(journeyScript ? guidanceMode : null, attempts);
+  const journeyRequirements = activity.tests.map((test) => test.label);
+  const journeyResults = results.map((result) => ({ label: result.label, passed: result.passed }));
+  const journeyProps = journeyScript ? {
+    script: journeyScript,
+    mode: guidanceMode,
+    onModeChange: (next: GuidanceMode) => {
+      setGuidanceMode(next);
+      writeGuidanceOverride(activity.id, next);
+    },
+    requirements: journeyRequirements,
+    results: journeyResults,
+    codePassed,
+    reflection,
+    setReflection,
+    onPassedChange: onMasteryChange,
+  } : null;
 
   useEffect(() => {
     function receivePreviewMessage(event: MessageEvent) {
@@ -1221,6 +1269,7 @@ function CodingActivity({
 
       {lessonStep === "notes" && (
         <section className="lesson-screen notes-screen">
+          {journeyProps && <LessonJourney {...journeyProps} step="notes" />}
           {reviewItem && (
             <ReviewCard
               item={reviewItem}
@@ -1253,6 +1302,7 @@ function CodingActivity({
 
       {lessonStep === "practice" && (
         <section className="lesson-screen practice-screen">
+          {journeyProps && <LessonJourney {...journeyProps} step="practice" />}
           <section className="practice-brief"><div><p className="section-label">YOUR PRACTICE TASK</p><h2>{activity.task}</h2><p>Work in {practiceFiles || activity.language}. Make one small change, run it, then compare the preview with the task.</p></div><button className="text-button" type="button" onClick={() => openStep("notes")}>Read the notes again</button></section>
           <section className="coding-studio">
             <div className="editor-panel">
@@ -1285,11 +1335,12 @@ function CodingActivity({
                   <small className="check-tally">{checksDone} of {checksAvailable} checks passed</small>
                 </div>
                 <div className="tutor-actions">
-                  <button className="outline-button tutor-nudge" type="button" disabled={tutorBusy} onClick={() => void requestNudge()}>
+                  <button className="outline-button tutor-nudge" type="button" disabled={tutorBusy || !journeyHintGate} onClick={() => void requestNudge()}>
                     {tutorBusy ? "Finding a nudge..." : hintsRequested > 0 ? "Another nudge" : "Give me a nudge"}
                   </button>
-                  <button className="text-button" type="button" disabled={tutorBusy} onClick={() => setHintIndex((current) => Math.min(current + 1, activity.hints.length - 1))}>Show hint {Math.min(hintIndex + 2, activity.hints.length)}</button>
+                  <button className="text-button" type="button" disabled={tutorBusy || !journeyHintGate} onClick={() => setHintIndex((current) => nextHintIndex(current, activity.hints.length))}>Show hint {Math.min(hintIndex + 2, activity.hints.length)}</button>
                 </div>
+                {!journeyHintGate && <p className="is-quiet">Check your code first. The first hint appears after an attempt.</p>}
                 <div className="tutor-advice" aria-live="polite">
                   {nudge?.requirement && <p className="tutor-requirement"><b>Not there yet</b>{nudge.requirement}</p>}
                   {tutorMessage
@@ -1309,6 +1360,7 @@ function CodingActivity({
 
       {lessonStep === "check" && (
         <section className="lesson-screen check-screen">
+          {journeyProps && <LessonJourney {...journeyProps} step="check" />}
           <section className="check-card">
             <header><p className="section-label">ONE LAST STEP</p><h2>Check what you understood</h2><p>Your code already passed. Answer this question without guessing, then read the explanation.</p></header>
             {activity.question && <QuickCheck question={activity.question} selected={practiceAnswer} checked={practiceChecked} busy={tutorBusy} serverMessage={tutorMessage} onSelect={setPracticeAnswer} onCheck={() => void submitQuickCheck(practiceAnswer)} />}

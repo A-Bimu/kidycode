@@ -14,3 +14,6 @@ npm-debug.log*
 # Generated Python bytecode from the browser-journey harnesses
 __pycache__/
 *.pyc
+
+# Local Cloudflare dev variables (never commit a secret here)
+.dev.vars

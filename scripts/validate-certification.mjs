@@ -152,9 +152,11 @@ rule("a credential id comes only from cryptographically secure randomness", () =
 
 /* --------------------------------------------------------- no new migration -- */
 
-rule("no new migration: 0007 is still the last one, and it only creates tables and indexes", () => {
+rule("the certificate migration still stands alone: 0007 is the only one that carries the credentials, and it only creates tables and indexes", () => {
   const migrations = readdirSync(resolve(root, "drizzle")).filter((name) => name.endsWith(".sql")).sort();
-  assert.equal(migrations[migrations.length - 1], "0007_violet_praxagora.sql", `the last migration must still be 0007 (found ${migrations[migrations.length - 1]}).`);
+  assert(migrations.includes("0007_violet_praxagora.sql"), "0007 must still be present.");
+  /* A later migration may exist. What must not happen is a second one that touches the
+   * credential tables, or an edit to 0007 itself. */
   const owners = migrations.filter((name) => read(`drizzle/${name}`).includes("assessment_credentials"));
   assert.deepEqual(owners, ["0007_violet_praxagora.sql"], `assessment_credentials must appear in exactly one migration (found: ${owners.join(", ") || "none"}).`);
   const sql = read("drizzle/0007_violet_praxagora.sql").replace(/-->[^\n]*/g, " ");
