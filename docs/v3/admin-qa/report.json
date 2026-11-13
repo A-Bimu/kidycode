@@ -1,0 +1,168 @@
+{
+  "origin": "http://127.0.0.1:3003",
+  "reviewKeyUsed": true,
+  "startedAt": "2026-11-13T21:28:26.650Z",
+  "checks": [
+    {
+      "name": "a stranger reaching /admin sees the closed state and nothing else",
+      "detail": "8 lines rendered"
+    },
+    {
+      "name": "the closed page names what has to be configured, without leaking a key",
+      "detail": "no key in the DOM"
+    },
+    {
+      "name": "the console page is noindex",
+      "detail": "noindex, nofollow, nocache"
+    },
+    {
+      "name": "the review key opens the console and the address bar is cleaned",
+      "detail": "/admin"
+    },
+    {
+      "name": "the synthetic banner says plainly that this is not real learner data",
+      "detail": "banner present"
+    },
+    {
+      "name": "the overview reports the real curriculum counts",
+      "detail": "248 lessons, 8 pathways, 244 with an answer key on screen"
+    },
+    {
+      "name": "the read-only promise is stated on the overview",
+      "detail": "read-only wording present"
+    },
+    {
+      "name": "every pathway is offered, including UI/UX design",
+      "detail": "All pathways | Web Coding Foundations — Ages 10 to 12 | Practical Web Development — Ages 13 to 15 | Web Application Development — Ages 16 to 18 | Web Skills for Work and Business — Adults | UI and UX Design — Ages 10 to 12 | UI and UX Design — Ages 13 to 15 | UI and UX Design — Ages 16 to 18 | UI and UX Design — Adults"
+    },
+    {
+      "name": "a pathway filter narrows the lesson list",
+      "detail": "248 lessons -> 12 for the design band"
+    },
+    {
+      "name": "the lesson list renders visible rows",
+      "detail": "248 rows, first row 269x82 at y=640 of 900, list height 512"
+    },
+    {
+      "name": "search finds a lesson by its idea",
+      "detail": "1 match(es): Repair broken HTML"
+    },
+    {
+      "name": "a lesson opens with its full content, notes, hints and answer key",
+      "detail": "objective, notes, example, hints, rubric and answer key all rendered"
+    },
+    {
+      "name": "the correct answer is marked in the answer key",
+      "detail": "✓Expected and actual behaviourcorrect"
+    },
+    {
+      "name": "lesson navigation is offered and the position is stated",
+      "detail": "position 43 of 248 in this pathway"
+    },
+    {
+      "name": "the owner review status and note controls are on the lesson",
+      "detail": "status and note, both labelled"
+    },
+    {
+      "name": "the review note is honestly labelled browser-local",
+      "detail": "durable-storage limitation stated"
+    },
+    {
+      "name": "quality flags are presented as heuristic suggestions",
+      "detail": "suggestion wording present"
+    },
+    {
+      "name": "the sandboxed preview carries a prominent owner label",
+      "detail": "OWNER PREVIEW label present"
+    },
+    {
+      "name": "the answer key is hidden until the owner asks for it",
+      "detail": "hidden (0 markers) then revealed (1 markers)"
+    },
+    {
+      "name": "an owner can jump straight to a gated final assessment and read all ten answers",
+      "detail": "gated final assessment opened; key hidden, then all 10 answers shown"
+    },
+    {
+      "name": "forward and back walk the pathway without any submit control",
+      "detail": "position 149 -> 150 -> 149, and no submit control anywhere"
+    },
+    {
+      "name": "every recorded figure names its source table",
+      "detail": "9 rows, sources: learner_profiles, learner_profiles.last_seen_at, course_progress, course_progress.updated_at, project_checkpoints, exam_attempts, assessment_credentials"
+    },
+    {
+      "name": "a count from a small group is suppressed rather than shown",
+      "detail": "small groups are suppressed on screen"
+    },
+    {
+      "name": "measures with no recorded source say 'not tracked yet' with a reason",
+      "detail": "four untracked measures, each with its reason and what to instrument"
+    },
+    {
+      "name": "the retention view refuses to draw an invented chart",
+      "detail": "no fabricated retention curve"
+    },
+    {
+      "name": "the centre states that nothing is sent",
+      "detail": "no-send promise present"
+    },
+    {
+      "name": "a draft renders a preview and a dry-run plan that refuses live delivery",
+      "detail": "preview rendered and live delivery refused"
+    },
+    {
+      "name": "the console reports its own trust boundary honestly",
+      "detail": "configuration state stated without over-claiming"
+    },
+    {
+      "name": "the owner review checklist is on the screen",
+      "detail": "5 checklist items"
+    },
+    {
+      "name": "no horizontal overflow at 320px",
+      "detail": "320x720: scrollWidth 320 = clientWidth 320 (no horizontal overflow), image 09-responsive-320.png"
+    },
+    {
+      "name": "no horizontal overflow at 768px",
+      "detail": "768x1024: scrollWidth 753 = clientWidth 753 (no horizontal overflow), image 10-responsive-768.png"
+    },
+    {
+      "name": "no horizontal overflow at 1440px",
+      "detail": "1440x900: scrollWidth 1425 = clientWidth 1425 (no horizontal overflow), image 11-responsive-1440.png"
+    },
+    {
+      "name": "every interactive control has an accessible name",
+      "detail": "6927 accessibility nodes, every control named"
+    },
+    {
+      "name": "headings and landmarks give the page a structure",
+      "detail": "navigation, main, heading"
+    },
+    {
+      "name": "a skip link reaches the console content",
+      "detail": "skip link points at #adm-main"
+    },
+    {
+      "name": "keyboard focus is visible on the console navigation",
+      "detail": "focus on BUTTON \"Overview\" with a 3px solid outline"
+    }
+  ],
+  "screenshots": [
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\01-closed-state.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\02-overview.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\03-curriculum-explorer-lesson.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\04-preview-as-learner.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\05-cohorts-and-learners.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\06-friction-and-retention.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\07-notification-centre.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\08-settings-and-audit.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\09-responsive-320.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\10-responsive-768.png",
+    "C:\\Users\\USER\\kidycode-admin\\docs\\v3\\admin-qa\\11-responsive-1440.png"
+  ],
+  "failures": [],
+  "finishedAt": "2026-11-13T21:28:42.081Z",
+  "passed": 36,
+  "failed": 0
+}

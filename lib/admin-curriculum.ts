@@ -59,6 +59,84 @@ function codingLesson(lesson: Lesson): AdminLesson {
 }
 const findDesign = (id: string) => designCourses.find(d => "design:" + d.adaptedFor === id);
 
+/** One lesson in its pathway context, with a stable key for search and deep links. */
+export type AdminLessonRef = {
+  key: string;
+  pathwayId: string;
+  pathwayTitle: string;
+  ageRange: string;
+  kind: "coding" | "design";
+  unitIndex: number;
+  unitId: string;
+  unitTitle: string;
+  unitNumber: number;
+  lesson: AdminLesson;
+};
+
+export function adminLessonKey(pathwayId: string, unitIndex: number, lessonId: string): string {
+  return `${pathwayId}:${unitIndex}:${lessonId}`;
+}
+
+/* Every lesson in every pathway, with the answer keys, hints and starter files already
+ * resolved by adminUnit. Used by search and by the quality checks, so both walk exactly
+ * the same content the reviewer can open. */
+export function adminLessonIndex(): AdminLessonRef[] {
+  const refs: AdminLessonRef[] = [];
+  for (const pathway of adminPathways()) {
+    for (const unit of pathway.units) {
+      const resolved = adminUnit(pathway.id, unit.index);
+      if (!resolved) continue;
+      for (const lesson of resolved.lessons) {
+        refs.push({
+          key: adminLessonKey(pathway.id, unit.index, lesson.id),
+          pathwayId: pathway.id,
+          pathwayTitle: pathway.title,
+          ageRange: pathway.ageRange,
+          kind: pathway.kind,
+          unitIndex: unit.index,
+          unitId: resolved.id,
+          unitTitle: resolved.title,
+          unitNumber: resolved.number,
+          lesson,
+        });
+      }
+    }
+  }
+  return refs;
+}
+
+export function adminLessonByKey(key: string): AdminLessonRef | null {
+  /* Keys are `${pathwayId}:${unitIndex}:${lessonId}`. A design pathway id itself contains a
+   * colon ("design:ages-10-12"), so the shape is read from the right: the last segment is
+   * the lesson id, the one before it is the unit index, and everything before that is the
+   * pathway id. */
+  const parts = key.split(":");
+  if (parts.length < 3) return null;
+  const lessonId = parts[parts.length - 1];
+  const unitIndex = Number(parts[parts.length - 2]);
+  const pathwayIdNormalised = parts.slice(0, parts.length - 2).join(":");
+  if (!Number.isInteger(unitIndex) || !lessonId) return null;
+  const unit = adminUnit(pathwayIdNormalised, unitIndex);
+  if (!unit) return null;
+  const lesson = unit.lessons.find(candidate => candidate.id === lessonId);
+  if (!lesson) return null;
+  const pathway = adminPathways().find(candidate => candidate.id === pathwayIdNormalised);
+  if (!pathway) return null;
+  return {
+    key,
+    pathwayId: pathwayIdNormalised,
+    pathwayTitle: pathway.title,
+    ageRange: pathway.ageRange,
+    kind: pathway.kind,
+    unitIndex,
+    unitId: unit.id,
+    unitTitle: unit.title,
+    unitNumber: unit.number,
+    lesson,
+  };
+}
+
+
 /** This index exposes counts and titles, not answer keys, so reviewers can navigate quickly. */
 export function adminPathways(): AdminPathway[] {
   const coding: AdminPathway[] = codingCourseIds.map(courseId => {
