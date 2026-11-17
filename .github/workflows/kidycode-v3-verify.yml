@@ -29,6 +29,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: TypeScript and curriculum gates
         run: npm run check
+      - name: Owner admin palette acceptance
+        run: node tests/admin/palette.test.mjs
       - name: Practice Studio model and safety checks
         run: node --import tsx tests/studio/model.test.mjs
       - name: Practice Studio design review and export safety
@@ -44,9 +46,13 @@ jobs:
       - name: Live Practice Studio route and bundled asset smoke
         shell: bash
         run: |
+          # A one-time local-only key unlocks synthetic curriculum review for browser QA.
+          # It does not provide owner access or read real learner records.
+          review_key="$(node -e 'console.log(require("node:crypto").randomBytes(24).toString("hex"))')"
+          printf 'KIDYCODE_ADMIN_REVIEW_DEMO=1\\nKIDYCODE_ADMIN_REVIEW_KEY=%s\\n' "$review_key" > .dev.vars
           npm run dev -- --port 3003 > /tmp/kidycode-studio.log 2>&1 &
           server=$!
-          trap 'kill "$server" 2>/dev/null || true' EXIT
+          trap 'rm -f .dev.vars; kill "$server" 2>/dev/null || true' EXIT
           ready=0
           for i in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:3003/studio > /dev/null; then ready=1; break; fi
@@ -62,7 +68,7 @@ jobs:
             --remote-debugging-port=9226 --remote-allow-origins='*' \
             --user-data-dir=/tmp/kidycode-studio-chrome about:blank > /tmp/kidycode-chrome.log 2>&1 &
           chrome_pid=$!
-          trap 'kill "$server" "$chrome_pid" 2>/dev/null || true' EXIT
+          trap 'rm -f .dev.vars; kill "$server" "$chrome_pid" 2>/dev/null || true' EXIT
           sleep 2
           echo "Browser: $BROWSER"
           ps -p "$chrome_pid" -o pid,stat,cmd || true
@@ -72,12 +78,19 @@ jobs:
             tail -n 100 /tmp/kidycode-chrome.log || true
             exit 1
           }
+          node scripts/admin-qa.mjs http://127.0.0.1:3003 "$review_key" /tmp/kidycode-admin-qa || {
+            echo "Admin review browser QA failed"
+            exit 1
+          }
       - name: Upload browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: kidycode-studio-browser-screenshots
-          path: /tmp/kidycode-studio-*.png
+          path: |
+            /tmp/kidycode-studio-*.png
+            /tmp/kidycode-admin-qa/*.png
+            /tmp/kidycode-admin-qa/report.json
           if-no-files-found: ignore
 
 
