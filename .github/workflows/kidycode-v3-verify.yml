@@ -49,7 +49,7 @@ jobs:
           # A one-time local-only key unlocks synthetic curriculum review for browser QA.
           # It does not provide owner access or read real learner records.
           review_key="$(node -e 'console.log(require("node:crypto").randomBytes(24).toString("hex"))')"
-          printf 'KIDYCODE_ADMIN_REVIEW_DEMO=1\\nKIDYCODE_ADMIN_REVIEW_KEY=%s\\n' "$review_key" > .dev.vars
+          { echo 'KIDYCODE_ADMIN_REVIEW_DEMO=1'; echo "KIDYCODE_ADMIN_REVIEW_KEY=$review_key"; } > .dev.vars
           npm run dev -- --port 3003 > /tmp/kidycode-studio.log 2>&1 &
           server=$!
           trap 'rm -f .dev.vars; kill "$server" 2>/dev/null || true' EXIT
