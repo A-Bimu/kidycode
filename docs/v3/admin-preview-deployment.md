@@ -131,61 +131,79 @@ these checks.
 
 ---
 
-## Live review deployment (verified)
+## Automatic deployment from GitHub
 
 | | |
 | --- | --- |
-| URL | https://kidycode-cqqgi4p2g-annettemumbi1-gmailcoms-projects.vercel.app |
-| Deployment | `dpl_54RSCuTqfbfoYhmbtXzYd5UZBQAo` (preview, project `kidycode`) |
-| Commit | `41a7ff2` on `feat/admin-review-console` |
-| Hosting gate | Vercel Authentication (`ssoProtection: all_except_custom_domains`) — an anonymous request is answered `302` to the platform sign-in, before any application code runs |
-| Application gate | `KIDYCODE_ADMIN_REVIEW_DEMO=1` + `KIDYCODE_ADMIN_REVIEW_KEY` (preview environment); both held by the deployment, not in the repository |
+| Stable admin URL | **https://kidycode-git-feat-admin-2185b0-annettemumbi1-gmailcoms-projects.vercel.app** |
+| Owner bookmark | `<stable URL>/admin?review=<key>` |
+| Current deployment | `kidycode-23ho2893t-...` (preview), commit `f27a694` |
+| Trigger | a push to `feat/admin-review-console` |
+| Hosting gate | Vercel Authentication (`ssoProtection: all_except_custom_domains`): anonymous requests get `302` to the platform sign-in before any application code runs |
+| Application gate | `KIDYCODE_ADMIN_REVIEW_DEMO=1` + `KIDYCODE_ADMIN_REVIEW_KEY` (preview environment), held by the deployment |
 
-The owner signs in to Vercel to reach it, then opens `/admin?review=<key>`. The review key is a
-deployment secret: read it from the project's Environment Variables in the Vercel dashboard. It
-is deliberately not written down anywhere in this repository.
+Pushing to the approved branch is the whole deployment step. Vercel builds `admin-preview/`,
+publishes it as a preview deployment and moves the stable branch alias onto it. The owner never
+opens GitHub or a terminal; they open the bookmarked URL.
 
-### What was verified live
+The alias is Vercel's own per-branch alias, so it is stable across pushes and always points at the
+newest successful deployment of that branch. It is a **preview** alias, never production.
 
-Because the deployment sits behind Vercel Authentication, anonymous `curl` cannot reach the
-application at all. `vercel curl <path> --deployment <url>` from `admin-preview/` gets through
-the platform gate with an authenticated CLI, which is how the following were measured against
-the deployed URL:
+### Project settings
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| Root Directory | `admin-preview` | The Cloudflare/Vinext app at the repository root cannot be a Vercel Next.js build. |
+| Framework | Next.js | |
+| Ignored Build Step | `[ "$VERCEL_GIT_COMMIT_REF" != "feat/admin-review-console" ]` | Only the approved branch builds. Every other branch, `main` included, is skipped, so the admin target can never become the project's production deployment. |
+| Production branch | `main` (unchanged) | Production stays reserved for the learner app. Nothing on `main` builds this target. |
+
+Changing the approved branch means editing that one command. Merging the admin console into
+`main` later must revisit both the Root Directory and this build step.
+
+### Two build failures this workflow had to fix
+
+1. **Finalization, not compilation.** With Root Directory set, every Git deployment compiled
+   successfully and then failed with
+   `ENOENT: lstat '/vercel/path0/.next/routes-manifest-deterministic.json'`.
+   `turbopack.root` and `outputFileTracingRoot` were both `process.cwd()`, which makes Next report
+   the app directory as the project root, so Vercel resolved the traced-file manifest one level
+   too high. Both keys only silenced a local "multiple lockfiles" warning; they are removed, with
+   a comment saying not to reintroduce them. This is the known Next.js 16 + multi-segment Root
+   Directory finalizer failure.
+2. **PostCSS walk-up.** The deployment installs only `admin-preview`'s dependencies, but Next
+   walked up and found the repository root's Tailwind PostCSS config, failing with
+   `Cannot find module '@tailwindcss/postcss'`. `admin.css` is plain CSS with no `@tailwind`
+   directives, so `admin-preview/postcss.config.mjs` declares an empty plugin set.
+
+### Verified on the stable alias
 
 | Probe | Result |
 | --- | --- |
-| Anonymous `GET /`, `/admin`, `/api/admin/*` | `302` → Vercel Authentication |
-| `GET /api/admin/{curriculum,lesson,analytics,notifications}` with no key | `403` |
-| `POST /api/admin/notifications` with no key | `403` |
-| `GET /api/admin/curriculum` with a wrong key | `403` |
-| `GET /api/admin/session` with the key | `200`, `authenticated: true`, `permission: "synthetic-review"`, `readOnly: true` |
-| `GET /api/admin/curriculum` with the key | `200`, `provenance: "synthetic"`, 8 pathways, 60 units, **248 lessons**, 244 with answer keys |
-| `GET /api/admin/lesson?key=…` with the key | `200`, notes, hints, requirements and the answer key |
-| `GET /api/admin/analytics` with the key | `200`, `databaseConnected: false`, every metric `unavailable`, the four `notTracked` ids present |
-| `GET /admin` | `200`, noindex |
+| Anonymous `GET /admin`, `/api/admin/curriculum` | `302` to Vercel Authentication |
+| `GET /api/admin/{curriculum,lesson,analytics,notifications}`, no key | `403` |
+| `GET /api/admin/curriculum`, wrong key | `403` |
+| `GET /api/admin/session`, valid key | `200`, `synthetic-review`, `readOnly: true` |
+| `GET /api/admin/curriculum`, valid key | `200`, `synthetic`, **8 pathways / 60 units / 248 lessons / 244 with answer keys** |
+| `GET /api/admin/analytics`, valid key | `200`, every metric `unavailable`, the four `notTracked` ids |
+| `GET /admin`, `/` | `200`, noindex |
 
-The console itself was rendered in headless Chrome (local build, same commit) at 320, 768 and
-1440 px: all seven sections present, no horizontal overflow at any width, and the approved
-navy / blue / white / gold palette with no warm shade and no green.
+Anonymous `curl` is stopped by the platform gate. `vercel curl <path> --deployment <alias>` from
+`admin-preview/` gets through it with an authenticated CLI, which is how those results were
+measured.
 
-### Deploying (what actually works)
+### Why the project domain is not the admin URL
+
+The project owns `kidycode.vercel.app`, but `ssoProtection` is `all_except_custom_domains` and
+that host answers `404` anonymously with no sign-in challenge: a project domain is exempt from
+deployment protection. Serving the admin console there would expose it publicly, so it stays on
+the protected preview alias and `kidycode.vercel.app` remains reserved for the learner app.
+
+### Manual deploy (fallback only)
+
+Not needed for normal operation. If the Git integration is unavailable:
 
 ```bash
 cd admin-preview
-vercel link --yes --project kidycode          # first time only
-vercel deploy --yes                            # a preview deployment
+vercel deploy --yes    # publishes a preview; the branch alias is not moved
 ```
-
-Deploy from **inside** `admin-preview/`, so the uploaded root and the build root agree. Setting
-the project's Root Directory to `admin-preview` and deploying from the repository root does not
-work: the Next.js build succeeds and then the deploy step fails with
-
-```
-ENOENT: no such file or directory, lstat '/vercel/path0/.next/routes-manifest-deterministic.json'
-```
-
-because the deployment root stays the repository root while the app is built one level down.
-Consequently the project's Root Directory is left as the repository root, and **Git pushes do
-not auto-deploy this target** — the preview above was published with the CLI command. Wiring the
-Git integration to it is an open item, not something this change claims.
-
