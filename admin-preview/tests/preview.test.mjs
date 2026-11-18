@@ -81,7 +81,10 @@ async function main() {
 
   /* ---- Live behaviour ---- */
 
-  const server = spawn(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "start"], {
+  /* Start Next's own binary rather than through npm: npm would add a wrapper process that
+   * outlives `kill()` and lingers in CI. */
+  const nextBin = join(appRoot, "node_modules", "next", "dist", "bin", "next");
+  const server = spawn(process.execPath, [nextBin, "start"], {
     cwd: appRoot,
     stdio: "ignore",
     env: {
