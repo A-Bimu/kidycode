@@ -32,10 +32,11 @@ function collect(directory, extensions, found = []) {
   return found;
 }
 
-/* 1. The vendoring step must run and must be reproducible. Running it here both proves the
- *    closure resolves and refreshes the copies this check is about to compare. */
-const sync = spawnSync(process.execPath, [join(previewRoot, "scripts", "sync-shared.mjs")], { encoding: "utf8" });
-assert.equal(sync.status, 0, `sync-shared.mjs failed:\n${sync.stderr || sync.stdout}`);
+/* 1. The vendored closure must exist AND must still be exactly what the repository sources
+ *    produce. `--check` writes nothing: it compares src/shared/ against the closure computed
+ *    from the root files and fails on a difference, a missing copy or an orphan. */
+const sync = spawnSync(process.execPath, [join(previewRoot, "scripts", "sync-shared.mjs"), "--check"], { encoding: "utf8" });
+assert.equal(sync.status, 0, `the vendored console is out of date:\n${sync.stderr || sync.stdout}`);
 
 const sharedRoot = join(previewRoot, "src", "shared");
 assert(existsSync(sharedRoot), "sync-shared.mjs did not produce src/shared.");

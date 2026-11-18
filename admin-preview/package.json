@@ -8,6 +8,7 @@
   },
   "scripts": {
     "sync": "node scripts/sync-shared.mjs",
+    "sync:check": "node scripts/sync-shared.mjs --check",
     "prebuild": "node scripts/sync-shared.mjs",
     "build": "next build",
     "dev": "node scripts/sync-shared.mjs && next dev --port 3011",

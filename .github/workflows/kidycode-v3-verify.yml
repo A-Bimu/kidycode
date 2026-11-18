@@ -121,11 +121,15 @@ jobs:
       - name: Vendor the shared console source
         working-directory: admin-preview
         run: npm run sync
+      - name: Vendored console matches the repository sources
+        working-directory: admin-preview
+        run: npm run sync:check
       - name: Build the review target the way Vercel will
         working-directory: admin-preview
         run: npm run build
       - name: Access control, curriculum and analytics checks
         working-directory: admin-preview
         run: node tests/preview.test.mjs
+
 
 
