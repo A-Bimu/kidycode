@@ -155,11 +155,22 @@ newest successful deployment of that branch. It is a **preview** alias, never pr
 | --- | --- | --- |
 | Root Directory | `admin-preview` | The Cloudflare/Vinext app at the repository root cannot be a Vercel Next.js build. |
 | Framework | Next.js | |
-| Ignored Build Step | `[ "$VERCEL_GIT_COMMIT_REF" != "feat/admin-review-console" ]` | Only the approved branch builds. Every other branch, `main` included, is skipped, so the admin target can never become the project's production deployment. |
+| Ignored Build Step | `[ "$VERCEL_GIT_COMMIT_REF" != "feat/admin-review-console" ]` | On a branch that contains `admin-preview/`, only the approved branch builds; the admin target can never become the project's production deployment. See the caveat below for branches that do not contain it. |
 | Production branch | `main` (unchanged) | Production stays reserved for the learner app. Nothing on `main` builds this target. |
 
 Changing the approved branch means editing that one command. Merging the admin console into
 `main` later must revisit both the Root Directory and this build step.
+
+**Measured caveat (found 18 Nov 2026).** Vercel validates the project's Root Directory *before* it evaluates the Ignored
+Build Step. A branch cut from `main` therefore does not get skipped — it fails at container setup with
+`The specified Root Directory "admin-preview" does not exist`, because `admin-preview/` only exists on the admin branch.
+Verified by pushing `feat/v4-learner-experience` (cut from `main`): the deployment recorded `ERROR` after 514 ms with no
+build, no output and no URL; the stable branch alias did **not** move and still served the admin preview (`302` to Vercel
+Authentication, owner endpoints `200`).
+
+So the accurate statement is: every branch that contains `admin-preview/` but is not the approved branch is skipped, and
+every branch that does not contain it produces a failed deployment record. Neither case publishes anything, and neither
+can move the alias or reach production. The noise disappears the day `admin-preview/` reaches `main`.
 
 ### Two build failures this workflow had to fix
 
@@ -207,5 +218,6 @@ Not needed for normal operation. If the Git integration is unavailable:
 # from the repository root; the CLI applies the project's Root Directory
 vercel deploy --yes    # publishes a preview; the branch alias is NOT moved
 ```
+
 
 
