@@ -7,13 +7,23 @@ import type { NextConfig } from "next";
  * root. It reuses the owner console's source (vendored into src/shared by
  * scripts/sync-shared.mjs) but runs on Node, with no database, no Worker bindings and no
  * learner write path of any kind.
+ *
+ * Deliberately absent: `turbopack.root` and `outputFileTracingRoot`.
+ *
+ * Setting either to `process.cwd()` makes Next report the app directory as the project root,
+ * so Vercel's post-build finalizer resolves the deployment's traced-file manifest one
+ * directory too high — `/vercel/path0/.next/...` instead of
+ * `/vercel/path0/admin-preview/.next/...` — and fails an otherwise successful build with
+ * `ENOENT ... routes-manifest-deterministic.json`. That is the known Next.js 16 + multi-segment
+ * Root Directory finalization bug (vercel/vercel and Vercel Community reports of the same
+ * ENOENT). Left unset, Next walks up from the app directory, finds the repository lockfile, and
+ * derives the correct nested app path, so Vercel looks in the right place.
+ *
+ * Do not reintroduce either key to silence the local "multiple lockfiles" warning: it is a
+ * warning only, and the workaround breaks the Git deployment.
  */
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  /* This app is its own workspace root. Without this, Next walks up and can pick an unrelated
-   * lockfile as the root, which would widen output tracing beyond this directory. */
-  turbopack: { root: process.cwd() },
-  outputFileTracingRoot: process.cwd(),
   // Every admin response is per-reviewer and must never be cached or shared.
   async headers() {
     return [
