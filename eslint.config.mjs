@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The isolated Vercel review target is its own app with its own workspace root and its
+    // own installed dependencies. Its source is vendored from files this task already lints,
+    // so linting it a second time from here would only race the vendoring step.
+    "admin-preview/**",
+    // Local scratch worktrees and their build output are untracked and never present in CI.
+    ".worktrees/**",
   ]),
   {
     files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],

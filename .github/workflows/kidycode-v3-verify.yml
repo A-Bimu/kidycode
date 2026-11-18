@@ -104,4 +104,28 @@ jobs:
             /tmp/kidycode-admin-qa/report.json
           if-no-files-found: ignore
 
+  admin-review-target:
+    name: Isolated Vercel admin review target
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: admin-preview/package-lock.json
+      - name: Install review target dependencies
+        working-directory: admin-preview
+        run: npm ci --no-audit --no-fund
+      - name: Vendor the shared console source
+        working-directory: admin-preview
+        run: npm run sync
+      - name: Build the review target the way Vercel will
+        working-directory: admin-preview
+        run: npm run build
+      - name: Access control, curriculum and analytics checks
+        working-directory: admin-preview
+        run: node tests/preview.test.mjs
+
 
