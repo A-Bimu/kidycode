@@ -65,5 +65,11 @@ node docs/v4/palette-contrast.mjs      # expects: 0 failing pair(s) of 56
 - The audit could not re-derive the original tester feedback: no session notes or recordings exist in the repository, so
   the brief's summary of it is taken as given.
 - The design band (UI and UX Design, marked `demo` provenance in the curriculum) was not assessed.
-- No deployment was made from this branch, and this branch is deliberately excluded from the Vercel admin preview's
-  build step (which builds `feat/admin-review-console` only).
+- No deployment was made from this branch; it publishes nothing and the admin preview's stable URL is unaffected.
+  One correction worth knowing: pushing this branch *does* create a failed deployment record on the Vercel project.
+  The project's Root Directory is `admin-preview`, which does not exist on a branch cut from `main`, and Vercel
+  validates the Root Directory **before** it evaluates the Ignored Build Step — so the build fails at setup
+  ("The specified Root Directory \"admin-preview\" does not exist") rather than being skipped. No build runs, no
+  output is published and nothing is exposed; it is dashboard noise, not a deployment, and it is the price of
+  keeping the admin preview on a single approved branch. It disappears the day `admin-preview/` reaches `main`.
+
