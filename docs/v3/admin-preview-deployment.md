@@ -106,17 +106,6 @@ To move to real owner access, add `KIDYCODE_IDENTITY_TRUST=proxy-signature`,
 `KIDYCODE_IDENTITY_SECRET` (≥32 chars) and `KIDYCODE_ADMIN_USER_IDS`. The synthetic path then
 closes automatically.
 
-## Deploying
-
-The preview app is self-contained, so the CLI can deploy it on its own:
-
-```bash
-cd admin-preview
-npm ci
-npm run build
-vercel deploy --prod=false    # a preview deployment, protected by Vercel Authentication
-```
-
 ## Verification
 
 `admin-preview/tests/preview.test.mjs` starts the built app the way Vercel does and checks,
@@ -139,3 +128,64 @@ these checks.
 - Review notes remain browser-local. No migration was added; `scripts/audit-database.mjs`
   still pins migrations `0000–0009`.
 - Nothing was merged to `main`.
+
+---
+
+## Live review deployment (verified)
+
+| | |
+| --- | --- |
+| URL | https://kidycode-cqqgi4p2g-annettemumbi1-gmailcoms-projects.vercel.app |
+| Deployment | `dpl_54RSCuTqfbfoYhmbtXzYd5UZBQAo` (preview, project `kidycode`) |
+| Commit | `41a7ff2` on `feat/admin-review-console` |
+| Hosting gate | Vercel Authentication (`ssoProtection: all_except_custom_domains`) — an anonymous request is answered `302` to the platform sign-in, before any application code runs |
+| Application gate | `KIDYCODE_ADMIN_REVIEW_DEMO=1` + `KIDYCODE_ADMIN_REVIEW_KEY` (preview environment); both held by the deployment, not in the repository |
+
+The owner signs in to Vercel to reach it, then opens `/admin?review=<key>`. The review key is a
+deployment secret: read it from the project's Environment Variables in the Vercel dashboard. It
+is deliberately not written down anywhere in this repository.
+
+### What was verified live
+
+Because the deployment sits behind Vercel Authentication, anonymous `curl` cannot reach the
+application at all. `vercel curl <path> --deployment <url>` from `admin-preview/` gets through
+the platform gate with an authenticated CLI, which is how the following were measured against
+the deployed URL:
+
+| Probe | Result |
+| --- | --- |
+| Anonymous `GET /`, `/admin`, `/api/admin/*` | `302` → Vercel Authentication |
+| `GET /api/admin/{curriculum,lesson,analytics,notifications}` with no key | `403` |
+| `POST /api/admin/notifications` with no key | `403` |
+| `GET /api/admin/curriculum` with a wrong key | `403` |
+| `GET /api/admin/session` with the key | `200`, `authenticated: true`, `permission: "synthetic-review"`, `readOnly: true` |
+| `GET /api/admin/curriculum` with the key | `200`, `provenance: "synthetic"`, 8 pathways, 60 units, **248 lessons**, 244 with answer keys |
+| `GET /api/admin/lesson?key=…` with the key | `200`, notes, hints, requirements and the answer key |
+| `GET /api/admin/analytics` with the key | `200`, `databaseConnected: false`, every metric `unavailable`, the four `notTracked` ids present |
+| `GET /admin` | `200`, noindex |
+
+The console itself was rendered in headless Chrome (local build, same commit) at 320, 768 and
+1440 px: all seven sections present, no horizontal overflow at any width, and the approved
+navy / blue / white / gold palette with no warm shade and no green.
+
+### Deploying (what actually works)
+
+```bash
+cd admin-preview
+vercel link --yes --project kidycode          # first time only
+vercel deploy --yes                            # a preview deployment
+```
+
+Deploy from **inside** `admin-preview/`, so the uploaded root and the build root agree. Setting
+the project's Root Directory to `admin-preview` and deploying from the repository root does not
+work: the Next.js build succeeds and then the deploy step fails with
+
+```
+ENOENT: no such file or directory, lstat '/vercel/path0/.next/routes-manifest-deterministic.json'
+```
+
+because the deployment root stays the repository root while the app is built one level down.
+Consequently the project's Root Directory is left as the repository root, and **Git pushes do
+not auto-deploy this target** — the preview above was published with the CLI command. Wiring the
+Git integration to it is an open item, not something this change claims.
+
