@@ -1,0 +1,135 @@
+name: KidyCode V3 release verification
+
+on:
+  pull_request:
+    branches: [main, "wt/t_31cba5cd", "curriculum/v3-content-only", "release/v3-integrate-and-verify", "release/v3-integrated-security-staging"]
+  push:
+    branches: ["release/v3-integrate-and-verify", "release/v3-integrated-security-staging", "feat/practice-studio-v1"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kidycode-v3-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-quality:
+    name: Typecheck, curriculum, lint, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: TypeScript and curriculum gates
+        run: npm run check
+      - name: Owner admin palette acceptance
+        run: node tests/admin/palette.test.mjs
+      - name: Practice Studio model and safety checks
+        run: node --import tsx tests/studio/model.test.mjs
+      - name: Practice Studio design review and export safety
+        run: node --import tsx tests/studio/review-export.test.mjs
+      - name: Age-adapted UI and UX curriculum
+        run: node --import tsx tests/studio/design-age.test.mjs
+      - name: Institution security assertions
+        run: node --import tsx scripts/validate-institution-security.mjs
+      - name: Lint
+        run: npm run lint
+      - name: Verified production build
+        run: npm run build
+      - name: Live Practice Studio route and bundled asset smoke
+        shell: bash
+        run: |
+          # A one-time local-only key unlocks synthetic curriculum review for browser QA.
+          # It does not provide owner access or read real learner records.
+          review_key="$(node -e 'console.log(require("node:crypto").randomBytes(24).toString("hex"))')"
+          { echo 'KIDYCODE_ADMIN_REVIEW_DEMO=1'; echo "KIDYCODE_ADMIN_REVIEW_KEY=$review_key"; } > .dev.vars
+          npm run dev -- --port 3003 > /tmp/kidycode-studio.log 2>&1 &
+          server=$!
+          trap 'rm -f .dev.vars; kill "$server" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3003/studio > /dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then cat /tmp/kidycode-studio.log; exit 1; fi
+          KIDYCODE_E2E_URL=http://127.0.0.1:3003 node scripts/e2e-studio-route.mjs
+          if command -v google-chrome >/dev/null; then BROWSER="$(command -v google-chrome)"
+          elif command -v chromium >/dev/null; then BROWSER="$(command -v chromium)"
+          elif command -v chromium-browser >/dev/null; then BROWSER="$(command -v chromium-browser)"
+          else echo "No Chrome binary for browser QA"; exit 1; fi
+          "$BROWSER" --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu \
+            --remote-debugging-port=9226 --remote-allow-origins='*' \
+            --user-data-dir=/tmp/kidycode-studio-chrome about:blank > /tmp/kidycode-chrome.log 2>&1 &
+          chrome_pid=$!
+          trap 'rm -f .dev.vars; kill "$server" "$chrome_pid" 2>/dev/null || true' EXIT
+          echo "Browser: $BROWSER"
+          chrome_ready=0
+          for i in $(seq 1 45); do
+            if curl -fsS --max-time 4 http://127.0.0.1:9226/json/version > /dev/null 2>&1; then
+              chrome_ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$chrome_ready" -ne 1 ]; then
+            echo "Chrome debugging endpoint unavailable after readiness polling"
+            ps -p "$chrome_pid" -o pid,stat,cmd || true
+            tail -n 120 /tmp/kidycode-chrome.log || true
+            exit 1
+          fi
+          KIDYCODE_E2E_URL=http://127.0.0.1:3003 node scripts/browser-studio-cdp.mjs || {
+            echo "Chrome debugging log:"
+            tail -n 100 /tmp/kidycode-chrome.log || true
+            exit 1
+          }
+          node scripts/admin-qa.mjs http://127.0.0.1:3003 "$review_key" /tmp/kidycode-admin-qa || {
+            echo "Admin review browser QA failed"
+            exit 1
+          }
+      - name: Upload browser QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kidycode-studio-browser-screenshots
+          path: |
+            /tmp/kidycode-studio-*.png
+            /tmp/kidycode-admin-qa/*.png
+            /tmp/kidycode-admin-qa/report.json
+          if-no-files-found: ignore
+
+  admin-review-target:
+    name: Isolated Vercel admin review target
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: admin-preview/package-lock.json
+      - name: Install review target dependencies
+        working-directory: admin-preview
+        run: npm ci --no-audit --no-fund
+      - name: Vendor the shared console source
+        working-directory: admin-preview
+        run: npm run sync
+      - name: Vendored console matches the repository sources
+        working-directory: admin-preview
+        run: npm run sync:check
+      - name: Build the review target the way Vercel will
+        working-directory: admin-preview
+        run: npm run build
+      - name: Access control, curriculum and analytics checks
+        working-directory: admin-preview
+        run: node tests/preview.test.mjs
+
+
+

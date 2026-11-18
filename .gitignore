@@ -11,6 +11,13 @@ tsconfig.tsbuildinfo
 npm-debug.log*
 *.pem
 
+# The isolated Vercel review target links itself; keep the link local.
+/.vercel
+
 # Generated Python bytecode from the browser-journey harnesses
 __pycache__/
 *.pyc
+
+# Local Cloudflare dev variables (never commit a secret here)
+.dev.vars
+.vercel

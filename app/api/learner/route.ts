@@ -36,6 +36,11 @@ export const LEARNER_OWNED_TABLES = [
   "assessment_credentials",
   "assessment_revision_items",
   "assessment_attempts",
+  /* Day 1 institution rows. The learner link and the academic review are the only
+   * institutional records that carry a learner, and they are removed with the learner
+   * rather than left to the cascade, so a permanent delete stays explicit. */
+  "cohort_enrolments",
+  "academic_reviews",
 ] as const;
 
 export async function DELETE(request: Request) {

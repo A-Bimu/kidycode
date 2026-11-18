@@ -277,7 +277,20 @@ await step("every condition satisfied issues the certificate", async () => {
   assert.ok(issue.body.certificate.learnerFirstName.length > 0, "the certificate names the learner");
   assert.ok(issue.body.certificate.issuedAt === rows[0].issuedAt, "the printed date is the stored date");
   assert.ok(issue.body.certificate.skills.length > 0, "the certificate lists demonstrated skills");
-  assert.ok(!JSON.stringify(issue.body.certificate).includes("88"), "raw marks must not reach the printed record");
+  /* The printed record may not carry a mark. The check is on the payload's own values, not
+   * on a substring of its JSON: a credential id or a generated nickname can contain any two
+   * digits by chance, and matching those reported a defect that was not there. */
+  for (const banned of ["score", "marks", "marksAwarded", "awarded", "percentage", "total"]) {
+    assert(!new RegExp(`"${banned}"\\s*:`, "i").test(JSON.stringify(issue.body.certificate)), `the printed record carries ${banned}`);
+  }
+  const numericValues = [];
+  const collect = (value) => {
+    if (typeof value === "number") numericValues.push(value);
+    else if (Array.isArray(value)) value.forEach(collect);
+    else if (value && typeof value === "object") Object.values(value).forEach(collect);
+  };
+  collect(issue.body.certificate);
+  assert(!numericValues.includes(88), `the printed record carries the raw mark: ${JSON.stringify(numericValues)}`);
 });
 
 await step("a repeated request returns the same credential, without minting another", async () => {

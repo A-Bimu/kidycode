@@ -244,7 +244,8 @@ assert(identityModule.includes("oai-authenticated-user-id") && identityModule.in
   "The identity must come from the platform headers.");
 assert(identityModule.includes("oai-authenticated-user-full-name"), "The optional display name must come from the platform header.");
 assert(identityModule.includes("request.headers.get"), "Identity must be read from request headers.");
-assert(authModule.includes("readGuardianIdentity(request)"), "The server only identity must come from the platform headers.");
+assert(authModule.includes("await readInstitutionIdentity(request)"), "Guardian identity must use the shared trust verifier, not unverified headers.");
+assert(!authModule.includes("readGuardianIdentity(request)"), "Guardian endpoints must not bypass verified identity.");
 assert(!/body\.\w*(id|email|userId|guardianId)/i.test(guardianSources), "Identity must never come from a body.");
 assert(!/searchParams\.get\("(id|email|guardianId|userId)"\)/.test(guardianSources), "Identity must never come from a query string.");
 assert(!guardianSources.includes("kidycode_session"), "The guardian path must not read the learner session.");

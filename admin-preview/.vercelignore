@@ -1,0 +1,6 @@
+# Vercel only needs this app's own source. Dependencies are installed on the build machine.
+node_modules
+.next
+next-env.d.ts
+tsconfig.tsbuildinfo
+.env*
