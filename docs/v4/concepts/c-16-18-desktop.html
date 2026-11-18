@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>V4 Concept C — Ages 16-18 — Developer Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0a0f1e; --surface:#111a31; --surface2:#18233f; --ink:#e9eefb; --ink-soft:#9aa8c7;
+    --blue:#5b8dff; --violet:#a66bff; --gold:#ffc24b; --pink:#ff6b9a; --line:#26314f;
+    --r:10px; --r-lg:14px; --r-pill:999px;
+    --glow:0 0 0 1px rgba(91,141,255,.28), 0 14px 40px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#070b16;color:var(--ink);font-family:"Inter Tight",system-ui,-apple-system,"Segoe UI",sans-serif}
+  .sheet{width:1440px;margin:0 auto;padding:44px 40px 64px}
+  .eyebrow{font:600 12px/1 "Inter Tight";letter-spacing:.2em;text-transform:uppercase;color:var(--blue)}
+  h1.title{margin:14px 0 12px;font:700 52px/1 "Space Grotesk";letter-spacing:-.025em}
+  h1.title em{font-style:normal;background:linear-gradient(100deg,#5b8dff,#a66bff 55%,#ff9ec2);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{margin:0;max-width:78ch;font-size:16px;line-height:1.62;color:var(--ink-soft)}
+  .meta{display:flex;flex-wrap:wrap;gap:26px;margin-top:18px}
+  .meta b{display:block;font:600 11px/1 "Inter Tight";letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
+  .meta span{font-size:14px;font-weight:600;color:var(--ink)}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 11px 6px 7px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill);font:600 12px/1 "Inter Tight";color:var(--ink)}
+  .chip i{width:15px;height:15px;border-radius:50%}
+  .scr{margin-top:38px}
+  .scr-cap{display:flex;align-items:baseline;gap:12px;margin:0 0 12px 2px}
+  .scr-cap b{font:600 13px/1 "Inter Tight";letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
+  .scr-cap span{font-size:13px;color:var(--ink-soft)}
+  .device{width:1180px;margin:0 auto;background:var(--canvas);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--glow);overflow:hidden}
+  .top{display:flex;align-items:center;gap:14px;padding:12px 20px;background:#0d1428;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font:600 15px/1 "Space Grotesk";letter-spacing:.01em}
+  .brand .sq{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#5b8dff,#a66bff)}
+  .grow{flex:1}
+  .mono{font-family:"JetBrains Mono"}
+  .badge{font:500 11px/1 "JetBrains Mono";padding:5px 9px;border-radius:var(--r-pill);border:1px solid var(--line);color:var(--ink-soft)}
+  .badge.on{color:#0a0f1e;background:var(--gold);border-color:var(--gold);font-weight:600}
+  .who{display:flex;align-items:center;gap:8px;font:600 12.5px/1 "Inter Tight";color:var(--ink-soft)}
+  .who .av{width:27px;height:27px;border-radius:8px;background:var(--surface2);display:grid;place-items:center;font:600 11px/1 "JetBrains Mono";color:var(--violet)}
+  .btn{border:0;border-radius:8px;padding:11px 18px;font:600 14px/1 "Inter Tight";cursor:pointer}
+  .btn-primary{background:var(--blue);color:#08111f}
+  .btn-ghost{background:var(--surface2);color:var(--ink);border:1px solid var(--line)}
+  .h2{margin:0;font:600 28px/1.1 "Space Grotesk";letter-spacing:-.02em}
+  .kicker{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:var(--r-pill);background:rgba(91,141,255,.14);border:1px solid rgba(91,141,255,.32);font:600 11px/1 "JetBrains Mono";color:#9dbcff}
+
+  /* dashboard */
+  .dash{padding:24px 24px 28px;background:radial-gradient(120% 90% at 12% -10%,rgba(91,141,255,.12),transparent 60%),var(--canvas)}
+  .dash-top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+  .dash-top p{margin:8px 0 0;font-size:14.5px;color:var(--ink-soft);max-width:60ch;line-height:1.6}
+  .stack{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px 22px}
+  .card h3{margin:12px 0 8px;font:600 23px/1.15 "Space Grotesk"}
+  .card p{margin:0 0 16px;font-size:14.5px;line-height:1.62;color:var(--ink-soft)}
+  .facts{display:flex;gap:22px;margin:16px 0 18px}
+  .facts div{display:grid;gap:4px}
+  .facts b{font:600 20px/1 "Space Grotesk";color:var(--ink)}
+  .facts span{font:500 11px/1 "Inter Tight";letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+  .rail{display:grid;gap:9px;margin-top:4px}
+  .step{display:grid;grid-template-columns:26px 1fr auto;gap:11px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+  .step.on{border-color:var(--blue);background:rgba(91,141,255,.1)}
+  .step .n{width:26px;height:26px;border-radius:8px;background:var(--surface2);display:grid;place-items:center;font:600 12px/1 "JetBrains Mono";color:var(--ink-soft)}
+  .step.on .n{background:var(--blue);color:#08111f}
+  .step b{font:600 13.5px/1.3 "Inter Tight"}
+  .step span{font:500 11.5px/1 "JetBrains Mono";color:var(--ink-soft)}
+  .meters{display:grid;gap:14px;margin-top:6px}
+  .meter{display:block}
+  .meter b{display:block;font:600 12px/1 "Inter Tight";color:var(--ink-soft);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+  .meter .track{display:block;height:7px;border-radius:4px;background:var(--surface2);overflow:hidden}
+  .meter .track i{display:block;height:7px;border-radius:4px}
+  .rowline{display:flex;justify-content:space-between;font:500 12.5px/1.5 "JetBrains Mono";color:var(--ink-soft);margin-top:7px}
+
+  /* lesson */
+  .lesson{background:var(--canvas)}
+  .lsn-bar{display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px solid var(--line);background:#0d1428}
+  .lsn-bar .back{border:0;background:none;color:var(--ink-soft);font:500 12.5px/1 "JetBrains Mono";cursor:pointer}
+  .modes{margin-left:auto;display:flex;gap:6px}
+  .mode{padding:6px 11px;border-radius:7px;font:500 12px/1 "JetBrains Mono";color:var(--ink-soft);background:var(--surface)}
+  .mode.on{background:var(--surface2);color:var(--ink);border:1px solid var(--line)}
+  .lbody{display:grid;grid-template-columns:1.06fr .94fr;gap:0}
+  .lleft{padding:24px 26px 26px;border-right:1px solid var(--line)}
+  .lright{padding:20px 22px 24px;background:linear-gradient(180deg,rgba(24,35,63,.5),transparent)}
+  .lbody h3{margin:0 0 10px;font:600 24px/1.18 "Space Grotesk"}
+  .lbody p{margin:0 0 13px;font-size:14.5px;line-height:1.68;color:#c3cdea}
+  .callout{border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:12px 14px;background:rgba(255,194,75,.06);font-size:13.5px;line-height:1.6;color:#e2e8fa;margin:14px 0}
+  .callout b{color:var(--gold)}
+  .cli{background:#070b16;border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;font:400 12.5px/1.75 "JetBrains Mono"}
+  .k{color:#a66bff}.s{color:#ffc24b}.f{color:#7aa2ff}.c{color:#5b6a92}.n{color:#ff6b9a}
+  .lab{display:grid;gap:9px;margin-top:12px}
+  .labrow{display:flex;align-items:center;gap:10px;font:500 12.5px/1.4 "JetBrains Mono";color:var(--ink-soft)}
+  .labrow b{color:var(--ink);font-weight:500}
+  .pill{font:500 11px/1 "JetBrains Mono";padding:4px 8px;border-radius:var(--r-pill);background:var(--surface2);color:var(--ink-soft)}
+  .lfoot{display:flex;align-items:center;gap:12px;padding:16px 22px;border-top:1px solid var(--line);background:#0d1428}
+
+  /* practice */
+  .ide{display:grid;grid-template-columns:186px 1fr 330px;min-height:400px}
+  .tree{padding:14px;border-right:1px solid var(--line);background:#0d1428;font:500 12.5px/2 "JetBrains Mono";color:var(--ink-soft)}
+  .tree b{display:block;font:600 11px/1 "Inter Tight";letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin:4px 0 10px}
+  .tree span{display:block}
+  .tree .cur{color:var(--ink);background:rgba(91,141,255,.14);border-radius:6px;padding:0 7px;margin-left:-7px}
+  .ed{padding:16px 18px;display:grid;align-content:start;gap:14px}
+  .cl{font:400 13px/1.85 "JetBrains Mono";display:grid;grid-template-columns:34px 1fr}
+  .cl .ln{color:#44507a;text-align:right}
+  .term{background:#070b16;border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;font:400 12px/1.8 "JetBrains Mono";color:#9aa8c7}
+  .term b{color:var(--gold);font-weight:500}
+  .rightc{padding:16px 18px;border-left:1px solid var(--line);display:grid;gap:14px;align-content:start}
+  .prev{background:#fff;border-radius:var(--r);padding:14px;color:#0d1428;font-family:"Inter Tight"}
+  .prev b{display:block;font:700 15px/1.3 "Inter Tight"}
+  .prev span{font-size:12.5px;color:#4a5578}
+  .checks{display:grid;gap:8px}
+  .chk{display:flex;gap:9px;align-items:flex-start;font:500 12.5px/1.45 "Inter Tight";color:#c3cdea}
+  .chk .b{width:16px;height:16px;border-radius:5px;border:1px solid var(--line);display:grid;place-items:center;flex:0 0 auto;margin-top:1px}
+  .chk.ok .b{background:var(--blue);border-color:var(--blue)}
+  .chk.no .b{background:rgba(255,107,154,.2);border-color:rgba(255,107,154,.5)}
+
+  /* progress */
+  .prog{padding:24px 26px 30px;background:radial-gradient(120% 90% at 88% -10%,rgba(166,107,255,.12),transparent 60%),var(--canvas)}
+  .prog-top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+  .prog-top p{margin:8px 0 0;font-size:14.5px;color:var(--ink-soft);max-width:62ch;line-height:1.6}
+  .matrix{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .cell{border:1px solid var(--line);border-radius:var(--r);padding:14px;background:var(--surface)}
+  .cell b{display:block;font:600 13.5px/1.3 "Inter Tight"}
+  .lvl{display:flex;gap:4px;margin:10px 0 8px}
+  .lvl i{flex:1;height:6px;border-radius:3px;background:var(--surface2)}
+  .lvl i.f{background:var(--blue)}
+  .lvl i.v{background:var(--violet)}
+  .cell span{font:500 11.5px/1.4 "JetBrains Mono";color:var(--ink-soft)}
+  .twocol{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:18px}
+  .ready h4,.repo h4{margin:0 0 12px;font:600 15px/1 "Space Grotesk"}
+  .ready ul{margin:0;padding:0;list-style:none;display:grid;gap:9px}
+  .ready li{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;font:400 13px/1.5 "Inter Tight";color:#c3cdea}
+  .ready li em{font-style:normal;font:500 11px/1 "JetBrains Mono";color:var(--ink-soft)}
+  .repo .commit{display:grid;grid-template-columns:74px 1fr;gap:10px;font:400 12.5px/1.7 "JetBrains Mono";color:var(--ink-soft);border-bottom:1px solid var(--line);padding:8px 0}
+  .repo .commit b{color:var(--violet);font-weight:500}
+  .sheet-foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <p class="eyebrow">KidyCode V4 · Concept C · desktop</p>
+    <h1 class="title">Ages 16–18 — <em>Developer Studio</em></h1>
+    <p class="lede">A workstation that looks like the tools they will meet in a first job: files, a terminal, real
+      failure states and a portfolio with versions. Skill progression is shown as technical mastery, not motivation
+      mechanics.</p>
+    <div class="meta">
+      <div><b>Pathway</b><span>Web Application Development · 8 units · 48 activities</span></div>
+      <div><b>Type</b><span>Space Grotesk · Inter Tight · JetBrains Mono</span></div>
+      <div><b>Shape language</b><span>10–14px radii · hairline borders · dark surfaces</span></div>
+    </div>
+    <div class="chips">
+      <span class="chip"><i style="background:#5b8dff"></i>#5B8DFF</span>
+      <span class="chip"><i style="background:#a66bff"></i>#A66BFF</span>
+      <span class="chip"><i style="background:#ffc24b"></i>#FFC24B</span>
+      <span class="chip"><i style="background:#ff6b9a"></i>#FF6B9A</span>
+      <span class="chip"><i style="background:#111a31"></i>#111A31 panel</span>
+      <span class="chip"><i style="background:#0a0f1e"></i>#0A0F1E midnight</span>
+      <span class="chip"><i style="background:#e9eefb"></i>#E9EEFB ink</span>
+    </div>
+  </header>
+
+  <!-- 1 dashboard -->
+  <section class="scr">
+    <p class="scr-cap"><b>Screen 1</b><span>Workspace — what you are building, how far through the application layer you are, and the honest gap to portfolio-ready.</span></p>
+    <div class="device">
+      <div class="top">
+        <span class="brand"><span class="sq"></span>KidyCode</span>
+        <span class="badge">Web Application Development</span>
+        <span class="grow"></span>
+        <span class="badge on mono">portfolio 3/5</span>
+        <span class="who"><span class="av">JT</span>Juma · 17</span>
+      </div>
+      <div class="dash">
+        <div class="dash-top">
+          <div><h2 class="h2">Unit 6 · Application state and CRUD</h2><p>Your revision planner can add and list tasks. It cannot yet change or remove one — that is what unit 6 finishes.</p></div>
+          <button class="btn btn-ghost mono" style="font-size:12.5px">open editor ⌘K</button>
+        </div>
+        <div class="stack">
+          <div class="card">
+            <span class="kicker">mission 29 / 48 · web application development</span>
+            <h3>Edit and remove a saved task, without losing the list</h3>
+            <p>You will hold an array of tasks in memory, change one entry by id, and re-render. The failure case
+              matters here: a task that no longer exists must not break the screen.</p>
+            <div class="facts">
+              <div><b>~45 min</b><span>estimated</span></div>
+              <div><b>3</b><span>checks to pass</span></div>
+              <div><b>state.js</b><span>main file</span></div>
+            </div>
+            <div style="display:flex;gap:12px"><button class="btn btn-primary">Start mission</button><button class="btn btn-ghost">Read the brief first</button></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0;font-size:16px">Where you are</h3>
+            <div class="meters">
+              <div class="meter"><b>Unit 6 · state &amp; CRUD</b><span class="track"><i style="width:42%;background:linear-gradient(90deg,#5b8dff,#a66bff)"></i></span><span class="rowline"><span>2 of 6 missions</span><span>42%</span></span></div>
+              <div class="meter"><b>Course</b><span class="track"><i style="width:56%;background:#5b8dff"></i></span><span class="rowline"><span>27 of 48 missions</span><span>56%</span></span></div>
+              <div class="meter"><b>Portfolio requirements met</b><span class="track"><i style="width:60%;background:#ffc24b"></i></span><span class="rowline"><span>3 of 5</span><span>60%</span></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="stack" style="grid-template-columns:1fr 1fr;margin-top:16px">
+          <div class="card">
+            <h3 style="margin-top:0;font-size:16px">This unit, in order</h3>
+            <div class="rail">
+              <div class="step"><span class="n">1</span><b>Hold app state in one place</b><span class="mono">done</span></div>
+              <div class="step"><span class="n">2</span><b>Create and list records</b><span class="mono">done</span></div>
+              <div class="step on"><span class="n">3</span><b>Update and delete by id</b><span class="mono">you are here</span></div>
+              <div class="step"><span class="n">4</span><b>Validate input before saving</b><span class="mono">next</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0;font-size:16px">Recent activity</h3>
+            <div class="repo" style="margin-top:0">
+              <div class="commit"><b>2 days ago</b><span>passed mission 28 · revision planner lists tasks</span></div>
+              <div class="commit"><b>4 days ago</b><span>passed mission 27 · state held in one module</span></div>
+              <div class="commit"><b>last week</b><span>unit 5 review · 3 of 4 checks on first attempt</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 lesson -->
+  <section class="scr">
+    <p class="scr-cap"><b>Screen 2</b><span>Lesson — concept, a runnable lab, then the proof. Difficulty is stated plainly instead of disguised.</span></p>
+    <div class="device">
+      <div class="top"><span class="brand"><span class="sq"></span>KidyCode</span><span class="grow"></span><span class="badge" style="color:#ffc24b;border-color:rgba(255,194,75,.35)">deep dive</span><span class="who"><span class="av">JT</span>Juma · 17</span></div>
+      <div class="lesson">
+        <div class="lsn-bar"><button class="back">← workspace</button><span class="badge mono">unit 6 · mission 29</span>
+          <span class="modes"><span class="mode on">concept</span><span class="mode">lab</span><span class="mode">proof</span></span>
+        </div>
+        <div class="lbody">
+          <div class="lleft">
+            <span class="kicker">state mutation · the part people get wrong</span>
+            <h3 style="margin-top:12px">Updating one record without losing the others</h3>
+            <p>An array of tasks is the source of truth. To change one task you do not edit it in place — you build a
+              new array where every other entry is carried across untouched, and the matching one is replaced.</p>
+            <div class="callout"><b>This one is genuinely fiddly.</b> Most people get it wrong the first time by mutating
+              the array in place. That is why there are three checks and a failing test to read, not one.</div>
+            <p>Removing is the same shape with one entry dropped. Once you can do both, "CRUD" stops being four letters
+              and becomes two functions you have written.</p>
+            <div class="lab">
+              <span class="labrow"><span class="pill">lab</span><b>Drag a task id into the function and watch the array</b></span>
+              <span class="labrow"><span class="pill">proof</span><b>An edit, a delete, and a missing id handled without a crash</b></span>
+            </div>
+          </div>
+          <div class="lright">
+            <div class="cli">
+              <span class="c">// the array is the source of truth</span><br>
+              <span class="k">const</span> <span class="f">next</span> = tasks.<span class="f">map</span>(t =&gt;<br>
+              &nbsp;&nbsp;t.<span class="f">id</span> === id ? { ...t, ...changes } : t<br>
+              );<br><br>
+              <span class="c">// nothing was mutated — `tasks` is untouched</span><br>
+              <span class="k">return</span> <span class="f">next</span>;
+            </div>
+            <div style="margin-top:14px" class="lab">
+              <span class="labrow"><b class="mono">tasks.length</b><span class="pill">4 → 4</span></span>
+              <span class="labrow"><b class="mono">tasks[1].done</b><span class="pill">false → true</span></span>
+              <span class="labrow"><b class="mono">original array</b><span class="pill">unchanged</span></span>
+            </div>
+            <div style="margin-top:16px;font:500 12px/1.7 'JetBrains Mono';color:#5b6a92">MDN: Array.prototype.map · structuring immutable updates</div>
+          </div>
+        </div>
+        <div class="lfoot"><span class="badge mono">2 of 3 checks previewable now</span><span class="grow"></span><button class="btn btn-ghost">Ask for a nudge</button><button class="btn btn-primary">Open the lab →</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 practice -->
+  <section class="scr">
+    <p class="scr-cap"><b>Screen 3</b><span>Practice — file tree, editor, terminal output, live preview and the three checks, in one workspace.</span></p>
+    <div class="device">
+      <div class="top"><span class="brand"><span class="sq"></span>KidyCode</span><span class="badge mono">revision-planner · branch: unit-6</span><span class="grow"></span><span class="who"><span class="av">JT</span>Juma · 17</span></div>
+      <div class="ide">
+        <div class="tree">
+          <b>project</b>
+          <span>index.html</span><span class="cur">state.js</span><span>render.js</span><span>styles.css</span><span>tests/state.test.js</span>
+        </div>
+        <div class="ed">
+          <div class="cl">
+            <span class="ln">12</span><span><span class="c">// replace one task, keep the rest</span></span>
+            <span class="ln">13</span><span><span class="k">export function</span> <span class="f">updateTask</span>(tasks, id, changes) {</span>
+            <span class="ln">14</span><span>&nbsp;&nbsp;<span class="k">return</span> tasks.<span class="f">map</span>(task =&gt;</span>
+            <span class="ln">15</span><span>&nbsp;&nbsp;&nbsp;&nbsp;task.id === id ? { ...task, ...changes } : task);</span>
+            <span class="ln">16</span><span>}</span>
+            <span class="ln">17</span><span></span>
+            <span class="ln">18</span><span><span class="k">export function</span> <span class="f">removeTask</span>(tasks, id) {</span>
+            <span class="ln">19</span><span>&nbsp;&nbsp;<span class="k">return</span> tasks.<span class="f">filter</span>(task =&gt; task.id !== id);</span>
+            <span class="ln">20</span><span>}</span>
+          </div>
+          <div class="term"><b>›</b> npx test state<br><span style="color:#5b6a92">✓ updates one task and leaves the array intact (4ms)</span><br>✓ removes a task without touching the others (3ms)<br><span style="color:#ff8fb0">✗ handles an id that is not in the list</span> <span style="color:#5b6a92">— expected 4 items, received undefined</span></div>
+        </div>
+        <div class="rightc">
+          <div class="prev"><b>Revision Planner</b><span>Mathematics · Friday 16:00</span><br><b style="color:#5b45f0;margin-top:8px;display:block">4 tasks</b></div>
+          <div class="checks">
+            <span class="chk ok"><span class="b"><svg width="10" height="10" viewBox="0 0 24 24"><path d="M4 12l6 6L20 6" stroke="#08111f" stroke-width="3.6" fill="none" stroke-linecap="round"/></svg></span>Editing a task keeps every other entry</span>
+            <span class="chk ok"><span class="b"><svg width="10" height="10" viewBox="0 0 24 24"><path d="M4 12l6 6L20 6" stroke="#08111f" stroke-width="3.6" fill="none" stroke-linecap="round"/></svg></span>Deleting removes exactly one</span>
+            <span class="chk no"><span class="b"></span>An unknown id leaves the list unchanged</span>
+          </div>
+          <div style="font:500 12px/1.6 'JetBrains Mono';color:#5b6a92">Failing is expected here. The test output is the feedback — read the last line first.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 progress -->
+  <section class="scr">
+    <p class="scr-cap"><b>Screen 4</b><span>Progress — a skill matrix with honest levels, a portfolio checklist, and the work history behind both.</span></p>
+    <div class="device">
+      <div class="top"><span class="brand"><span class="sq"></span>KidyCode</span><span class="badge">Web Application Development</span><span class="grow"></span><span class="who"><span class="av">JT</span>Juma · 17</span></div>
+      <div class="prog">
+        <div class="prog-top">
+          <div><h2 class="h2">27 of 48 missions · 3 of 5 portfolio requirements</h2><p>Levels below are earned by passing the checks for that skill, not by time spent. Nothing here is a score you can grind.</p></div>
+          <button class="btn btn-ghost mono" style="font-size:12.5px">export portfolio</button>
+        </div>
+        <div class="matrix">
+          <div class="cell"><b>Semantic HTML</b><span class="lvl"><i class="f"></i><i class="f"></i><i class="f"></i><i></i></span><span>applied · 5 projects</span></div>
+          <div class="cell"><b>CSS systems</b><span class="lvl"><i class="f"></i><i class="f"></i><i></i><i></i></span><span>applied · 3 projects</span></div>
+          <div class="cell"><b>Application logic</b><span class="lvl"><i class="v"></i><i class="v"></i><i></i><i></i></span><span>learning · unit 6</span></div>
+          <div class="cell"><b>Data &amp; failure states</b><span class="lvl"><i></i><i></i><i></i><i></i></span><span>not started · unit 7</span></div>
+        </div>
+        <div class="twocol">
+          <div class="card ready">
+            <h4>What a portfolio needs</h4>
+            <ul>
+              <li><svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" stroke="#5b8dff" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg><span>One project with a semantic, accessible structure</span><em>met</em></li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" stroke="#5b8dff" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg><span>A layout that works at 360px and on a desktop</span><em>met</em></li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" stroke="#5b8dff" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg><span>Logic separated from rendering</span><em>met</em></li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" stroke="#a66bff" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".45"/></svg><span>Persisted state that survives a reload</span><em>unit 7</em></li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" stroke="#26314f" stroke-width="3" fill="none"/></svg><span>A written release note for your own project</span><em>unit 8</em></li>
+            </ul>
+          </div>
+          <div class="card repo">
+            <h4>Work history</h4>
+            <div class="commit"><b>state.js</b><span>updateTask, removeTask added</span></div>
+            <div class="commit"><b>tests</b><span>2 of 3 passing</span></div>
+            <div class="commit"><b>render.js</b><span>list re-renders from state</span></div>
+            <div class="commit"><b>notes</b><span>“read the last line of the failure first”</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="sheet-foot">Concept sheet C of 4 · Ages 16–18 · palette pairs verified with <code>docs/v4/palette-contrast.mjs</code> (56/56 pass; on dark surfaces every text pair clears 4.5:1).<br>
+    Unit names, project names and the five portfolio requirements come from the real course (Web Application Development · Revision Planner / Opportunity Directory / Service Dashboard).</p>
+</div>
+</body>
+</html>

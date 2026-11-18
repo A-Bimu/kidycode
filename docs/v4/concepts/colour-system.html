@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>V4 — Colour system and admin gold refinement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#e9eef7;color:#0e1726;font-family:"Inter Tight",system-ui,sans-serif}
+  .sheet{width:1440px;margin:0 auto;padding:42px 40px 60px}
+  .eyebrow{font:600 12px/1 "Inter Tight";letter-spacing:.18em;text-transform:uppercase;color:#1b4fbf}
+  h1{margin:12px 0 10px;font:700 40px/1.05 "Space Grotesk";letter-spacing:-.02em}
+  .lede{margin:0;max-width:84ch;font-size:15.5px;line-height:1.62;color:#46566e}
+  h2{margin:40px 0 14px;font:700 15px/1 "Space Grotesk";letter-spacing:.06em;text-transform:uppercase;color:#0e1726}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .pal{border:1px solid #d5dfec;border-radius:14px;overflow:hidden;background:#fff}
+  .pal .head{padding:16px 18px 14px;border-bottom:1px solid #e4ebf4}
+  .pal .head b{display:block;font:700 17px/1.2 "Space Grotesk"}
+  .pal .head span{display:block;margin-top:5px;font-size:12.5px;color:#5a6b83;line-height:1.5}
+  .pal .stage{height:76px;display:flex}
+  .pal .stage i{flex:1;display:block}
+  .pal .rows{padding:12px 16px 16px}
+  .row{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12.5px}
+  .row i{width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.12);flex:0 0 auto}
+  .row code{font:400 11.5px/1 "JetBrains Mono";color:#46566e}
+  .row b{margin-left:auto;font-weight:600}
+  .row em{font-style:normal;color:#5a6b83;font-size:11.5px}
+  .banned{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  .no{display:inline-flex;align-items:center;gap:9px;padding:7px 12px 7px 8px;border:1px solid #e2c9cb;background:#fdf3f3;border-radius:999px;font:500 12.5px/1 "Inter Tight";color:#7d2b32}
+  .no i{width:14px;height:14px;border-radius:4px}
+  .no s{text-decoration-thickness:1.5px}
+  .note{margin-top:14px;padding:13px 16px;border-left:3px solid #1b4fbf;background:#f6f9fd;border-radius:8px;font-size:13.5px;line-height:1.65;color:#31415a;max-width:96ch}
+  .cols2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .card{border:1px solid #d5dfec;border-radius:14px;background:#fff;padding:18px 20px}
+  .card h3{margin:0 0 10px;font:700 16px/1.2 "Space Grotesk"}
+  .card p{margin:0 0 10px;font-size:13.5px;line-height:1.65;color:#46566e}
+  .chiprow{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+  .skill{display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid #d5dfec;border-radius:999px;font:500 12px/1 "Inter Tight"}
+  .skill i{width:14px;height:14px;border-radius:50%}
+  /* admin */
+  .admin{border:1px solid #1c3454;border-radius:16px;overflow:hidden;background:#0b1b33}
+  .admin .bar{display:flex;align-items:center;gap:14px;padding:14px 20px;background:linear-gradient(180deg,#0f2d52,#0b1b33);border-bottom:3px solid #c9902a}
+  .admin .bar b{font:700 16px/1 "Space Grotesk";color:#fff}
+  .admin .bar .tagm{padding:6px 11px;border-radius:999px;background:rgba(56,189,248,.14);border:1px solid rgba(56,189,248,.34);color:#9fd9ff;font:500 11.5px/1 "JetBrains Mono"}
+  .admin .bar .gold{margin-left:auto;padding:8px 16px;border-radius:999px;background:linear-gradient(135deg,#fff3c9 0%,#f3ce6a 42%,#c9902a 100%);box-shadow:inset 0 1px 0 #fffbe8,0 1px 2px rgba(0,0,0,.4);color:#2b1c02;font:700 12.5px/1 "Inter Tight"}
+  .admin .body{padding:18px 20px;background:#f7f9fc}
+  .admin .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .kpi{background:#fff;border:1px solid #dde6f0;border-radius:10px;padding:13px 15px}
+  .kpi b{display:block;font:600 22px/1 "Space Grotesk";color:#0f2d52}
+  .kpi span{display:block;margin-top:6px;font:500 11px/1.3 "Inter Tight";letter-spacing:.08em;text-transform:uppercase;color:#6b7c93}
+  .kpi.gold{background:linear-gradient(135deg,#fffdf4,#fff6dc);border-color:#e8d49a}
+  .goldramp{display:flex;gap:0;border-radius:10px;overflow:hidden;border:1px solid #e0cfa0;margin-top:12px}
+  .goldramp i{height:56px;flex:1;display:grid;place-items:end center;padding-bottom:7px;font:500 10px/1 "JetBrains Mono";color:#4a3608}
+  .beforeafter{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #d5dfec;border-radius:12px;overflow:hidden}
+  .beforeafter .side{padding:16px 18px}
+  .beforeafter .side:first-child{background:#fbf7ee;border-right:1px solid #d5dfec}
+  .beforeafter .side:last-child{background:#f5f9ff}
+  .beforeafter h4{margin:0 0 8px;font:700 13px/1 "Space Grotesk";letter-spacing:.06em;text-transform:uppercase}
+  .sw{display:flex;gap:7px;margin:10px 0}
+  .sw i{width:26px;height:26px;border-radius:7px;border:1px solid rgba(0,0,0,.1)}
+  .beforeafter p{margin:0;font-size:12.5px;line-height:1.6;color:#46566e}
+  .foot{margin-top:36px;padding-top:16px;border-top:1px solid #cfdae8;font-size:12.5px;color:#55657c;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <p class="eyebrow">KidyCode V4 · colour system</p>
+  <h1>Four learner palettes, one admin system</h1>
+  <p class="lede">The four age groups do not share a palette. They share a discipline: a near-white or cool ground, one
+    committed brand hue, one or two energetic accents used as fills (never as small text on white), and no green
+    anywhere. Every pair below was measured, not eyeballed — <code>docs/v4/palette-contrast.mjs</code> re-runs the check
+    and currently reports 56 of 56 pairs passing.</p>
+
+  <h2>The four learner palettes</h2>
+  <div class="grid4">
+    <div class="pal">
+      <div class="head"><b>A · Ages 10–12</b><span>Playful Discovery · bright, buoyant, dark ink on white</span></div>
+      <div class="stage"><i style="background:#2563eb"></i><i style="background:#ff7a1a"></i><i style="background:#ff4d8d"></i><i style="background:#7c5cff"></i><i style="background:#ffb020"></i></div>
+      <div class="rows">
+        <div class="row"><i style="background:#2563eb"></i><code>#2563EB</code><em>brand</em><b>5.17:1</b></div>
+        <div class="row"><i style="background:#ff7a1a"></i><code>#FF7A1A</code><em>energy · fill</em><b>2.61:1</b></div>
+        <div class="row"><i style="background:#ff4d8d"></i><code>#FF4D8D</code><em>friendly · fill</em><b>3.14:1</b></div>
+        <div class="row"><i style="background:#7c5cff"></i><code>#7C5CFF</code><em>curious</em><b>4.35:1</b></div>
+        <div class="row"><i style="background:#ffb020"></i><code>#FFB020</code><em>star · fill</em><b>1.83:1</b></div>
+        <div class="row"><i style="background:#eff6ff"></i><code>#EFF6FF</code><em>icy blue ground</em><b>—</b></div>
+        <div class="row"><i style="background:#131a2e"></i><code>#131A2E</code><em>ink on white</em><b>17.29:1</b></div>
+      </div>
+    </div>
+    <div class="pal">
+      <div class="head"><b>B · Ages 13–15</b><span>Creative Exploration · violet-led, confident, less candy</span></div>
+      <div class="stage"><i style="background:#5b45f0"></i><i style="background:#00a3ff"></i><i style="background:#ff4d6d"></i><i style="background:#ffb020"></i><i style="background:#f4f2ff"></i></div>
+      <div class="rows">
+        <div class="row"><i style="background:#5b45f0"></i><code>#5B45F0</code><em>brand</em><b>5.91:1</b></div>
+        <div class="row"><i style="background:#00a3ff"></i><code>#00A3FF</code><em>azure · fill</em><b>2.73:1</b></div>
+        <div class="row"><i style="background:#ff4d6d"></i><code>#FF4D6D</code><em>rose · fill</em><b>3.21:1</b></div>
+        <div class="row"><i style="background:#ffb020"></i><code>#FFB020</code><em>amber · fill</em><b>1.83:1</b></div>
+        <div class="row"><i style="background:#f4f2ff"></i><code>#F4F2FF</code><em>pale violet ground</em><b>—</b></div>
+        <div class="row"><i style="background:#eef3ff"></i><code>#EEF3FF</code><em>pale blue ground</em><b>—</b></div>
+        <div class="row"><i style="background:#14122b"></i><code>#14122B</code><em>ink on white</em><b>18.24:1</b></div>
+      </div>
+    </div>
+    <div class="pal">
+      <div class="head"><b>C · Ages 16–18</b><span>Developer Studio · midnight surfaces, luminous accents</span></div>
+      <div class="stage"><i style="background:#0a0f1e"></i><i style="background:#111a31"></i><i style="background:#5b8dff"></i><i style="background:#a66bff"></i><i style="background:#ffc24b"></i></div>
+      <div class="rows">
+        <div class="row"><i style="background:#0a0f1e"></i><code>#0A0F1E</code><em>canvas</em><b>—</b></div>
+        <div class="row"><i style="background:#111a31"></i><code>#111A31</code><em>panel</em><b>—</b></div>
+        <div class="row"><i style="background:#5b8dff"></i><code>#5B8DFF</code><em>primary</em><b>6.09:1</b></div>
+        <div class="row"><i style="background:#a66bff"></i><code>#A66BFF</code><em>secondary</em><b>5.61:1</b></div>
+        <div class="row"><i style="background:#ffc24b"></i><code>#FFC24B</code><em>accent</em><b>11.88:1</b></div>
+        <div class="row"><i style="background:#ff6b9a"></i><code>#FF6B9A</code><em>warning</em><b>7.11:1</b></div>
+        <div class="row"><i style="background:#e9eefb"></i><code>#E9EEFB</code><em>ink on midnight</em><b>16.44:1</b></div>
+      </div>
+    </div>
+    <div class="pal">
+      <div class="head"><b>D · Adults</b><span>Professional Learning · cool, calm, no decoration</span></div>
+      <div class="stage"><i style="background:#1b4fbf"></i><i style="background:#0ea5e9"></i><i style="background:#f4f7fb"></i><i style="background:#eef3f9"></i><i style="background:#d8e2ee"></i></div>
+      <div class="rows">
+        <div class="row"><i style="background:#1b4fbf"></i><code>#1B4FBF</code><em>brand</em><b>7.20:1</b></div>
+        <div class="row"><i style="background:#0ea5e9"></i><code>#0EA5E9</code><em>sky · fill</em><b>2.77:1</b></div>
+        <div class="row"><i style="background:#0369a1"></i><code>#0369A1</code><em>sky, for text</em><b>5.93:1</b></div>
+        <div class="row"><i style="background:#f4f7fb"></i><code>#F4F7FB</code><em>cool grey-blue</em><b>—</b></div>
+        <div class="row"><i style="background:#eef3f9"></i><code>#EEF3F9</code><em>cool light blue</em><b>—</b></div>
+        <div class="row"><i style="background:#0e1726"></i><code>#0E1726</code><em>ink on white</em><b>17.96:1</b></div>
+        <div class="row"><i style="background:#d8e2ee"></i><code>#D8E2EE</code><em>hairline</em><b>—</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><b>Read the ratios as instructions, not scores.</b> An accent under 3:1 against white is fine as a
+    <em>fill</em> — a chip, a bar, a star — as long as the text sitting on it is dark ink (all such pairs clear 4.5:1,
+    e.g. #131A2E on #FFB020 = 11.1:1). None of those accents is ever used for small text on a white ground; where an
+    accent hue is needed as text, the palette carries a darkened variant (#B3490A, #0B6FA8, #C41F42, #0369A1) and those
+    all clear 4.5:1.</div>
+
+  <h2>Banned, and explicitly replaced</h2>
+  <div class="banned">
+    <span class="no"><i style="background:#f7f3ea"></i><s>#F7F3EA warm ivory</s> → #FFFFFF / #EFF6FF</span>
+    <span class="no"><i style="background:#ece5d8"></i><s>#ECE5D8 beige</s> → #F4F2FF / #F4F7FB</span>
+    <span class="no"><i style="background:#fffdf8"></i><s>#FFFDF8 warm off-white</s> → #FFFFFF</span>
+    <span class="no"><i style="background:#ee9d2b"></i><s>#EE9D2B muddy amber</s> → #FFB020 (fill) / #8A5A00 (text)</span>
+    <span class="no"><i style="background:#d6cdbc"></i><s>#D6CDBC tan border</s> → #DCE6F7 / #E2DFF7 / #D8E2EE</span>
+    <span class="no"><i style="background:#4caf50"></i><s>green</s> → not used anywhere in any palette</span>
+  </div>
+  <div class="note">The current learner theme is exactly the warm set on the left — <code>app/globals.css</code> lines
+    1–14. Green stays out of both the learner experiences and the admin dashboard, including syntax highlighting in the
+    16–18 editor (keywords use #A66BFF, strings #FFC24B, tags #5B8DFF, errors #FF6B9A).</div>
+
+  <h2>Admin dashboard — gold refinement only, structure untouched</h2>
+  <div class="cols2">
+    <div class="card">
+      <h3>What changes</h3>
+      <p>The approved admin structure — sidebar, overview, curriculum explorer, learner preview, analytics, notification
+        centre, settings — stays exactly as reviewed. Only the gold changes: from one flat mustard (#D4A63A) to a
+        luminous metallic ramp with a highlight edge, used sparingly on the top bar rule, primary actions and the one
+        figure that matters most on a screen.</p>
+      <div class="goldramp">
+        <i style="background:#fff7dc">#FFF7DC</i><i style="background:#ffe9a8">#FFE9A8</i><i style="background:#f6d06b">#F6D06B</i><i style="background:#e8b93f">#E8B93F</i><i style="background:#c9902a;color:#fff">#C9902A</i><i style="background:#9a6b12;color:#fff">#9A6B12</i>
+      </div>
+      <p style="margin-top:12px">Gold never carries small text on a white ground. On light surfaces the gold <em>text</em>
+        colour is #805A0C (6.20:1 on white); on the navy bar, gold text is #D4A63A (6.14:1); navy on the gold button is
+        #0B1B33 (6.14:1). The gradient is a surface, not a text colour.</p>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;border:0">
+      <div class="admin">
+        <div class="bar"><b>KidyCode Admin</b><span class="tagm">SYNTHETIC REVIEW</span><span class="gold">Export notes</span></div>
+        <div class="body">
+          <div class="kpis">
+            <div class="kpi"><b>8</b><span>Pathways</span></div>
+            <div class="kpi"><b>60</b><span>Modules</span></div>
+            <div class="kpi"><b>248</b><span>Lessons</span></div>
+            <div class="kpi gold"><b>244</b><span>With answer key</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="beforeafter" style="border:0;border-top:1px solid #d5dfec;border-radius:0">
+        <div class="side">
+          <h4>Now</h4>
+          <div class="sw"><i style="background:#d4a63a"></i><i style="background:#805a0c"></i><i style="background:#0f2d52"></i></div>
+          <p>One flat mustard for every gold role, so accents and chrome compete for the same attention.</p>
+        </div>
+        <div class="side">
+          <h4>Proposed</h4>
+          <div class="sw"><i style="background:linear-gradient(135deg,#fff3c9,#f3ce6a 42%,#c9902a)"></i><i style="background:#805a0c"></i><i style="background:#0b1b33"></i></div>
+          <p>A ramp with one highlight edge: gold reads as metal on the navy chrome and as a quiet ink when it must be text.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Type, shape and motion per group</h2>
+  <div class="grid4">
+    <div class="card"><h3 style="font:800 17px/1.2 'Inter Tight'">A · 10–12</h3><p style="margin-top:8px">Baloo 2 headings · Nunito Sans body · JetBrains Mono code. 22px radii, soft lift, dashed trail. Motion: a 200&nbsp;ms pop on completion, star twinkle; off under reduced-motion.</p></div>
+    <div class="card"><h3 style="font:800 17px/1.2 'Inter Tight'">B · 13–15</h3><p style="margin-top:8px">Poppins headings · Inter Tight body. 14px radii, hairlines, flat panels. Motion: 140&nbsp;ms cross-fade between Brief / Make / Check; no celebration animation.</p></div>
+    <div class="card"><h3 style="font:600 17px/1.2 'Inter Tight'">C · 16–18</h3><p style="margin-top:8px">Space Grotesk headings · Inter Tight body · JetBrains Mono for everything code. 10px radii, dark surfaces. Motion: 120&nbsp;ms panel transitions; the terminal reveals output line by line at 60&nbsp;ms.</p></div>
+    <div class="card"><h3 style="font:600 17px/1.2 'IBM Plex Sans'">D · Adults</h3><p style="margin-top:8px">IBM Plex Serif headings · IBM Plex Sans body · IBM Plex Mono code. 8–12px radii, near-flat. Motion: 120&nbsp;ms opacity only. No decorative animation at all.</p></div>
+  </div>
+
+  <p class="foot">Colour system sheet · re-run the check with <code>node docs/v4/palette-contrast.mjs</code> (expects 56/56 pass; it prints every pair and its ratio).<br>
+    Admin tokens here are a refinement proposal for <code>app/admin/admin.css</code>; they do not change any admin layout, route, gate or data behaviour.</p>
+</div>
+</body>
+</html>

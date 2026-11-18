@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>V4 Concepts B–D — mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter+Tight:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#e9eef7;font-family:"Inter Tight",system-ui,sans-serif;color:#0e1726}
+  .sheet{width:1440px;margin:0 auto;padding:40px 40px 56px}
+  .eyebrow{font:700 12px/1 "Inter Tight";letter-spacing:.18em;text-transform:uppercase;color:#3f2cc4}
+  h1{margin:12px 0 10px;font:700 40px/1.04 "Space Grotesk";letter-spacing:-.02em}
+  .lede{margin:0;max-width:76ch;font-size:15.5px;line-height:1.6;color:#46566e}
+  .row{display:flex;gap:30px;align-items:flex-start;margin-top:32px}
+  .col{display:grid}
+  .cap{margin:0 0 10px 4px;font:700 12.5px/1 "Inter Tight";letter-spacing:.1em;text-transform:uppercase}
+  .phone{width:390px;flex:0 0 auto;border-radius:30px;overflow:hidden;box-shadow:0 14px 40px rgba(14,23,38,.14)}
+  .status{display:flex;align-items:center;gap:8px;padding:9px 16px;font:600 11px/1 "Inter Tight"}
+  .status .pill{margin-left:auto;padding:4px 8px;border-radius:999px;font-weight:700}
+  .bar{display:flex;align-items:center;gap:9px;padding:11px 15px}
+  .bar b{font-size:14.5px;font-weight:700}
+  .av{margin-left:auto;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:700}
+  .body{padding:15px 15px 18px}
+  .h2{margin:0;font-size:23px;line-height:1.12;font-weight:800}
+  .sub{margin:6px 0 13px;font-size:13px;line-height:1.55}
+  .card{border-radius:14px;padding:15px}
+  .facts{display:flex;gap:18px;margin:13px 0}
+  .facts div{display:grid;gap:3px}
+  .facts b{font-size:17px;font-weight:700}
+  .facts span{font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+  .btn{display:block;text-align:center;border-radius:999px;padding:13px;font-size:14.5px;font-weight:700}
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid}
+  .tabs span{padding:11px 4px 13px;text-align:center;font-size:11.5px;font-weight:700}
+  /* B — 13-15 */
+  .b{background:#fff;color:#14122b;font-family:"Inter Tight"}
+  .b .status{background:#fff;color:#4c4a6e;border-bottom:1px solid #e2dff7}
+  .b .status .pill{background:#eef3ff;color:#0b6fa8}
+  .b .bar{background:#fff;border-bottom:1px solid #e2dff7}
+  .b .h2{font-family:"Poppins";font-weight:800;font-size:21px}
+  .b .av{background:#f4f2ff;color:#3f2cc4}
+  .b .body{background:linear-gradient(180deg,#faf9ff,#fff 60%)}
+  .b .card{background:#fff;border:1px solid #e2dff7}
+  .b .kick{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef3ff;font:700 10px/1 "Inter Tight";letter-spacing:.1em;text-transform:uppercase;color:#0b6fa8}
+  .b .title{margin:11px 0 7px;font:800 21px/1.12 "Poppins"}
+  .b p{margin:0;font-size:13px;line-height:1.6;color:#4c4a6e}
+  .b .btn{background:#5b45f0;color:#fff;margin-top:14px}
+  .b .facts b{color:#14122b}
+  .b .facts span{color:#4c4a6e}
+  .b .tabs{border-color:#e2dff7;background:#fff}
+  .b .tabs span{color:#4c4a6e}
+  .b .tabs span.on{color:#3f2cc4;box-shadow:inset 0 3px 0 #5b45f0}
+  .bl{display:grid;gap:8px;margin-top:12px}
+  .blrow{display:flex;align-items:center;gap:9px;padding:10px 11px;border:1px solid #e2dff7;border-radius:11px;font:700 12.5px/1.3 "Inter Tight"}
+  .blrow.on{border-color:#5b45f0;background:#f4f2ff}
+  .blrow span{margin-left:auto;font:600 11px/1 "JetBrains Mono";color:#4c4a6e}
+  /* C — 16-18 */
+  .c{background:#0a0f1e;color:#e9eefb;font-family:"Inter Tight"}
+  .c .status{background:#0a0f1e;color:#9aa8c7}
+  .c .status .pill{background:rgba(91,141,255,.16);color:#9dbcff}
+  .c .bar{background:#0d1428;border-bottom:1px solid #26314f}
+  .c .av{background:#18233f;color:#a66bff}
+  .c .body{background:radial-gradient(120% 80% at 10% -10%,rgba(91,141,255,.14),transparent 60%),#0a0f1e}
+  .c .h2{font-family:"Space Grotesk";font-weight:600;font-size:20px;letter-spacing:-.01em}
+  .c .sub{color:#9aa8c7}
+  .c .card{background:#111a31;border:1px solid #26314f}
+  .c .facts b{color:#e9eefb}
+  .c .facts span{color:#9aa8c7}
+  .c .btn{background:#5b8dff;color:#08111f;border-radius:9px;margin-top:13px}
+  .c .tabs{border-color:#26314f;background:#0d1428}
+  .c .tabs span{color:#9aa8c7}
+  .c .tabs span.on{color:#e9eefb;box-shadow:inset 0 3px 0 #5b8dff}
+  .c .kick{display:inline-flex;padding:5px 9px;border-radius:999px;background:rgba(91,141,255,.14);border:1px solid rgba(91,141,255,.32);font:500 10px/1 "JetBrains Mono";color:#9dbcff}
+  .c .title{margin:11px 0 7px;font:600 20px/1.15 "Space Grotesk"}
+  .c p{margin:0;font-size:13px;line-height:1.6;color:#c3cdea}
+  .c .term{margin-top:12px;background:#070b16;border:1px solid #26314f;border-radius:10px;padding:11px;font:400 11px/1.8 "JetBrains Mono";color:#9aa8c7}
+  /* D — adults */
+  .d{background:#fff;color:#0e1726;font-family:"IBM Plex Sans"}
+  .d .status{background:#fff;color:#46566e;border-bottom:1px solid #d8e2ee}
+  .d .status .pill{background:#eef3f9;color:#0369a1}
+  .d .bar{background:#fff;border-bottom:1px solid #d8e2ee}
+  .d .h2{font-family:"IBM Plex Serif";font-weight:600;font-size:21px}
+  .d .av{background:#eef3f9;color:#1b4fbf;border-radius:8px}
+  .d .body{background:linear-gradient(180deg,#fafcfe,#fff 60%)}
+  .d .card{background:#fff;border:1px solid #d8e2ee;border-left:3px solid #1b4fbf;border-radius:8px}
+  .d .btn{background:#1b4fbf;color:#fff;border-radius:8px;margin-top:14px}
+  .d ul{margin:0;padding:0;list-style:none;display:grid;gap:9px}
+  .d li{display:grid;grid-template-columns:22px 1fr;gap:10px;font-size:13px;line-height:1.5}
+  .d li i{width:22px;height:22px;border-radius:50%;background:#eef3f9;display:grid;place-items:center;font:600 10.5px/1 "IBM Plex Sans";font-style:normal;color:#0369a1}
+  .d .tabs{border-color:#d8e2ee;background:#fff}
+  .d .tabs span{color:#46566e}
+  .d .tabs span.on{color:#1b4fbf;box-shadow:inset 0 3px 0 #1b4fbf;font-family:"IBM Plex Sans"}
+  .sheet-foot{margin-top:32px;padding-top:16px;border-top:1px solid #cfdae8;font-size:12.5px;color:#55657c;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <p class="eyebrow">KidyCode V4 · Concepts B, C and D · mobile (390 × 844)</p>
+  <h1>Mobile posture for 13–15, 16–18 and Adults</h1>
+  <p class="lede">Same three postures as 10–12 — dashboard, work, progress — but each keeps its own personality on a
+    phone. The mission board, the dark workspace and the calm adult view are three different products, not one layout
+    in three colours.</p>
+
+  <div class="row">
+    <!-- B -->
+    <div class="col">
+      <p class="cap" style="color:#3f2cc4">Concept B · Ages 13–15 · Dashboard</p>
+      <div class="phone b">
+        <div class="status">9:41 <span class="pill">2 missions this week</span></div>
+        <div class="bar"><b>KidyCode Studio</b><span class="av">AK</span></div>
+        <div class="body">
+          <h2 class="h2">Your studio</h2>
+          <p class="sub">One mission open · Unit 5 of 8</p>
+          <div class="card">
+            <span class="kick">Mission 22 · JavaScript decisions</span>
+            <h3 class="title" style="font-size:19px;margin:9px 0 7px">Make the page calculate something</h3>
+            <p>Swap a typed number for a calculated one, so the page updates itself.</p>
+            <div class="facts"><div><b>35 min</b><span>estimate</span></div><div><b>2</b><span>constraints</span></div></div>
+            <span class="btn">Open mission ▸</span>
+          </div>
+          <div class="bl">
+            <div class="blrow on">Community Event Hub<span>v4</span></div>
+            <div class="blrow">Personal Portfolio<span>v2</span></div>
+            <div class="blrow">Small Business Website<span>new</span></div>
+          </div>
+        </div>
+        <div class="tabs"><span class="on">Studio</span><span>Missions</span><span>Portfolio</span></div>
+      </div>
+    </div>
+
+    <!-- C -->
+    <div class="col">
+      <p class="cap" style="color:#5b8dff">Concept C · Ages 16–18 · Workspace</p>
+      <div class="phone c">
+        <div class="status">9:41 <span class="pill">portfolio 3/5</span></div>
+        <div class="bar"><b>KidyCode</b><span class="av">JT</span></div>
+        <div class="body">
+          <h2 class="h2">Unit 6 · application state and CRUD</h2>
+          <p class="sub">27 of 48 missions · 6 of 8 units</p>
+          <div class="card">
+            <span class="kick">mission 29 / 48</span>
+            <h3 class="title">Edit and remove a saved task, without losing the list</h3>
+            <p>Hold tasks in an array, change one by id, re-render. The missing-id case must not crash.</p>
+            <div class="facts"><div><b>~45 min</b><span>estimate</span></div><div><b>3</b><span>checks</span></div><div><b>2 of 6</b><span>unit</span></div></div>
+            <span class="btn">Start mission</span>
+          </div>
+          <div class="term"><b style="color:#ffc24b">›</b> npx test state<br><span style="color:#8ea1c9">✓ update leaves the array intact</span><br><span style="color:#ff8fb0">✗ unknown id — expected 4, got undefined</span></div>
+        </div>
+        <div class="tabs"><span class="on">Mission</span><span>Editor</span><span>Skills</span></div>
+      </div>
+    </div>
+
+    <!-- D -->
+    <div class="col">
+      <p class="cap" style="color:#1b4fbf">Concept D · Adults · Dashboard</p>
+      <div class="phone d">
+        <div class="status">9:41 <span class="pill">45 min plan</span></div>
+        <div class="bar"><b>KidyCode</b><span class="av">NM</span></div>
+        <div class="body">
+          <h2 class="h2">Continue where you left off</h2>
+          <p class="sub">Unit 3 of 8 · 12 of 48 activities</p>
+          <div class="card">
+            <b style="display:block;font:600 15.5px/1.3 'IBM Plex Sans'">Keep a stylesheet readable as it grows</b>
+            <p style="margin:6px 0 0;font-size:12.5px;line-height:1.55;color:#46566e">A consistent CSS system · about 25 minutes</p>
+            <span class="btn">Continue</span>
+          </div>
+          <ul style="margin-top:14px">
+            <li><i>✓</i><span><b style="display:block;font-size:13px">Publish a working web page</b><span style="font-size:12px;color:#46566e">Done · Unit 1</span></span></li>
+            <li><i>✓</i><span><b style="display:block;font-size:13px">Style it to a brief</b><span style="font-size:12px;color:#46566e">Done · Unit 2</span></span></li>
+            <li><i>u4</i><span><b style="display:block;font-size:13px">Make it work on a phone</b><span style="font-size:12px;color:#46566e">Starts after Unit 3</span></span></li>
+          </ul>
+        </div>
+        <div class="tabs"><span class="on">Learn</span><span>Progress</span><span>Projects</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="sheet-foot">Concepts B–D · mobile · 390 × 844 · palette pairs verified with <code>docs/v4/palette-contrast.mjs</code> (56/56 pass).<br>
+    Motion rule for all four phone experiences: transitions are 120–200&nbsp;ms, transforms and opacity only, and every
+    one of them is disabled under <code>prefers-reduced-motion: reduce</code>.</p>
+</div>
+</body>
+</html>

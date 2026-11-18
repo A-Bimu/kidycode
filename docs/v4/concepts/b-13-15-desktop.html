@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>V4 Concept B — Ages 13-15 — Creative Exploration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#ffffff; --surface:#f4f2ff; --surface2:#eef3ff; --ink:#14122b; --ink-soft:#4c4a6e;
+    --brand:#5b45f0; --brand-deep:#3f2cc4; --azure:#00a3ff; --azure-ink:#0b6fa8;
+    --rose:#ff4d6d; --rose-ink:#c41f42; --amber:#ffb020; --amber-ink:#8a5a00;
+    --line:#e2dff7; --r:14px; --r-lg:20px; --r-pill:999px;
+    --shadow:0 8px 26px rgba(20,18,43,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f1effb;color:var(--ink);font-family:"Inter Tight",system-ui,-apple-system,"Segoe UI",sans-serif}
+  .sheet{width:1440px;margin:0 auto;padding:44px 40px 64px}
+  .eyebrow{font:700 12px/1 "Inter Tight";letter-spacing:.18em;text-transform:uppercase;color:var(--brand-deep)}
+  h1.title{margin:14px 0 12px;font:800 52px/1 "Poppins";letter-spacing:-.02em}
+  h1.title em{font-style:normal;color:var(--rose-ink)}
+  .lede{margin:0;max-width:76ch;font-size:16px;line-height:1.62;color:var(--ink-soft)}
+  .meta{display:flex;flex-wrap:wrap;gap:26px;margin-top:18px}
+  .meta b{display:block;font:700 11px/1 "Inter Tight";letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
+  .meta span{font-size:14px;font-weight:600}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 11px 6px 7px;background:#fff;border:1px solid var(--line);border-radius:var(--r-pill);font:600 12px/1 "Inter Tight"}
+  .chip i{width:15px;height:15px;border-radius:50%}
+  .scr{margin-top:38px}
+  .scr-cap{display:flex;align-items:baseline;gap:12px;margin:0 0 12px 2px}
+  .scr-cap b{font:700 13px/1 "Inter Tight";letter-spacing:.12em;text-transform:uppercase;color:var(--brand-deep)}
+  .scr-cap span{font-size:13px;color:var(--ink-soft)}
+  .device{width:1180px;margin:0 auto;background:var(--canvas);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden}
+  .top{display:flex;align-items:center;gap:16px;padding:13px 22px;background:#fff;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font:800 16px/1 "Poppins"}
+  .who{display:flex;align-items:center;gap:9px;font:600 13px/1 "Inter Tight";color:var(--ink-soft)}
+  .who .av{width:29px;height:29px;border-radius:9px;background:var(--surface);display:grid;place-items:center;font:700 11.5px/1 "Inter Tight";color:var(--brand-deep)}
+  .grow{flex:1}
+  .btn{border:0;border-radius:var(--r-pill);padding:12px 20px;font:700 14.5px/1 "Inter Tight";cursor:pointer}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-ghost{background:var(--surface);color:var(--brand-deep)}
+  .h2{margin:0;font:800 30px/1.08 "Poppins";letter-spacing:-.015em}
+  .kicker{display:inline-flex;padding:5px 11px;border-radius:var(--r-pill);background:var(--surface2);font:700 11px/1 "Inter Tight";letter-spacing:.12em;text-transform:uppercase;color:var(--azure-ink)}
+
+  /* dashboard — the studio */
+  .dash{padding:26px 26px 30px;background:linear-gradient(180deg,#faf9ff,#fff 60%)}
+  .dash-top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+  .dash-top p{margin:8px 0 0;font-size:14.5px;color:var(--ink-soft);max-width:54ch;line-height:1.6}
+  .mission{display:grid;grid-template-columns:1fr 300px;gap:0;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:#fff;margin-bottom:18px}
+  .mission-main{padding:22px 24px}
+  .mission-main h3{margin:12px 0 8px;font:800 26px/1.1 "Poppins"}
+  .mission-main p{margin:0 0 16px;font-size:14.5px;line-height:1.62;color:var(--ink-soft);max-width:52ch}
+  .brief{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .tag2{font:700 11.5px/1 "Inter Tight";padding:6px 10px;border-radius:8px;background:var(--surface2);color:var(--azure-ink)}
+  .mission-side{padding:22px 22px;background:var(--surface);border-left:1px solid var(--line);display:grid;gap:12px;align-content:start}
+  .mission-side b{font:800 13px/1 "Poppins";text-transform:uppercase;letter-spacing:.08em;color:var(--brand-deep)}
+  .kv{display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-soft)}
+  .kv strong{color:var(--ink);font-weight:700}
+  .grid3{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:16px}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:17px 18px}
+  .panel h4{margin:0 0 4px;font:800 16px/1.2 "Poppins"}
+  .panel p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ink-soft)}
+  .proj{display:grid;gap:10px;margin-top:12px}
+  .proj-row{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff}
+  .proj-row.on{border-color:var(--brand);background:var(--surface)}
+  .dot{width:11px;height:11px;border-radius:3px;background:var(--brand);flex:0 0 auto}
+  .proj-row b{font:700 13.5px/1.3 "Inter Tight"}
+  .proj-row span:last-child{margin-left:auto;font:600 11.5px/1 "Inter Tight";color:var(--ink-soft)}
+  .versions{display:grid;gap:8px;margin-top:12px}
+  .ver{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-soft)}
+  .ver em{font-style:normal;font:600 12px/1 "JetBrains Mono";color:var(--brand-deep);background:var(--surface);padding:4px 7px;border-radius:6px}
+  .swatches{display:flex;gap:8px;margin-top:12px}
+  .sw{width:34px;height:34px;border-radius:10px;border:2px solid transparent;cursor:pointer}
+  .sw.on{border-color:var(--ink)}
+
+  /* lesson — brief, demo, make */
+  .lesson{background:#fff}
+  .lsn-bar{display:flex;align-items:center;gap:14px;padding:11px 22px;border-bottom:1px solid var(--line);background:#fcfbff}
+  .back{display:flex;align-items:center;gap:7px;font:700 13px/1 "Inter Tight";color:var(--ink-soft);border:0;background:none;cursor:pointer}
+  .crumbs{display:flex;align-items:center;gap:8px;font:600 12.5px/1 "Inter Tight";color:var(--ink-soft);margin-left:auto}
+  .crumbs b{color:var(--brand-deep)}
+  .band{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
+  .band div{padding:15px 22px;border-right:1px solid var(--line)}
+  .band div:last-child{border-right:0}
+  .band span{font:700 11px/1 "Inter Tight";letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+  .band p{margin:7px 0 0;font-size:14px;line-height:1.55;color:var(--ink)}
+  .band div.on{background:var(--surface)}
+  .band div.on span{color:var(--brand-deep)}
+  .body{padding:24px 26px 8px}
+  .two{display:grid;grid-template-columns:1.02fr .98fr;gap:22px;align-items:start}
+  .body h3{margin:0 0 10px;font:800 25px/1.15 "Poppins"}
+  .body p{margin:0 0 13px;font-size:15px;line-height:1.65;color:#332f57}
+  .demo{background:#0c1024;border-radius:var(--r);padding:16px 18px;color:#e8ecff}
+  .demo-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .demo-bar b{font:700 12.5px/1 "Inter Tight";color:#aab6e0}
+  .demo-bar .live{margin-left:auto;font:700 11px/1 "Inter Tight";color:#8ff0d0;background:#12304d;padding:5px 9px;border-radius:var(--r-pill)}
+  .demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .demo .cell{background:#141a38;border-radius:10px;padding:12px;font:600 12.5px/1.5 "JetBrains Mono";color:#c9d3ff}
+  .demo .res{background:#fff;border-radius:10px;padding:12px;color:#14122b;display:grid;gap:6px}
+  .demo .res i{display:block;height:9px;border-radius:4px;background:#e6e1ff}
+  .tk{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .tk span{font:600 12px/1 "Inter Tight";padding:6px 10px;border-radius:8px;background:var(--surface);color:var(--brand-deep)}
+  .actions{display:flex;align-items:center;gap:12px;padding:18px 26px 26px;border-top:1px solid var(--line)}
+  .ghost{display:inline-flex;align-items:center;gap:8px;padding:10px 15px;border-radius:var(--r-pill);border:1px dashed #c8bffa;background:#fbfaff;color:var(--brand-deep);font:700 13.5px/1 "Inter Tight";cursor:pointer}
+
+  /* practice */
+  .prac{background:#0c1024;color:#e8ecff}
+  .prac-bar{display:flex;align-items:center;gap:10px;padding:11px 20px;background:#111731;border-bottom:1px solid #202a52}
+  .ftab{font:600 12.5px/1 "JetBrains Mono";padding:7px 12px;border-radius:8px;background:#1a2145;color:#9dabd8}
+  .ftab.on{background:#232d5c;color:#fff}
+  .prac-grid{display:grid;grid-template-columns:1.12fr .88fr;min-height:330px}
+  .editor{padding:16px 18px;border-right:1px solid #202a52}
+  .cl{font:400 13px/1.8 "JetBrains Mono";display:grid;grid-template-columns:32px 1fr}
+  .cl .ln{color:#4d5b85;text-align:right}
+  .tag{color:#7aa2ff}.at{color:#a66bff}.str{color:#ffc24b}.cmt{color:#55648c}.var{color:#ff8fb0}
+  .side{padding:15px 17px;display:grid;gap:14px;align-content:start}
+  .prev{background:#fff;border-radius:var(--r);padding:14px;color:#14122b}
+  .prev .card{border:1px solid #e6e1ff;border-radius:11px;padding:12px}
+  .prev .card b{display:block;font:700 14px/1.3 "Poppins"}
+  .prev .card span{font-size:12.5px;color:#4c4a6e}
+  .console{background:#080b1a;border:1px solid #202a52;border-radius:var(--r);padding:11px 13px;font:400 12px/1.7 "JetBrains Mono";color:#9dabd8}
+  .console b{color:#ffc24b;font-weight:600}
+  .checks{display:grid;gap:8px}
+  .chk{display:flex;gap:9px;align-items:center;font:600 12.5px/1.35 "Inter Tight";color:#c3cdf0}
+  .chk .b{width:17px;height:17px;border-radius:6px;background:#232d5c;display:grid;place-items:center;flex:0 0 auto}
+  .chk.ok .b{background:#5b45f0}
+
+  /* progress — portfolio */
+  .prog{padding:26px 28px 32px;background:linear-gradient(180deg,#faf9ff,#fff 58%)}
+  .prog-head{display:flex;align-items:center;gap:22px;margin-bottom:20px}
+  .prog-head h2{margin:0;font:800 28px/1.08 "Poppins"}
+  .prog-head p{margin:7px 0 0;font-size:14.5px;color:var(--ink-soft);max-width:58ch;line-height:1.6}
+  .ports{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+  .port{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:#fff}
+  .port .shot{height:118px;background:var(--surface2);position:relative}
+  .port .meta2{padding:12px 14px}
+  .port .meta2 b{display:block;font:700 14.5px/1.25 "Poppins"}
+  .port .meta2 span{font-size:12.5px;color:var(--ink-soft)}
+  .toolkit{margin-top:20px;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px}
+  .toolkit h4{margin:0 0 14px;font:800 16px/1 "Poppins"}
+  .skills{display:grid;grid-template-columns:repeat(6,1fr);gap:11px}
+  .skill{border:1px solid var(--line);border-radius:11px;padding:11px 10px;text-align:center}
+  .skill b{display:block;font:700 12px/1.3 "Inter Tight"}
+  .skill span{display:block;margin-top:5px;font:600 10.5px/1 "Inter Tight";color:var(--ink-soft)}
+  .skill.got{background:var(--surface);border-color:#cdc2fb}
+  .skill.next{border-style:dashed}
+  .sheet-foot{margin-top:40px;padding-top:18px;border-top:1px solid #ded9f5;font-size:12.5px;color:#5b5680;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <p class="eyebrow">KidyCode V4 · Concept B · desktop</p>
+    <h1 class="title">Ages 13–15 — <em>Creative Exploration</em></h1>
+    <p class="lede">A studio, not a classroom. Work is framed as missions with real constraints, learners pick their own
+      project and their own accent colour, and progress is a portfolio of versions rather than a score. No cartoon
+      mascots, no points, no confetti.</p>
+    <div class="meta">
+      <div><b>Pathway</b><span>Practical Web Development · 8 units · 48 activities</span></div>
+      <div><b>Type</b><span>Poppins · Inter Tight · JetBrains Mono</span></div>
+      <div><b>Shape language</b><span>14px radii · flat panels · 1px hairlines</span></div>
+    </div>
+    <div class="chips">
+      <span class="chip"><i style="background:#5b45f0"></i>#5B45F0 brand</span>
+      <span class="chip"><i style="background:#00a3ff"></i>#00A3FF azure</span>
+      <span class="chip"><i style="background:#ff4d6d"></i>#FF4D6D rose</span>
+      <span class="chip"><i style="background:#ffb020"></i>#FFB020 amber</span>
+      <span class="chip"><i style="background:#f4f2ff"></i>#F4F2FF pale violet</span>
+      <span class="chip"><i style="background:#eef3ff"></i>#EEF3FF pale blue</span>
+      <span class="chip"><i style="background:#14122b"></i>#14122B ink</span>
+    </div>
+  </header>
+
+  <!-- 1 dashboard -->
+  <section class="scr">
+    <p class="scr-cap"><b>Screen 1</b><span>Dashboard — the studio: one mission in progress, your projects, your versions.</span></p>
+    <div class="device">
+      <div class="top">
+        <span class="brand"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="6" fill="#5b45f0"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>KidyCode Studio</span>
+        <span class="grow"></span>
+        <span class="who"><span class="av">AK</span>Amani · 14</span>
+      </div>
+      <div class="dash">
+        <div class="dash-top">
+          <div><h2 class="h2">Your studio</h2><p>You have one mission open. Everything below it is yours to change.</p></div>
+          <button class="btn btn-ghost">Project settings</button>
+        </div>
+        <div class="mission">
+          <div class="mission-main">
+            <span class="kicker">Mission 22 · Unit 5 · JavaScript decisions</span>
+            <h3>Make the page calculate something</h3>
+            <p>Right now your page shows numbers you typed by hand. This mission makes the page work them out for you —
+              so when a visitor changes an input, the answer updates.</p>
+            <div class="brief"><span class="tag2">index.html</span><span class="tag2">script.js</span><span class="tag2">~35 min</span><span class="tag2">2 constraints</span></div>
+            <button class="btn btn-primary">Open mission ▸</button>
+          </div>
+          <div class="mission-side">
+            <b>Mission brief</b>
+            <span class="kv"><span>Project</span><strong>Community Event Hub</strong></span>
+            <span class="kv"><span>Language</span><strong>JavaScript</strong></span>
+            <span class="kv"><span>You will show</span><strong>A total that updates</strong></span>
+            <span class="kv"><span>Unit progress</span><strong>3 of 6</strong></span>
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="panel">
+            <h4>Your projects</h4>
+            <p>Switch at any time. Each keeps its own files and history.</p>
+            <div class="proj">
+              <div class="proj-row on"><span class="dot"></span><b>Community Event Hub</b><span>v4</span></div>
+              <div class="proj-row"><span class="dot" style="background:#00a3ff"></span><b>Personal Portfolio</b><span>v2</span></div>
+              <div class="proj-row"><span class="dot" style="background:#ff4d6d"></span><b>Small Business Website</b><span>new</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h4>Recent work</h4>
+            <p>Every run you keep is stored, so you can compare your own versions.</p>
+            <div class="versions">
+              <span class="ver"><em>v4</em> Added the ticket total</span>
+              <span class="ver"><em>v3</em> Cleaned up the layout</span>
+              <span class="ver"><em>v2</em> Semantic structure pass</span>
+              <span class="ver"><em>v1</em> First draft committed</span>
+            </div>
+          </div>
+          <div class="panel">
+            <h4>Make it yours</h4>
+            <p>Pick the accent your project uses. It is a real CSS variable in your files, not a filter over the app.</p>
+            <div class="swatches">
+              <span class="sw on" style="background:#5b45f0"></span>
+              <span class="sw" style="background:#00a3ff"></span>
+              <span class="sw" style="background:#ff4d6d"></span>
+              <span class="sw" style="background:#ffb020"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 lesson -->
+  <section class="scr">
+    <p class="scr-cap"><b>Screen 2</b><span>Lesson — brief, live demonstration, then make. The three bands replace the six-moment rail.</span></p>
+    <div class="device">
+      <div class="top"><span class="brand"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="6" fill="#5b45f0"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>KidyCode Studio</span><span class="grow"></span><span class="who"><span class="av">AK</span>Amani · 14</span></div>
+      <div class="lesson">
+        <div class="lsn-bar"><button class="back">◀ Your studio</button><span class="crumbs">Unit 5 · <b>Mission 22</b> · Brief</span></div>
+        <div class="band">
+          <div class="on"><span>1 · Brief</span><p>What you are making and why it is worth it.</p></div>
+          <div><span>2 · Make</span><p>Two constraints, one editor, your own way of solving it.</p></div>
+          <div><span>3 · Check</span><p>Prove it works when the numbers change.</p></div>
+        </div>
+        <div class="body">
+          <div class="two">
+            <div>
+              <h3>A page that works things out for itself</h3>
+              <p>You already know how to put a number on a page by typing it. That breaks the moment a visitor orders
+                something different — the page would be lying.</p>
+              <p>JavaScript lets the page hold a value in a <b>variable</b> and work with it: read two ticket prices,
+                add them, and write the result into the page. Change the input, and the total changes with it.</p>
+              <p style="color:var(--ink-soft)">You will meet three words today — <b>variable</b>, <b>function</b>,
+                <b>return</b> — but only after you have made the total update once.</p>
+              <div class="tk"><span>variable</span><span>function</span><span>return</span><span>template string</span></div>
+            </div>
+            <div class="demo">
+              <div class="demo-bar"><b>Run it yourself</b><span class="live">live</span></div>
+              <div class="demo-grid">
+                <div class="cell"><span class="var">const</span> <span class="tag">price</span> = <span class="str">12</span>;<br><span class="var">const</span> <span class="tag">qty</span> = <span class="str">3</span>;<br><br><span class="at">function</span> <span class="tag">total</span>(a, b) {<br>&nbsp;&nbsp;<span class="at">return</span> a * b;<br>}</div>
+                <div class="res"><b style="font:700 13px/1 'JetBrains Mono';color:#5b45f0">total(12, 3)</b><i style="width:72%"></i><i style="width:48%"></i><span style="font:600 12px/1.4 'Inter Tight';color:#4c4a6e">Drag the numbers. Watch the answer change.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="actions"><button class="ghost">? Shape a hint</button><span class="grow"></span><button class="btn btn-ghost">Skip to editor</button><button class="btn btn-primary">Start making ▸</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 practice -->
+  <section class="scr">
+    <p class="scr-cap"><b>Screen 3</b><span>Practice — file tabs, a real console, a browser preview, and the mission's constraints as a short rubric.</span></p>
+    <div class="device">
+      <div class="prac">
+        <div class="prac-bar">
+          <span class="ftab on">script.js</span><span class="ftab">index.html</span><span class="ftab">styles.css</span>
+          <span class="grow"></span><button class="btn btn-ghost" style="padding:8px 14px;font-size:13px">Hint</button><button class="btn btn-primary" style="padding:8px 14px;font-size:13px">Run ▸</button>
+        </div>
+        <div class="prac-grid">
+          <div class="editor">
+            <div class="cl">
+              <span class="ln">1</span><span><span class="cmt">// the prices the visitor chooses</span></span>
+              <span class="ln">2</span><span><span class="var">const</span> <span class="tag">price</span> = <span class="str">12</span>;</span>
+              <span class="ln">3</span><span><span class="var">const</span> <span class="tag">quantity</span> = <span class="str">3</span>;</span>
+              <span class="ln">4</span><span></span>
+              <span class="ln">5</span><span><span class="cmt">// work out the total, then put it on the page</span></span>
+              <span class="ln">6</span><span><span class="at">function</span> <span class="tag">total</span>(a, b) {</span>
+              <span class="ln">7</span><span>&nbsp;&nbsp;<span class="at">return</span> a * b;</span>
+              <span class="ln">8</span><span>}</span>
+              <span class="ln">9</span><span></span>
+              <span class="ln">10</span><span><span class="var">const</span> <span class="tag">summary</span> = <span class="str">`Total: R${total(price, quantity)}`</span>;</span>
+              <span class="ln">11</span><span><span class="tag">document</span>.querySelector(<span class="str">".total"</span>).textContent = summary;</span>
+            </div>
+          </div>
+          <div class="side">
+            <div class="prev">
+              <div class="card"><b>Community Event Hub</b><span>Saturday market · 3 tickets</span><br><b style="color:#5b45f0;margin-top:8px;display:block">Total: R36</b></div>
+              <div style="margin-top:10px;font:600 12px/1.4 'Inter Tight';color:#4c4a6e">Preview reloads on Run. Nothing is sent anywhere.</div>
+            </div>
+            <div class="console"><b>›</b> total(12, 3)<br><span style="color:#e8ecff">36</span><br><b>›</b> no errors</div>
+            <div class="checks">
+              <span class="chk ok"><span class="b"><svg width="10" height="10" viewBox="0 0 24 24"><path d="M4 12l6 6L20 6" stroke="#fff" stroke-width="3.6" fill="none" stroke-linecap="round"/></svg></span>The total is worked out in code, not typed</span>
+              <span class="chk ok"><span class="b"><svg width="10" height="10" viewBox="0 0 24 24"><path d="M4 12l6 6L20 6" stroke="#fff" stroke-width="3.6" fill="none" stroke-linecap="round"/></svg></span>Changing quantity changes the total</span>
+              <span class="chk"><span class="b"></span>The same function is reused twice</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 progress -->
+  <section class="scr">
+    <p class="scr-cap"><b>Screen 4</b><span>Progress — a portfolio of real work and a skill toolkit. No streak pressure, no points.</span></p>
+    <div class="device">
+      <div class="top"><span class="brand"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="6" fill="#5b45f0"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>KidyCode Studio</span><span class="grow"></span><span class="who"><span class="av">AK</span>Amani · 14</span></div>
+      <div class="prog">
+        <div class="prog-head">
+          <div>
+            <h2 class="h2">Three projects, eleven versions</h2>
+            <p>This is what you have built. Open any version to see what you changed and when — useful when you are
+              writing a portfolio entry or showing someone your work.</p>
+          </div>
+        </div>
+        <div class="ports">
+          <div class="port"><div class="shot"><svg viewBox="0 0 340 118" width="100%"><rect width="340" height="118" fill="#eef3ff"/><rect x="18" y="16" width="120" height="12" rx="6" fill="#5b45f0"/><rect x="18" y="40" width="300" height="7" rx="3.5" fill="#cdd9f5"/><rect x="18" y="54" width="270" height="7" rx="3.5" fill="#cdd9f5"/><rect x="18" y="74" width="140" height="28" rx="8" fill="#fff" stroke="#cdd9f5"/></svg></div><div class="meta2"><b>Community Event Hub</b><span>4 versions · last edited 2 days ago</span></div></div>
+          <div class="port"><div class="shot"><svg viewBox="0 0 340 118" width="100%"><rect width="340" height="118" fill="#f4f2ff"/><circle cx="60" cy="46" r="18" fill="#5b45f0"/><rect x="96" y="34" width="150" height="10" rx="5" fill="#d8d1fb"/><rect x="96" y="52" width="110" height="8" rx="4" fill="#e5e0fc"/><rect x="18" y="80" width="240" height="20" rx="8" fill="#fff" stroke="#e2dff7"/></svg></div><div class="meta2"><b>Personal Portfolio</b><span>2 versions · last edited last week</span></div></div>
+          <div class="port"><div class="shot" style="display:grid;place-items:center;background:#fff;border-bottom:1px dashed #e2dff7"><span style="font:600 13px/1.5 'Inter Tight';color:#4c4a6e;text-align:center">Small Business Website<br><span style="font-size:12px">Not started — pick it from your studio</span></span></div><div class="meta2"><b>Small Business Website</b><span>Available project</span></div></div>
+        </div>
+        <div class="toolkit">
+          <h4>Your toolkit so far</h4>
+          <div class="skills">
+            <span class="skill got"><b>Semantic HTML</b><span>used in 3 projects</span></span>
+            <span class="skill got"><b>CSS layout</b><span>used in 2 projects</span></span>
+            <span class="skill got"><b>Variables</b><span>just now</span></span>
+            <span class="skill next"><b>Functions</b><span>in this unit</span></span>
+            <span class="skill next"><b>DOM</b><span>unit 7</span></span>
+            <span class="skill next"><b>Forms</b><span>unit 7</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="sheet-foot">Concept sheet B of 4 · Ages 13–15 · palette pairs verified with <code>docs/v4/palette-contrast.mjs</code> (56/56 pass).<br>
+    Mission numbering, unit names and project names come from the real course (Practical Web Development · units 1–8 · Personal Portfolio / Community Event Hub / Small Business Website).</p>
+</div>
+</body>
+</html>
