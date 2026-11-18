@@ -137,7 +137,7 @@ these checks.
 | --- | --- |
 | Stable admin URL | **https://kidycode-git-feat-admin-2185b0-annettemumbi1-gmailcoms-projects.vercel.app** |
 | Owner bookmark | `<stable URL>/admin?review=<key>` |
-| Current deployment | `kidycode-23ho2893t-...` (preview), commit `f27a694` |
+| Current deployment | the newest successful deployment of that branch; the alias moves itself |
 | Trigger | a push to `feat/admin-review-console` |
 | Hosting gate | Vercel Authentication (`ssoProtection: all_except_custom_domains`): anonymous requests get `302` to the platform sign-in before any application code runs |
 | Application gate | `KIDYCODE_ADMIN_REVIEW_DEMO=1` + `KIDYCODE_ADMIN_REVIEW_KEY` (preview environment), held by the deployment |
@@ -204,6 +204,8 @@ the protected preview alias and `kidycode.vercel.app` remains reserved for the l
 Not needed for normal operation. If the Git integration is unavailable:
 
 ```bash
-cd admin-preview
-vercel deploy --yes    # publishes a preview; the branch alias is not moved
+# from the repository root; the CLI applies the project's Root Directory
+vercel deploy --yes    # publishes a preview; the branch alias is NOT moved
 ```
+
+
